@@ -13,9 +13,10 @@ interface NarrativeBoxProps {
     mood?: string;
   } | null;
   onNext?: () => void;
+  pendingVictory?: boolean;
 }
 
-export default function NarrativeBox({ dialogue, onNext }: NarrativeBoxProps) {
+export default function NarrativeBox({ dialogue, onNext, pendingVictory }: NarrativeBoxProps) {
   const [displayedText, setDisplayedText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
 
@@ -31,8 +32,8 @@ export default function NarrativeBox({ dialogue, onNext }: NarrativeBoxProps) {
     setIsTyping(true);
 
     const interval = setInterval(() => {
-      setDisplayedText((prev) => prev + fullText.charAt(index));
       index++;
+      setDisplayedText(fullText.slice(0, index));
 
       // Play soft typewriter sound for letters (but don't saturate audio threads)
       if (index % 3 === 0 && dialogue.sender !== 'system') {
@@ -132,10 +133,26 @@ export default function NarrativeBox({ dialogue, onNext }: NarrativeBoxProps) {
         </div>
       </div>
 
-      {/* Action Indicator */}
-      <div className="absolute bottom-2 right-4 font-mono text-[8px] text-white/30 tracking-[0.15em] uppercase">
-        {isTyping ? '[ Кликни для пропуска ]' : '[ Далее // Нажми на текст ]'}
-      </div>
+      {/* Action Indicator or Finish Button */}
+      {isTyping ? (
+        <div className="absolute bottom-2 right-4 font-mono text-[8px] text-white/30 tracking-[0.15em] uppercase">
+          [ Кликни для пропуска ]
+        </div>
+      ) : pendingVictory ? (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (onNext) onNext();
+          }}
+          className="absolute bottom-1.5 right-4 px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/40 border border-amber-500/40 text-[9px] text-amber-400 font-sans font-bold uppercase tracking-widest animate-pulse transition-all rounded-none"
+        >
+          Завершить расследование
+        </button>
+      ) : (
+        <div className="absolute bottom-2 right-4 font-mono text-[8px] text-white/30 tracking-[0.15em] uppercase">
+          [ Далее // Нажми на текст ]
+        </div>
+      )}
     </div>
   );
 }

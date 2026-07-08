@@ -828,6 +828,7 @@ export default function App() {
           {/* Active Dialog Bubble */}
           <NarrativeBox 
             dialogue={gameState.activeDialogue}
+            pendingVictory={gameState.pendingVictory}
             onNext={() => {
               setGameState(prev => {
                 if (prev.pendingVictory) {
