@@ -1,0 +1,6 @@
+{
+  "name": "Noir Detective Cat",
+  "description": "A monochrome noir visual novel and puzzle game. Play as a clever cat helping a serious but silly detective search for clues using procedural puzzles.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
