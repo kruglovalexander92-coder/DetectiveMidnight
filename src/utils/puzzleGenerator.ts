@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Clue, ObjectId, ObjectState, GameState, GameLog, RoomInfo, StoryState, EconomyState } from '../types';
+import { Clue, ObjectId, ObjectState, GameState, GameLog, RoomInfo, StoryState, EconomyState, PuzzleItem } from '../types';
 
 export const ALL_CLUES: Clue[] = [
   {
@@ -258,7 +258,7 @@ export const STORY_TEMPLATES: Record<number, RoomInfo> = {
     },
     objectDescriptions: {
       bookshelf: 'Деревянный стеллаж, забитый ящиками с контрабандным чаем и табаком.',
-      desk: 'Шаткиий столик смотрителя, залитый дешевым ромом.',
+      desk: 'Шаткий столик смотрителя, залитый дешевым ромом.',
       rug: 'Мокрые, скользкие деревянные доски пирса у черной качающейся воды.',
       safe: 'Потрепанный металлический сейф с кодовым механическим лимбом.',
       lamp: 'Висящий на цепи закопченный фонарь, раскачивающийся от порывов ветра.',
@@ -308,6 +308,152 @@ function shuffleArray<T>(array: T[]): T[] {
   return arr;
 }
 
+export function generateProceduralClues(roomInfo: RoomInfo, safeCode: string): Clue[] {
+  let suspects: string[] = [];
+  let objectsPool: { name: string; description: string; icon: string }[] = [];
+  
+  if (roomInfo.id === 'room_ballerina') {
+    suspects = ['хореограф Дягилев', 'соперница Клео', 'поклонник-барон', 'костюмер мадам Жорж'];
+    objectsPool = [
+      { name: 'Флакон с эфиром', description: 'Флакон из синего стекла с усыпляющим эфиром. На этикетке проступает зачеркнутое имя примы.', icon: 'FlaskConical' },
+      { name: 'Разорванное трико', description: 'Сценическое трико со следами поспешного разреза острым предметом.', icon: 'Scissors' },
+      { name: 'Дневник соперницы', description: 'Записная книжка, где на каждой странице сквозит жгучая зависть к успехам балерины.', icon: 'BookOpen' },
+      { name: 'Письмо от барона', description: 'Тайное послание с угрозами разорвать контракт, если прима не ответит на его ухаживания.', icon: 'Mail' },
+      { name: 'Афиша с угрозой', description: 'Театральная афиша премьеры, где лицо балерины грубо перечеркнуто красным гримом.', icon: 'FileText' },
+      { name: 'Серебряная шпилька', description: 'Сломанная заколка для волос, измазанная воском от свечи.', icon: 'Sparkles' }
+    ];
+  } else if (roomInfo.id === 'room_captain') {
+    suspects = ['боцман Крюк', 'кок Джузеппе', 'пассажир лорд Шелдон', 'штурман Смит'];
+    objectsPool = [
+      { name: 'Навигационная карта', description: 'Морская карта с тайным проложенным маршрутом в сторону необитаемых пиратских островов.', icon: 'Map' },
+      { name: 'Вахтенный журнал', description: 'Страницы за вчерашний день вырваны с корнем. Видны лишь капли соленой воды.', icon: 'Book' },
+      { name: 'Подзорная труба', description: 'Тяжелая медная труба. На оптическом стекле остался след от черного грима.', icon: 'Search' },
+      { name: 'Бутылка ямайского рома', description: 'Крепкий ром, разбавленный сильнодействующим сонным порошком.', icon: 'Wine' },
+      { name: 'Золотой дублон', description: 'Старинная золотая монета испанской чеканки, застрявшая в щели пола.', icon: 'CircleDollarSign' },
+      { name: 'Компас штурмана', description: 'Компас с разбитым стеклом, стрелка которого указывает в неверном направлении.', icon: 'Compass' }
+    ];
+  } else if (roomInfo.id === 'room_banker') {
+    suspects = ['секретарь мисс Эмили', 'брокер Блэк', 'соперник-финансист Дюпон', 'аудитор мистер Кроу'];
+    objectsPool = [
+      { name: 'Шифрованный баланс', description: 'Финансовый документ с тайными переводами миллионов в оффшоры Ливерпуля.', icon: 'FileSpreadsheet' },
+      { name: 'Вексель на предъявителя', description: 'Ценная бумага на огромную сумму с явно поддельной подписью директора банка.', icon: 'FileCheck' },
+      { name: 'Разорванный чек', description: 'Обрывки чека на крупную сумму, поспешно выброшенные в корзину для бумаг.', icon: 'Ticket' },
+      { name: 'Служебный пропуск', description: 'Именной пропуск в хранилище банка на имя брокера, потерянный у сейфа.', icon: 'Contact' },
+      { name: 'Золотая печать', description: 'Официальная гербовая печать банка со следами свежих чернил цвета индиго.', icon: 'Award' },
+      { name: 'Тайная телеграмма', description: 'Телеграмма из Цюриха с текстом: «Сделка сорвана. Нас раскрыли. Срочно уничтожь бумаги».', icon: 'Send' }
+    ];
+  } else if (roomInfo.id === 'room_antique') {
+    suspects = ['скупщик краденого Гобсек', 'коллекционер Спенсер', 'ученик антиквара Тоби', 'археолог Картер'];
+    objectsPool = [
+      { name: 'Золотой жук-скарабей', description: 'Древнеегипетский амулет из цельного золота с тайником внутри.', icon: 'Gem' },
+      { name: 'Карта раскопок', description: 'Чертеж гробницы фараона с пометками о скрытых ловушках и сокровищах.', icon: 'Map' },
+      { name: 'Старинная отмычка', description: 'Набор тонких стальных отмычек в бархатном футляре для вскрытия сундуков.', icon: 'Wrench' },
+      { name: 'Лупа в серебряной раме', description: 'Увеличительное стекло антиквара. На ручке остался кровавый отпечаток пальца.', icon: 'Search' },
+      { name: 'Каталог древностей', description: 'Список проданных артефактов, где одна позиция замазана черной тушью.', icon: 'BookOpen' },
+      { name: 'Письмо археолога', description: 'Гневное письмо с обвинениями антиквара в продаже подделок богатым лордам.', icon: 'Mail' }
+    ];
+  } else {
+    suspects = ['инженер Блэквуд', 'мадам Софи', 'полковник Мустард', 'доктор Ватсон'];
+    objectsPool = [
+      { name: 'Чертеж устройства', description: 'Схема секретного часового механизма неизвестного назначения.', icon: 'Cpu' },
+      { name: 'Обгоревший блокнот', description: 'Потрепанный дневник с расчетами времени и датами взрывов.', icon: 'FileText' },
+      { name: 'Флакон со снотворным', description: 'Маленький пузырек с латинской надписью «Сомнифер». Почти пуст.', icon: 'FlaskConical' },
+      { name: 'Шелковый платок', description: 'Женский платок с монограммой преступника и следами пороха.', icon: 'Scissors' },
+      { name: 'Сломанный ключ', description: 'Половинка стального ключа, покрытая ржавчиной и масляным осадком.', icon: 'Key' },
+      { name: 'Карманные часы', description: 'Серебряные часы, остановившиеся ровно в момент совершения кражи.', icon: 'Watch' }
+    ];
+  }
+
+  const shuffledPool = shuffleArray(objectsPool);
+  const selected = shuffledPool.slice(0, 3);
+  
+  return selected.map((item, idx) => {
+    const suspect = suspects[idx % suspects.length];
+    let findingMessage = '';
+    
+    if (idx === 0) {
+      findingMessage = `«Ура! Кот Миднайт вытащил из укрытия ${item.name}! Барт Ванс воодушевленно вглядывается в находку: "Невероятно! Это же ${item.name}! Мои подозрения подтверждаются: этот предмет указывает прямо на ${suspect}! Нам нужно копать глубже!"»`;
+    } else if (idx === 1) {
+      findingMessage = `«Замок поддался! Открываем ящик стола... О боже, да тут ${item.name}! Барт Ванс шепчет: "Поразительно! ${item.name}! Изумительная улика. Похоже, у ${suspect} были серьезные мотивы скрыть это... Отличная работа, Миднайт!"»`;
+    } else {
+      findingMessage = `«Сейф с громким щелчком распахивается! На самой верхней полке лежит ${item.name}! Барт Ванс сияет от триумфа: "Есть! Мы нашли главную улику дела — ${item.name}! Все ниточки сходятся к ${suspect}! Дело полностью раскрыто, злоумышленник разоблачен! Время праздновать победу!"»`;
+    }
+
+    return {
+      id: `procedural_clue_${idx + 1}`,
+      name: item.name,
+      description: `${item.description} Кажется, это улика против подозреваемого — ${suspect}.`,
+      icon: item.icon,
+      findingMessage
+    };
+  });
+}
+
+export function generateCustomItems(roomInfoId: string, safeCode: string): Record<string, PuzzleItem> {
+  let keyName = 'Изящный серебряный ключ';
+  let keyDesc = 'Резной серебряный ключик с изящными узорами. Подойдет к замочной скважине стола.';
+  let keyIcon = 'Key';
+
+  let noteName = 'Обрывок записки';
+  let noteDesc = `Тонкий кусочек бумаги с поспешно нацарапанными цифрами кода: ${safeCode}.`;
+  let noteIcon = 'FileText';
+
+  if (roomInfoId === 'room_ballerina') {
+    keyName = 'Золоченая шпилька';
+    keyDesc = 'Тонкая, изящно изогнутая золоченая шпилька для волос. Кажется, ею можно вскрыть замок туалетного столика.';
+    keyIcon = 'Sparkles';
+
+    noteName = 'Нотная партитура';
+    noteDesc = `Листок с нотами из балета «Жизель». На полях карандашом начертан трехзначный код: ${safeCode}.`;
+    noteIcon = 'Music';
+  } else if (roomInfoId === 'room_captain') {
+    keyName = 'Латунный ключ от бюро';
+    keyDesc = 'Тяжелый латунный ключ с гравировкой якоря. Идеально подходит к замку капитанского стола.';
+    keyIcon = 'Key';
+
+    noteName = 'Вахтенная запись';
+    noteDesc = `Вырванная страница с навигационным расчетом. Внизу спешно вписаны три цифры кода: ${safeCode}.`;
+    noteIcon = 'BookOpen';
+  } else if (roomInfoId === 'room_banker') {
+    keyName = 'Электронная ключ-карта';
+    keyDesc = 'Карта-ключ с магнитной полосой для авторизации доступа к столу руководства.';
+    keyIcon = 'CreditCard';
+
+    noteName = 'Конфиденциальный отчет';
+    noteDesc = `Шлифованная карточка с финансовыми показателями. На обороте нацарапан код сейфа: ${safeCode}.`;
+    noteIcon = 'FileSpreadsheet';
+  } else if (roomInfoId === 'room_antique') {
+    keyName = 'Антикварный ключ';
+    keyDesc = 'Старинный кованый инструмент с причудливыми зубцами. Позволит вскрыть замок стола.';
+    keyIcon = 'Wrench';
+
+    noteName = 'Свиток с древним шифром';
+    noteDesc = `Потрепанный пергамент с каббалистическими знаками. Среди рисунков четко видны три цифры комбинации: ${safeCode}.`;
+    noteIcon = 'Scroll';
+  }
+
+  return {
+    key_brass: {
+      id: 'key_brass',
+      name: keyName,
+      description: keyDesc,
+      icon: keyIcon
+    },
+    safe_code_note: {
+      id: 'safe_code_note',
+      name: noteName,
+      description: noteDesc,
+      icon: noteIcon
+    },
+    catnip: {
+      id: 'catnip',
+      name: 'Премиум кошачья мята',
+      description: 'Ароматная высушенная травка. Любимое лакомство Миднайта!',
+      icon: 'Leaf'
+    }
+  };
+}
+
 export function generateNewGame(
   mode: 'sandbox' | 'story' = 'sandbox',
   chapter: number = 1,
@@ -329,8 +475,17 @@ export function generateNewGame(
     roomInfo = ROOM_TEMPLATES[Math.floor(Math.random() * ROOM_TEMPLATES.length)];
   }
 
+  // Generate dynamic custom items for this case
+  const customItems = generateCustomItems(roomInfo.id, safeCode);
+
   // 3. Choose 3 clues
-  const selectedClues = shuffleArray(ALL_CLUES).slice(0, 3);
+  let selectedClues: Clue[];
+  if (mode === 'sandbox') {
+    selectedClues = generateProceduralClues(roomInfo, safeCode);
+  } else {
+    // Deep copy/clone ALL_CLUES subset so we do not mutate templates
+    selectedClues = JSON.parse(JSON.stringify(shuffleArray(ALL_CLUES).slice(0, 3)));
+  }
   const [clue1, clue2, clue3] = selectedClues;
 
   // If story mode chapter 1, customize clues to make it fully narrative-themed
@@ -653,7 +808,8 @@ export function generateNewGame(
     solvedSteps,
     roomInfo,
     economy,
-    storyState
+    storyState,
+    customItems
   };
 }
 

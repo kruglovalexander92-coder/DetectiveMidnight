@@ -33,3 +33,24 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.4);
 }
+
+/* Diagonal Atmospheric Rain Animations */
+@keyframes rain-fall {
+  0% {
+    transform: translateY(-120%) rotate(15deg);
+  }
+  100% {
+    transform: translateY(120%) rotate(15deg);
+  }
+}
+.animate-rain {
+  animation: rain-fall 1.2s linear infinite;
+}
+.animate-rain-delayed {
+  animation: rain-fall 1.6s linear infinite;
+  animation-delay: 0.4s;
+}
+.animate-rain-fast {
+  animation: rain-fall 0.8s linear infinite;
+  animation-delay: 0.2s;
+}

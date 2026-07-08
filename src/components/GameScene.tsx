@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ObjectId, ObjectState, GameState } from '../types';
 import { gameAudio } from '../utils/AudioEngine';
+import { DetectiveCharacter } from './DetectiveCharacter';
 
 interface GameSceneProps {
   gameState: GameState;
@@ -23,6 +24,10 @@ export default function GameScene({
   const { objects, catPosition, catAction, safeCode, foundClueIds } = gameState;
   const [lightning, setLightning] = useState(false);
 
+  // Create refs to track physical positions for responsive, frame-exact movement
+  const detectiveRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
   // Dynamic Coordinates for cat placements (percentages from left and top of container)
   const getCatSpot = (spot: string) => {
     if (spot === 'center') return { x: 45, y: 84, height: 'h-16' };
@@ -34,16 +39,25 @@ export default function GameScene({
     let height = 'h-14';
     
     if (spot === 'bookshelf') {
-      y = obj.y ? obj.y + 16 : 44;
+      const topNew = (obj.y ?? 16) + (obj.h ?? 70) * 0.2;
+      y = topNew + 12.8;
     } else if (spot === 'desk') {
-      y = obj.y ? obj.y + 12 : 66.5;
+      const topNew = (obj.y ?? 58) + (obj.h ?? 32) * 0.2;
+      y = topNew + 9.6;
     } else if (spot === 'safe') {
-      y = obj.y ? obj.y + 10 : 66;
+      const topNew = (obj.y ?? 66) + (obj.h ?? 28) * 0.2;
+      y = topNew + 8.0;
     } else if (spot === 'painting') {
-      y = obj.y ? obj.y + 10 : 42;
+      const topNew = (obj.y ?? 15) + (obj.h ?? 12) * 0.1;
+      y = topNew + 8.0;
     } else if (spot === 'fishbowl') {
-      y = obj.y ? obj.y + 8 : 66.5;
+      const deskH = objects.desk.h ?? 32;
+      const topNew = (obj.y ?? 54) + (obj.h ?? 8) * 0.2 + deskH * 0.2;
+      y = topNew + 6.4;
       height = 'h-12';
+    } else if (spot === 'lamp') {
+      const topNew = (obj.y ?? 45) + (obj.h ?? 55) * 0.2;
+      y = topNew + 4.0;
     } else if (spot === 'rug') {
       height = 'h-16';
     }
@@ -110,36 +124,79 @@ export default function GameScene({
     }
   };
 
-  // Sync Detective position with active cat target
+  // Helper to get the exact real-time physical X percentage of the detective inside the game scene
+  const getPhysicalDetectiveX = () => {
+    if (!detectiveRef.current || !containerRef.current) return detectiveX;
+    const detRect = detectiveRef.current.getBoundingClientRect();
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const relativeLeft = detRect.left + detRect.width / 2 - containerRect.left;
+    const pct = (relativeLeft / containerRect.width) * 100;
+    return Math.max(0, Math.min(100, pct));
+  };
+
+  // Sync Detective position with active cat target. 
+  // Detective stays still most of the time except when cat is at the desk, safe, or if he is stepping off the rug.
   useEffect(() => {
     if (catPosition === 'center') return;
     
-    const targetX = getDetectiveTargetX(catPosition);
+    let shouldMove = false;
+    let targetX = detectiveX;
+    
+    if (catPosition === 'desk') {
+      shouldMove = true;
+      targetX = getDetectiveTargetX('desk'); // 52
+    } else if (catPosition === 'safe') {
+      shouldMove = true;
+      targetX = getDetectiveTargetX('safe'); // 78
+    } else if (catPosition === 'rug') {
+      const currentX = getPhysicalDetectiveX();
+      const isStandingOnRug = Math.abs(currentX - 36) < 10;
+      if (isStandingOnRug) {
+        shouldMove = true;
+        targetX = 14; // Step off the rug to the bookshelf area
+      }
+    }
+    
+    const currentPhysicalX = getPhysicalDetectiveX();
     
     if (detectiveWalkTimeoutRef.current) {
       clearTimeout(detectiveWalkTimeoutRef.current);
     }
     
-    setDetectiveX(prev => {
-      const distance = Math.abs(targetX - prev);
+    if (!shouldMove) {
+      // Keep detective standing exactly where he physically is right now
+      setDetectiveX(currentPhysicalX);
+      setDetectiveTransition('none');
+      setDetectiveState('idle');
+      return;
+    }
+    
+    // Stop ongoing transition at exact physical coordinate to prevent double flips/teleports
+    setDetectiveX(currentPhysicalX);
+    setDetectiveTransition('none');
+    setDetectiveState('idle');
+    
+    // Start walk in next tick (30ms) after CSS has processed the snap
+    const walkTimer = setTimeout(() => {
+      const distance = Math.abs(targetX - currentPhysicalX);
       if (distance < 1) {
-        setDetectiveFacingLeft(targetX < prev);
-        return prev;
+        setDetectiveFacingLeft(targetX < currentPhysicalX);
+        return;
       }
       
-      const duration = Math.max(600, distance * 22); // dynamic walk duration
+      const duration = Math.max(600, distance * 22);
       setDetectiveTransition(`left ${duration}ms linear`);
-      setDetectiveFacingLeft(targetX < prev);
+      setDetectiveFacingLeft(targetX < currentPhysicalX);
       setDetectiveState('walking');
+      setDetectiveX(targetX);
       
       detectiveWalkTimeoutRef.current = setTimeout(() => {
         setDetectiveState('idle');
       }, duration);
-      
-      return targetX;
-    });
+    }, 30);
     
     return () => {
+      clearTimeout(walkTimer);
       if (detectiveWalkTimeoutRef.current) {
         clearTimeout(detectiveWalkTimeoutRef.current);
       }
@@ -211,27 +268,99 @@ export default function GameScene({
   // Transition style dynamic helper
   const getTransitionStyle = () => {
     if (visualAction === 'jumping') {
-      return 'left 400ms ease-in-out, top 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+      return 'left 440ms ease-in-out, top 330ms cubic-bezier(0.25, 0.46, 0.45, 0.94)';
     }
     if (visualAction === 'walking') {
-      return 'left 400ms ease-in-out, top 400ms ease-in-out';
+      return 'left 650ms ease-in-out, top 650ms ease-in-out';
     }
     return 'left 200ms ease-out, top 200ms ease-out, transform 150ms ease-out';
   };
 
-  // Sync positions & drive transition sequencer when catPosition updates
+  const getClimbSteps = (from: string, to: string): (ObjectId | 'center')[] => {
+    if (from === to) return [];
+    const visible = (id: ObjectId) => isVisible(id);
+    
+    const getX = (spot: string): number => {
+      if (spot === 'bookshelf') return 14;
+      if (spot === 'painting') return 31;
+      if (spot === 'desk') return 59;
+      if (spot === 'fishbowl') return 52;
+      if (spot === 'lamp') return 78;
+      if (spot === 'safe') return 92.5;
+      if (spot === 'trashcan') return 85;
+      if (spot === 'rug') return 47;
+      return 45; // 'center'
+    };
+
+    const getHeightClass = (spot: string): 'floor' | 'medium' | 'high' => {
+      if (spot === 'center' || spot === 'rug' || spot === 'trashcan') return 'floor';
+      if (spot === 'bookshelf' || spot === 'painting' || spot === 'lamp') return 'high';
+      return 'medium'; // desk, safe, fishbowl
+    };
+
+    const fromX = getX(from);
+    const toX = getX(to);
+    const toHeight = getHeightClass(to);
+    const fromHeight = getHeightClass(from);
+
+    // If jumping to a high item (bookshelf, painting, lamp) and starting from floor
+    if (toHeight === 'high' && fromHeight === 'floor') {
+      // Only medium-height objects (desk, safe) are valid stepping stones
+      const possibleHelpers: ObjectId[] = ['desk', 'safe'];
+      const bestHelper = possibleHelpers.find(helper => {
+        if (helper === to) return false;
+        if (!visible(helper)) return false;
+        const helperX = getX(helper);
+        const distToTarget = Math.abs(helperX - toX);
+        
+        // Stepping stone must be extremely close (physically nearby) to the target
+        if (distToTarget <= 12) {
+          const isBetween = (fromX <= helperX && helperX <= toX) || (toX <= helperX && helperX <= fromX);
+          return isBetween || distToTarget <= 8;
+        }
+        return false;
+      });
+
+      if (bestHelper) {
+        return [bestHelper, to as ObjectId];
+      }
+    }
+    
+    return [to as ObjectId];
+  };
+
+  const [climbQueue, setClimbQueue] = useState<(ObjectId | 'center')[]>([]);
+  const [activeHopTarget, setActiveHopTarget] = useState<ObjectId | 'center' | null>(null);
+
+  // Sync positions and queue up climb steps when catPosition updates from parent
   useEffect(() => {
     if (catPosition === currentSpot) {
       setVisualAction(catAction);
       return;
     }
+    const steps = getClimbSteps(currentSpot, catPosition);
+    if (steps.length > 0) {
+      setClimbQueue(steps);
+    }
+  }, [catPosition]);
+
+  // Process the climbing steps queue
+  useEffect(() => {
+    if (climbQueue.length > 0 && !activeHopTarget) {
+      const nextHop = climbQueue[0];
+      setClimbQueue(prev => prev.slice(1));
+      setActiveHopTarget(nextHop);
+    }
+  }, [climbQueue, activeHopTarget]);
+
+  // Run the current hop transition
+  useEffect(() => {
+    if (!activeHopTarget) return;
 
     const fromSpot = currentSpot;
-    const toSpot = catPosition;
+    const toSpot = activeHopTarget;
     const fromCoords = getCatSpot(fromSpot);
     const toCoords = getCatSpot(toSpot);
-
-    setCurrentSpot(toSpot);
 
     const isFromFloor = fromCoords.y >= 80;
     const isToFloor = toCoords.y >= 80;
@@ -240,6 +369,11 @@ export default function GameScene({
 
     const clearAllTimeouts = () => {
       timeouts.forEach(clearTimeout);
+    };
+
+    const onHopComplete = () => {
+      setCurrentSpot(toSpot);
+      setActiveHopTarget(null);
     };
 
     if (isFromFloor && isToFloor) {
@@ -256,7 +390,8 @@ export default function GameScene({
       const t2 = setTimeout(() => {
         setVisualAction(catAction);
         setScales({ x: 1, y: 1 });
-      }, 550);
+        onHopComplete();
+      }, 700);
       timeouts.push(t2);
 
     } else if (isFromFloor && !isToFloor) {
@@ -264,37 +399,33 @@ export default function GameScene({
       setVisualAction('walking');
       setVisualCoords({ x: fromCoords.x, y: 84 });
       
-      // 1. Walk horizontally on the floor to the target's base column
       const t1 = setTimeout(() => {
         setVisualCoords({ x: toCoords.x, y: 84 });
       }, 50);
       timeouts.push(t1);
 
-      // 2. Crouch and prepare to leap (squish body)
       const t2 = setTimeout(() => {
         setVisualAction('jumping');
         setScales({ x: 1.3, y: 0.65 });
-      }, 450);
+      }, 700);
       timeouts.push(t2);
 
-      // 3. Launch upwards! (stretch body)
       const t3 = setTimeout(() => {
         setScales({ x: 0.75, y: 1.35 });
         setVisualCoords({ x: toCoords.x, y: toCoords.y });
-      }, 650);
+      }, 920);
       timeouts.push(t3);
 
-      // 4. Land on surface (squish on impact)
       const t4 = setTimeout(() => {
         setVisualAction(catAction);
         setScales({ x: 1.15, y: 0.85 });
-      }, 950);
+      }, 1350);
       timeouts.push(t4);
 
-      // 5. Normal settling
       const t5 = setTimeout(() => {
         setScales({ x: 1, y: 1 });
-      }, 1100);
+        onHopComplete();
+      }, 1515);
       timeouts.push(t5);
 
     } else if (!isFromFloor && isToFloor) {
@@ -302,83 +433,102 @@ export default function GameScene({
       setVisualAction('jumping');
       setScales({ x: 1.3, y: 0.65 });
 
-      // 1. Launch downwards to floor base of starting item
       const t1 = setTimeout(() => {
         setScales({ x: 0.8, y: 1.3 });
         setVisualCoords({ x: fromCoords.x, y: 84 });
-      }, 200);
+      }, 220);
       timeouts.push(t1);
 
-      // 2. Land on floor (squish)
       const t2 = setTimeout(() => {
         setScales({ x: 1.15, y: 0.85 });
-      }, 500);
+      }, 550);
       timeouts.push(t2);
 
-      // 3. Walk horizontally to target floor spot
       const t3 = setTimeout(() => {
         setVisualAction('walking');
         setScales({ x: 1, y: 1 });
         setVisualCoords({ x: toCoords.x, y: 84 });
-      }, 650);
+      }, 715);
       timeouts.push(t3);
 
-      // 4. Settle at floor target
       const t4 = setTimeout(() => {
         setVisualAction(catAction);
-      }, 1100);
+        onHopComplete();
+      }, 1365);
       timeouts.push(t4);
 
     } else {
-      // Elevated to Elevated (different furniture heights): leap down to floor, walk, leap up!
-      setVisualAction('jumping');
-      setScales({ x: 1.3, y: 0.65 });
-
-      // 1. Leap down to base of source
-      const t1 = setTimeout(() => {
-        setScales({ x: 0.8, y: 1.3 });
-        setVisualCoords({ x: fromCoords.x, y: 84 });
-      }, 200);
-      timeouts.push(t1);
-
-      // 2. Land & start walking to target base column
-      const t2 = setTimeout(() => {
-        setVisualAction('walking');
-        setScales({ x: 1.05, y: 0.95 });
-        setVisualCoords({ x: toCoords.x, y: 84 });
-      }, 500);
-      timeouts.push(t2);
-
-      // 3. Crouch at target base column
-      const t3 = setTimeout(() => {
+      // Elevated to Elevated (different furniture heights)
+      const dist = Math.abs(fromCoords.x - toCoords.x);
+      if (dist < 25) {
+        // Direct jump between nearby elevated items!
         setVisualAction('jumping');
         setScales({ x: 1.3, y: 0.65 });
-      }, 900);
-      timeouts.push(t3);
 
-      // 4. Leap up onto target
-      const t4 = setTimeout(() => {
-        setScales({ x: 0.75, y: 1.35 });
-        setVisualCoords({ x: toCoords.x, y: toCoords.y });
-      }, 1100);
-      timeouts.push(t4);
+        const t1 = setTimeout(() => {
+          setScales({ x: 0.75, y: 1.35 });
+          setVisualCoords({ x: toCoords.x, y: toCoords.y });
+        }, 300);
+        timeouts.push(t1);
 
-      // 5. Land on target
-      const t5 = setTimeout(() => {
-        setVisualAction(catAction);
-        setScales({ x: 1.15, y: 0.85 });
-      }, 1400);
-      timeouts.push(t5);
+        const t2 = setTimeout(() => {
+          setVisualAction(catAction);
+          setScales({ x: 1.15, y: 0.85 });
+        }, 700);
+        timeouts.push(t2);
 
-      // 6. Settle on target
-      const t6 = setTimeout(() => {
-        setScales({ x: 1, y: 1 });
-      }, 1550);
-      timeouts.push(t6);
+        const t3 = setTimeout(() => {
+          setScales({ x: 1, y: 1 });
+          onHopComplete();
+        }, 900);
+        timeouts.push(t3);
+
+      } else {
+        // Far jump: Leap down to floor base, walk across, leap up onto target!
+        setVisualAction('jumping');
+        setScales({ x: 1.3, y: 0.65 });
+
+        const t1 = setTimeout(() => {
+          setScales({ x: 0.8, y: 1.3 });
+          setVisualCoords({ x: fromCoords.x, y: 84 });
+        }, 220);
+        timeouts.push(t1);
+
+        const t2 = setTimeout(() => {
+          setVisualAction('walking');
+          setScales({ x: 1.05, y: 0.95 });
+          setVisualCoords({ x: toCoords.x, y: 84 });
+        }, 550);
+        timeouts.push(t2);
+
+        const t3 = setTimeout(() => {
+          setVisualAction('jumping');
+          setScales({ x: 1.3, y: 0.65 });
+        }, 1200);
+        timeouts.push(t3);
+
+        const t4 = setTimeout(() => {
+          setScales({ x: 0.75, y: 1.35 });
+          setVisualCoords({ x: toCoords.x, y: toCoords.y });
+        }, 1420);
+        timeouts.push(t4);
+
+        const t5 = setTimeout(() => {
+          setVisualAction(catAction);
+          setScales({ x: 1.15, y: 0.85 });
+        }, 1750);
+        timeouts.push(t5);
+
+        const t6 = setTimeout(() => {
+          setScales({ x: 1, y: 1 });
+          onHopComplete();
+        }, 1915);
+        timeouts.push(t6);
+      }
     }
 
     return () => clearAllTimeouts();
-  }, [catPosition]);
+  }, [activeHopTarget]);
 
   // Synchronize non-moving actions
   useEffect(() => {
@@ -526,6 +676,7 @@ export default function GameScene({
 
   return (
     <div 
+      ref={containerRef}
       className={`relative w-full aspect-[16/10] ${wallBgClass} border-4 ${borderAccentClass} rounded-none overflow-hidden select-none transition-all duration-300 ${
         lightning ? 'bg-white/10' : wallBgClass
       }`}
@@ -534,7 +685,7 @@ export default function GameScene({
       {/* Dynamic Rain Window, Porthole, or Dressing Mirror */}
       {gameState.roomInfo?.id === 'room_ballerina' ? (
         /* Ballerina dressing room back wall decoration: Lit mirror with light bulbs! */
-        <div className="absolute top-8 left-[37%] w-[26%] h-[35%] border-4 border-amber-900 bg-neutral-900 shadow-2xl p-2 flex flex-col justify-center items-center relative">
+        <div className="absolute top-[16%] left-[37%] w-[26%] h-[35%] border-4 border-amber-900 bg-neutral-900 shadow-2xl p-2 flex flex-col justify-center items-center relative">
           <div className="absolute inset-1 border border-amber-800" />
           {/* Mirror reflection surface */}
           <div className="w-full h-full bg-neutral-950 flex items-center justify-center relative shadow-inner overflow-hidden border border-neutral-800">
@@ -553,34 +704,79 @@ export default function GameScene({
         </div>
       ) : (gameState.roomInfo?.id === 'story_chapter_3' || gameState.roomInfo?.id === 'room_captain' || gameState.roomInfo?.id === 'story_chapter_2') ? (
         /* Captain / Airship cabin porthole: circular window with rain and sky view! */
-        <div className="absolute top-8 left-[40%] w-[20%] aspect-square border-4 border-yellow-600 bg-neutral-900 rounded-full overflow-hidden shadow-2xl flex items-center justify-center">
+        <div className="absolute top-[16%] left-[40%] w-[20%] aspect-square border-4 border-yellow-600 bg-neutral-900 rounded-full overflow-hidden shadow-2xl flex items-center justify-center relative">
           <div className="absolute inset-0 bg-neutral-950/40 pointer-events-none z-10" />
           {/* Rivets on bronze frame */}
           <div className="absolute inset-1 border-2 border-dashed border-yellow-700 rounded-full z-10 pointer-events-none" />
           {/* Sky with clouds & rain */}
-          <div className="w-full h-full relative opacity-50 bg-neutral-950">
+          <div className="w-full h-full relative bg-neutral-950 overflow-hidden">
             {/* Soft sky light */}
             <div className="absolute inset-0 bg-gradient-to-b from-blue-950/20 to-neutral-950" />
             {/* Porthole grid cross */}
             <div className="absolute inset-x-0 top-1/2 h-0.5 bg-neutral-800 opacity-40 z-10" />
             <div className="absolute inset-y-0 left-1/2 w-0.5 bg-neutral-800 opacity-40 z-10" />
+            
             {/* Sliding rain overlay */}
-            <div className="absolute inset-0 flex flex-col justify-around py-2">
-              <div className="h-[2px] bg-white/25 w-1/2 rounded animate-pulse translate-x-2" />
-              <div className="h-[2px] bg-white/20 w-2/3 rounded animate-pulse translate-x-4" />
-              <div className="h-[2px] bg-white/15 w-1/3 rounded animate-pulse translate-x-1" />
+            <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-30">
+              <div className="absolute inset-0 flex justify-around">
+                <div className="w-[1px] h-[150%] bg-white animate-rain" />
+                <div className="w-[1.2px] h-[150%] bg-white animate-rain-delayed" />
+                <div className="w-[1px] h-[150%] bg-white animate-rain-fast" />
+              </div>
             </div>
+            
+            {/* Lightning flash overlay */}
+            <div className={`absolute inset-0 bg-white/70 z-20 pointer-events-none transition-opacity duration-100 ${lightning ? 'opacity-100' : 'opacity-0'}`} />
+          </div>
+        </div>
+      ) : (gameState.roomInfo?.id === 'room_antique' || gameState.roomInfo?.id === 'room_banker') ? (
+        /* Antique/Banker double smaller windows layout */
+        <div className="absolute inset-y-0 inset-x-4 pointer-events-none z-0">
+          {/* Left window */}
+          <div className="absolute top-[16%] left-[28%] w-[13%] h-[28%] border-2 border-neutral-700 bg-neutral-900 rounded overflow-hidden shadow-2xl flex relative">
+            <div className="absolute inset-0 bg-neutral-950/40 pointer-events-none z-10" />
+            <div className="absolute inset-x-0 top-1/2 h-0.5 bg-neutral-800 z-10" />
+            <div className="absolute inset-y-0 left-1/2 w-0.5 bg-neutral-800 z-10" />
+            
+            <div className="w-full h-full relative opacity-40 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-b from-neutral-800/10 to-neutral-950/80" />
+              <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-40">
+                <div className="absolute inset-0 flex justify-around">
+                  <div className="w-[1px] h-[150%] bg-white animate-rain" />
+                  <div className="w-[1px] h-[150%] bg-white animate-rain-fast" />
+                </div>
+              </div>
+            </div>
+            <div className={`absolute inset-0 bg-white/90 z-20 pointer-events-none transition-opacity duration-100 ${lightning ? 'opacity-100' : 'opacity-0'}`} />
+          </div>
+
+          {/* Right window */}
+          <div className="absolute top-[16%] left-[59%] w-[13%] h-[28%] border-2 border-neutral-700 bg-neutral-900 rounded overflow-hidden shadow-2xl flex relative">
+            <div className="absolute inset-0 bg-neutral-950/40 pointer-events-none z-10" />
+            <div className="absolute inset-x-0 top-1/2 h-0.5 bg-neutral-800 z-10" />
+            <div className="absolute inset-y-0 left-1/2 w-0.5 bg-neutral-800 z-10" />
+            
+            <div className="w-full h-full relative opacity-40 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-b from-neutral-800/10 to-neutral-950/80" />
+              <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-40">
+                <div className="absolute inset-0 flex justify-around">
+                  <div className="w-[1px] h-[150%] bg-white animate-rain-delayed" />
+                  <div className="w-[1px] h-[150%] bg-white animate-rain-fast" />
+                </div>
+              </div>
+            </div>
+            <div className={`absolute inset-0 bg-white/90 z-20 pointer-events-none transition-opacity duration-100 ${lightning ? 'opacity-100' : 'opacity-0'}`} />
           </div>
         </div>
       ) : (
-        /* Mansion/Banker/Antique/Default rectangular window */
-        <div className="absolute top-8 left-[35%] w-[30%] h-[35%] border-2 border-neutral-700 bg-neutral-900 rounded overflow-hidden shadow-2xl flex">
+        /* Mansion/Default rectangular window */
+        <div className="absolute top-[16%] left-[35%] w-[30%] h-[35%] border-2 border-neutral-700 bg-neutral-900 rounded overflow-hidden shadow-2xl flex relative">
           <div className="absolute inset-0 bg-neutral-950/40 pointer-events-none z-10" />
           {/* Window grid */}
           <div className="absolute inset-x-0 top-1/2 h-0.5 bg-neutral-800 z-10" />
           <div className="absolute inset-y-0 left-1/2 w-0.5 bg-neutral-800 z-10" />
           {/* Rain behind glass */}
-          <div className="w-full h-full relative opacity-40">
+          <div className="w-full h-full relative opacity-40 overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-b from-neutral-800/10 to-neutral-950/80" />
             {/* Distant dark skyline silhouettes */}
             <div className="absolute bottom-0 inset-x-0 flex items-end justify-around gap-1 opacity-20">
@@ -589,7 +785,19 @@ export default function GameScene({
               <div className="w-10 h-16 bg-neutral-900 border-t border-neutral-700" />
               <div className="w-16 h-24 bg-neutral-900 border-t border-neutral-700" />
             </div>
+            
+            {/* Sliding rain lines */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-40">
+              <div className="absolute inset-0 flex justify-around">
+                <div className="w-[1px] h-[150%] bg-white animate-rain" />
+                <div className="w-[1px] h-[150%] bg-white animate-rain-delayed" />
+                <div className="w-[1px] h-[150%] bg-white animate-rain-fast" />
+              </div>
+            </div>
           </div>
+          
+          {/* Lightning flash overlay */}
+          <div className={`absolute inset-0 bg-white/95 z-20 pointer-events-none transition-opacity duration-100 ${lightning ? 'opacity-100' : 'opacity-0'}`} />
         </div>
       )}
 
@@ -606,10 +814,10 @@ export default function GameScene({
         onClick={() => handleObjectClick('bookshelf')}
         className="absolute group cursor-pointer z-20 flex flex-col justify-end transition-all duration-300"
         style={{
-          left: `${objects.bookshelf.x ?? 4}%`,
-          top: `${objects.bookshelf.y ?? 16}%`,
-          width: `${objects.bookshelf.w ?? 20}%`,
-          height: `${objects.bookshelf.h ?? 70}%`
+          left: `${(objects.bookshelf.x ?? 4) + (objects.bookshelf.w ?? 20) * 0.1}%`,
+          top: `${(objects.bookshelf.y ?? 16) + (objects.bookshelf.h ?? 70) * 0.2}%`,
+          width: `${(objects.bookshelf.w ?? 20) * 0.8}%`,
+          height: `${(objects.bookshelf.h ?? 70) * 0.8}%`
         }}
       >
         <div className="relative w-full h-full border-2 border-neutral-600 bg-neutral-900 rounded-md p-1.5 flex flex-col justify-between transition-colors duration-200 group-hover:border-neutral-400 group-hover:bg-neutral-900/90 shadow-2xl">
@@ -685,10 +893,10 @@ export default function GameScene({
         onClick={() => handleObjectClick('painting')}
         className="absolute group cursor-pointer z-10 flex flex-col items-center transition-all duration-300"
         style={{
-          left: `${objects.painting.x ?? 25}%`,
-          top: `${objects.painting.y ?? 15}%`,
-          width: `${objects.painting.w ?? 12}%`,
-          height: `${objects.painting.h ?? 12}%`
+          left: `${(objects.painting.x ?? 25) + (objects.painting.w ?? 12) * 0.1}%`,
+          top: `${(objects.painting.y ?? 15) + (objects.painting.h ?? 12) * 0.1}%`,
+          width: `${(objects.painting.w ?? 12) * 0.8}%`,
+          height: `${(objects.painting.h ?? 12) * 0.8}%`
         }}
       >
         <div 
@@ -730,17 +938,18 @@ export default function GameScene({
         onClick={() => handleObjectClick('rug')}
         className="absolute group cursor-pointer z-10 transition-all duration-300"
         style={{
-          left: `${objects.rug.x ?? 28}%`,
-          top: `${objects.rug.y ?? 82}%`,
-          width: `${objects.rug.w ?? 38}%`,
-          height: `${objects.rug.h ?? 16}%`
+          left: `${(objects.rug.x ?? 28) + (objects.rug.w ?? 38) * 0.1}%`,
+          top: `${(objects.rug.y ?? 82) + (objects.rug.h ?? 16) * 0.2}%`,
+          width: `${(objects.rug.w ?? 38) * 0.8}%`,
+          height: `${(objects.rug.h ?? 16) * 0.8}%`
         }}
       >
         <div 
-          className={`w-full h-full border-2 border-neutral-700 bg-neutral-900/80 rounded-full flex items-center justify-center transition-all duration-300 relative ${
-            objects.rug.toggled ? 'skew-x-12 translate-x-3 scale-x-95 border-neutral-500' : 'group-hover:border-neutral-500'
+          className={`w-full h-full bg-neutral-900/80 flex items-center justify-center transition-all duration-300 relative ${
+            objects.rug.toggled ? 'skew-x-12 translate-x-3 scale-x-95 border-neutral-500' : 'group-hover:scale-[1.01]'
           }`}
           style={{ 
+            clipPath: 'polygon(12% 0%, 88% 0%, 100% 100%, 0% 100%)',
             backgroundImage: gameState.roomInfo?.id === 'room_ballerina'
               ? 'repeating-linear-gradient(45deg, #2d1b22, #2d1b22 4px, #3d242f 4px, #3d242f 8px)' // pink accent
               : gameState.roomInfo?.id === 'room_captain'
@@ -750,7 +959,7 @@ export default function GameScene({
         >
           {/* Folded edge indicating interaction */}
           {objects.rug.toggled && (
-            <div className="absolute right-0 top-0 bottom-0 w-8 bg-neutral-950 border-l-2 border-neutral-500 rounded-r-full shadow-inner flex items-center justify-center">
+            <div className="absolute right-0 top-0 bottom-0 w-8 bg-neutral-950 border-l border-neutral-500 rounded-r shadow-inner flex items-center justify-center">
               <span className="text-[9px] font-mono text-neutral-400">ПОДНЯТ</span>
             </div>
           )}
@@ -759,7 +968,7 @@ export default function GameScene({
             <div className="absolute left-8 top-1/2 -translate-y-1/2 w-4 h-4 bg-white/25 rounded-full animate-ping" />
           )}
         </div>
-        <span className="text-center font-sans text-[9px] uppercase tracking-[0.2em] text-white/30 group-hover:text-white/80 transition-colors duration-200 block truncate">
+        <span className="text-center font-sans text-[9px] uppercase tracking-[0.2em] text-white/30 group-hover:text-white/80 transition-colors duration-200 block truncate mt-1">
           {objects.rug.name}
         </span>
       </div>
@@ -772,15 +981,15 @@ export default function GameScene({
         onClick={() => handleObjectClick('desk')}
         className="absolute group cursor-pointer z-20 flex flex-col justify-end transition-all duration-300"
         style={{
-          left: `${objects.desk.x ?? 43}%`,
-          top: `${objects.desk.y ?? 58}%`,
-          width: `${objects.desk.w ?? 32}%`,
-          height: `${objects.desk.h ?? 32}%`
+          left: `${(objects.desk.x ?? 43) + (objects.desk.w ?? 32) * 0.1}%`,
+          top: `${(objects.desk.y ?? 58) + (objects.desk.h ?? 32) * 0.2}%`,
+          width: `${(objects.desk.w ?? 32) * 0.8}%`,
+          height: `${(objects.desk.h ?? 32) * 0.8}%`
         }}
       >
-        <div className="relative w-full h-[80%] border-2 border-neutral-600 bg-neutral-900 rounded p-1 group-hover:border-neutral-400 shadow-2xl flex flex-col justify-between">
+        <div className="relative w-full h-full flex flex-col justify-end group-hover:scale-[1.01] transition-transform duration-200">
           {/* Desk Surface items */}
-          <div className="absolute -top-6 inset-x-2 h-6 flex justify-between items-end pointer-events-none px-4">
+          <div className="absolute -top-5 inset-x-2 h-6 flex justify-between items-end pointer-events-none px-3 z-10">
             {gameState.roomInfo?.id === 'room_ballerina' ? (
               <>
                 <div className="text-[12px]">💄</div>
@@ -789,34 +998,56 @@ export default function GameScene({
             ) : (
               <>
                 {/* Ink bottle */}
-                <div className="w-4 h-5 bg-neutral-950 border border-neutral-700 rounded-sm flex items-start justify-center">
-                  <div className="w-1.5 h-1.5 bg-neutral-700 rounded-full -mt-1" />
+                <div className="w-3.5 h-4 bg-neutral-950 border border-neutral-700 rounded-sm flex items-start justify-center">
+                  <div className="w-1 h-1 bg-neutral-700 rounded-full -mt-0.5" />
                 </div>
                 
                 {/* Papers pile */}
-                <div className="relative w-10 h-3">
-                  <div className="absolute bottom-0 right-0 w-8 h-1 bg-neutral-800 border border-neutral-600 transform rotate-1" />
-                  <div className="absolute bottom-0.5 right-1 w-8 h-1 bg-neutral-700 border border-neutral-500 transform -rotate-2" />
+                <div className="relative w-8 h-2.5">
+                  <div className="absolute bottom-0 right-0 w-6 h-0.5 bg-neutral-200 border border-neutral-400 transform rotate-1" />
+                  <div className="absolute bottom-0.5 right-0.5 w-6 h-0.5 bg-neutral-100 border border-neutral-300 transform -rotate-2" />
                 </div>
               </>
             )}
           </div>
 
-          {/* Desk drawer details */}
-          <div className="w-full h-[40%] border-b border-neutral-700 flex items-center justify-center px-4 relative">
-            <div className="w-16 h-5 border border-neutral-700 bg-neutral-950 rounded flex items-center justify-center relative">
-              {/* Lock hole */}
-              <div className={`w-1.5 h-1.5 rounded-full ${objects.desk.locked ? 'bg-neutral-500' : 'bg-transparent'} border border-neutral-600`} />
-              {/* Handle */}
-              <div className="absolute bottom-0 w-8 h-0.5 bg-neutral-600" />
+          {gameState.roomInfo?.id === 'room_ballerina' || gameState.roomInfo?.id === 'room_antique' ? (
+            /* Chest of Drawers / Dresser (Комод) */
+            <div className="w-full h-[80%] border-2 border-neutral-700 bg-neutral-900 rounded p-1 group-hover:border-neutral-500 shadow-2xl flex flex-col gap-1 justify-between">
+              {/* Drawer 1 */}
+              <div className="w-full h-[28%] border border-neutral-800 bg-neutral-950/40 rounded flex items-center justify-center relative">
+                {/* Brass knob */}
+                <div className="w-1.5 h-1.5 rounded-full bg-yellow-600 border border-yellow-500" />
+                {/* Lock hole */}
+                <div className={`absolute right-3 w-1 h-1 rounded-full ${objects.desk.locked ? 'bg-neutral-500' : 'bg-transparent'} border border-neutral-700`} />
+              </div>
+              {/* Drawer 2 */}
+              <div className="w-full h-[28%] border border-neutral-800 bg-neutral-950/40 rounded flex items-center justify-center">
+                <div className="w-1.5 h-1.5 rounded-full bg-yellow-600 border border-yellow-500" />
+              </div>
+              {/* Drawer 3 */}
+              <div className="w-full h-[28%] border border-neutral-800 bg-neutral-950/40 rounded flex items-center justify-center">
+                <div className="w-1.5 h-1.5 rounded-full bg-yellow-600 border border-yellow-500" />
+              </div>
             </div>
-          </div>
-
-          {/* Desk Legs */}
-          <div className="w-full h-[50%] flex justify-between px-6 items-end">
-            <div className="w-4 h-full bg-neutral-950 border-r border-neutral-800" />
-            <div className="w-4 h-full bg-neutral-950 border-l border-neutral-800" />
-          </div>
+          ) : (
+            /* Table with Legs (Стол на ножках) */
+            <div className="w-full h-[80%] flex flex-col justify-between">
+              {/* Tabletop & Drawer box */}
+              <div className="w-full h-[45%] border-2 border-neutral-700 bg-neutral-900 rounded-t p-1 shadow-md flex items-center justify-center relative group-hover:border-neutral-500">
+                <div className="w-12 h-3.5 border border-neutral-800 bg-neutral-950/80 rounded flex items-center justify-center relative">
+                  {/* Lock hole */}
+                  <div className={`w-1 h-1 rounded-full ${objects.desk.locked ? 'bg-neutral-500' : 'bg-transparent'} border border-neutral-700`} />
+                  <div className="absolute bottom-0 w-6 h-0.5 bg-neutral-700" />
+                </div>
+              </div>
+              {/* Transparent space with two legs */}
+              <div className="w-full h-[55%] flex justify-between px-5">
+                <div className="w-1.5 h-full bg-neutral-700 border-r border-neutral-800" />
+                <div className="w-1.5 h-full bg-neutral-700 border-l border-neutral-800" />
+              </div>
+            </div>
+          )}
         </div>
         <span className="text-center font-sans text-[9px] uppercase tracking-[0.2em] text-white/30 group-hover:text-white/80 transition-colors duration-200 mt-1 block truncate">
           {objects.desk.name}
@@ -831,10 +1062,10 @@ export default function GameScene({
         onClick={() => handleObjectClick('fishbowl')}
         className="absolute group cursor-pointer z-30 transition-all duration-300"
         style={{
-          left: `${objects.fishbowl.x ?? 48}%`,
-          top: `${objects.fishbowl.y ?? 54}%`,
-          width: `${objects.fishbowl.w ?? 8}%`,
-          height: `${objects.fishbowl.h ?? 8}%`
+          left: `${(objects.fishbowl.x ?? 48) + (objects.fishbowl.w ?? 8) * 0.1}%`,
+          top: `${(objects.fishbowl.y ?? 54) + (objects.fishbowl.h ?? 8) * 0.2 + (objects.desk.h ?? 32) * 0.36}%`,
+          width: `${(objects.fishbowl.w ?? 8) * 0.8}%`,
+          height: `${(objects.fishbowl.h ?? 8) * 0.8}%`
         }}
       >
         <div className="relative w-full h-full flex flex-col items-center">
@@ -889,10 +1120,10 @@ export default function GameScene({
         onClick={() => handleObjectClick('lamp')}
         className="absolute group cursor-pointer z-20 flex flex-col justify-end transition-all duration-300"
         style={{
-          left: `${objects.lamp.x ?? 74}%`,
-          top: `${objects.lamp.y ?? 45}%`,
-          width: `${objects.lamp.w ?? 8}%`,
-          height: `${objects.lamp.h ?? 55}%`
+          left: `${(objects.lamp.x ?? 74) + (objects.lamp.w ?? 8) * 0.1}%`,
+          top: `${(objects.lamp.y ?? 45) + (objects.lamp.h ?? 55) * 0.2}%`,
+          width: `${(objects.lamp.w ?? 8) * 0.8}%`,
+          height: `${(objects.lamp.h ?? 55) * 0.8}%`
         }}
       >
         <div className="relative w-full h-full flex flex-col justify-between items-center">
@@ -921,7 +1152,7 @@ export default function GameScene({
                 />
                 {/* Glow projection */}
                 {objects.lamp.toggled && (
-                  <div className="absolute top-[80%] w-64 h-64 left-1/2 -translate-x-1/2 bg-gradient-to-b from-white/20 via-white/5 to-transparent pointer-events-none animate-lamp-beam-adjust" 
+                  <div className="absolute top-[80%] w-[450%] h-[550%] left-1/2 -translate-x-1/2 bg-gradient-to-b from-white/20 via-white/5 to-transparent pointer-events-none" 
                        style={{ 
                          clipPath: 'polygon(35% 0%, 65% 0%, 100% 100%, 0% 100%)',
                          transformOrigin: 'top center'
@@ -953,10 +1184,10 @@ export default function GameScene({
         onClick={() => handleObjectClick('trashcan')}
         className="absolute group cursor-pointer z-15 transition-all duration-300"
         style={{
-          left: `${objects.trashcan.x ?? 80}%`,
-          top: `${objects.trashcan.y ?? 82}%`,
-          width: `${objects.trashcan.w ?? 10}%`,
-          height: `${objects.trashcan.h ?? 16}%`
+          left: `${(objects.trashcan.x ?? 80) + (objects.trashcan.w ?? 10) * 0.1}%`,
+          top: `${(objects.trashcan.y ?? 82) + (objects.trashcan.h ?? 16) * 0.2}%`,
+          width: `${(objects.trashcan.w ?? 10) * 0.8}%`,
+          height: `${(objects.trashcan.h ?? 16) * 0.8}%`
         }}
       >
         <div className="relative w-full h-full flex flex-col items-center">
@@ -1015,10 +1246,10 @@ export default function GameScene({
         onClick={() => handleObjectClick('safe')}
         className="absolute group cursor-pointer z-10 flex flex-col justify-end transition-all duration-300"
         style={{
-          left: `${objects.safe.x ?? 87}%`,
-          top: `${objects.safe.y ?? 66}%`,
-          width: `${objects.safe.w ?? 11}%`,
-          height: `${objects.safe.h ?? 28}%`
+          left: `${(objects.safe.x ?? 87) + (objects.safe.w ?? 11) * 0.1}%`,
+          top: `${(objects.safe.y ?? 66) + (objects.safe.h ?? 28) * 0.2}%`,
+          width: `${(objects.safe.w ?? 11) * 0.8}%`,
+          height: `${(objects.safe.h ?? 28) * 0.8}%`
         }}
       >
         <div className={`relative w-full h-full border-4 ${
@@ -1081,156 +1312,14 @@ export default function GameScene({
       )}
 
       {/* --- DETECTIVE BARTH (Animated character) --- */}
-      <div 
-        className="absolute bottom-3 pointer-events-none z-40 flex flex-col items-center justify-end w-28 h-56"
-        style={{
-          left: `${detectiveX}%`,
-          transform: `translateX(-50%) scaleX(${detectiveFacingLeft ? 1 : -1})`,
-          transition: detectiveTransition
-        }}
-      >
-        {/* Smoke rings adjusted to align with pipe profile */}
-        {smokeRings.map(ring => (
-          <div 
-            key={ring.id}
-            className="absolute border border-neutral-400/40 rounded-full animate-pulse pointer-events-none"
-            style={{
-              left: '26px',
-              bottom: '156px',
-              width: '8px',
-              height: '4px',
-              transform: `scale(${ring.scale}) translateY(-${(Date.now() - ring.id) / 10}px)`,
-              opacity: (2000 - (Date.now() - ring.id)) / 2000,
-              transition: 'all 2s linear'
-            }}
-          />
-        ))}
-
-        {/* Vector SVG Detective Profile Facing Left (3/4 view) */}
-        <svg viewBox="0 0 100 180" className="w-full h-full stroke-neutral-700 stroke-[1.5] drop-shadow-[0_8px_16px_rgba(0,0,0,0.95)]">
-          {/* Main skeleton */}
-          <g>
-            {/* 1. Background/Left Leg */}
-            <g className={detectiveState === 'walking' ? 'animate-det-leg-l' : ''}>
-              {/* Pant leg */}
-              <path d="M 32,118 L 32,168 L 40,168 L 40,118 Z" fill="#171717" />
-              {/* Ankle cuff */}
-              <line x1="32" y1="168" x2="40" y2="168" stroke="#262626" strokeWidth="2" />
-              {/* Leather shoe */}
-              <path d="M 32,168 Q 22,168 20,174 L 40,174 Z" fill="#0a0a0a" />
-              {/* Shoe sole */}
-              <path d="M 18,174 L 40,174 L 40,176 L 18,176 Z" fill="#000000" />
-            </g>
-
-            {/* 2. Foreground/Right Leg */}
-            <g className={detectiveState === 'walking' ? 'animate-det-leg-r' : ''}>
-              {/* Pant leg */}
-              <path d="M 44,118 L 44,168 L 52,168 L 52,118 Z" fill="#222222" />
-              {/* Ankle cuff */}
-              <line x1="44" y1="168" x2="52" y2="168" stroke="#333" strokeWidth="2" />
-              {/* Leather shoe */}
-              <path d="M 44,168 Q 54,168 56,174 L 40,174 Z" fill="#0c0c0c" />
-              {/* Shoe sole */}
-              <path d="M 40,174 L 58,174 L 58,176 L 40,176 Z" fill="#000000" />
-            </g>
-
-            {/* 3. Main Body Group (bobs when walking, breathes when idle) */}
-            <g className={detectiveState === 'walking' ? 'animate-det-walk-bob' : 'animate-det-idle-body'}>
-              
-              {/* Coat tail (lower skirt of the trench coat) */}
-              <path 
-                d="M 28,118 C 25,130 22,145 20,154 L 62,154 C 60,140 56,130 54,118 Z" 
-                fill="#262626" 
-                className={detectiveState === 'walking' ? 'animate-det-walk-coat' : 'animate-det-idle-coat'} 
-              />
-              {/* Coat tail crease/folds */}
-              <path d="M 41,118 L 41,154" stroke="#171717" strokeWidth="1.5" />
-              <path d="M 33,122 C 31,132 29,142 27,152" stroke="#1c1c1c" strokeWidth="1" fill="none" />
-              <path d="M 49,122 C 51,132 53,142 55,152" stroke="#1c1c1c" strokeWidth="1" fill="none" />
-
-              {/* Belt & Waist belt line */}
-              <rect x="29" y="114" width="24" height="6" rx="1.5" fill="#1a1a1a" />
-              {/* Gold Belt Buckle */}
-              <rect x="39" y="112" width="8" height="10" rx="1" fill="#eab308" stroke="#ca8a04" strokeWidth="1.5" />
-              {/* Belt prong */}
-              <line x1="43" y1="112" x2="43" y2="122" stroke="#451a03" strokeWidth="1.5" />
-
-              {/* Upper Torso (Double-breasted trench coat chest) */}
-              <path d="M 28,74 C 23,88 27,114 29,114 L 53,114 C 55,108 58,88 53,74 Z" fill="#2d2d2d" />
-              
-              {/* Coat shading highlight / trim */}
-              <path d="M 28,74 C 26,86 28,114 29,114" stroke="#404040" strokeWidth="1.5" fill="none" />
-              <path d="M 53,74 C 56,86 54,114 53,114" stroke="#404040" strokeWidth="1.5" fill="none" />
-
-              {/* White Shirt Collar & Necktie */}
-              <polygon points="37,70 41,75 45,70" fill="#ffffff" />
-              <polygon points="39,72 41,88 43,72" fill="#0a0a0a" />
-
-              {/* Double-breasted buttons */}
-              <circle cx="34" cy="84" r="2" fill="#0f0f0f" stroke="#404040" strokeWidth="0.5" />
-              <circle cx="34" cy="94" r="2" fill="#0f0f0f" stroke="#404040" strokeWidth="0.5" />
-              <circle cx="35" cy="104" r="2" fill="#0f0f0f" stroke="#404040" strokeWidth="0.5" />
-              <circle cx="48" cy="84" r="2" fill="#0f0f0f" stroke="#404040" strokeWidth="0.5" />
-              <circle cx="48" cy="94" r="2" fill="#0f0f0f" stroke="#404040" strokeWidth="0.5" />
-              <circle cx="47" cy="104" r="2" fill="#0f0f0f" stroke="#404040" strokeWidth="0.5" />
-
-              {/* Popped Collar Left & Right */}
-              <path d="M 33,74 L 20,68 L 36,65 Z" fill="#1c1c1c" />
-              <path d="M 49,74 L 62,68 L 46,65 Z" fill="#1c1c1c" />
-
-              {/* 4. Left Arm (Hand in pocket) */}
-              <path d="M 53,74 Q 60,86 58,98 Q 56,104 50,110" fill="none" stroke="#262626" strokeWidth="8" strokeLinecap="round" />
-              {/* Pocket opening and sleeve folds */}
-              <path d="M 48,104 L 52,112" stroke="#171717" strokeWidth="2.5" />
-              <path d="M 56,84 C 58,88 58,92 57,96" stroke="#404040" strokeWidth="1" fill="none" />
-
-              {/* 5. Right Arm (Holding Pipe to mouth) */}
-              <g className={detectiveState === 'walking' ? 'animate-det-walk-arm' : 'animate-det-idle-arm'}>
-                {/* Shoulder and upper arm */}
-                <path d="M 28,74 L 20,92 L 22,106" fill="none" stroke="#262626" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
-                {/* Forearm curving back up to hold pipe */}
-                <path d="M 22,106 L 20,96 L 22,80" fill="none" stroke="#222222" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
-                {/* Hand (skin-tone) */}
-                <circle cx="23" cy="74" r="3" fill="#b0a498" />
-                {/* Classic curved briar pipe */}
-                <path d="M 23,74 C 23,70 30,68 31,64" stroke="#4a1d19" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-                <path d="M 31,64 Q 31,60 33,60" stroke="#7c2d12" strokeWidth="2.5" fill="none" />
-                {/* Pipe bowl */}
-                <path d="M 32,60 L 35,60 L 35,56 L 31,56 Z" fill="#4a1d19" />
-                {/* Ember inside bowl */}
-                <circle cx="33" cy="57" r="1.5" className="fill-orange-500 animate-det-pipe" />
-              </g>
-
-              {/* 6. HEAD & HAT GROUP (gently bobs) */}
-              <g className={detectiveState === 'walking' ? '' : 'animate-det-idle-head'}>
-                {/* Neck */}
-                <path d="M 37,74 L 37,64 L 45,64 L 45,74 Z" fill="#b0a498" />
-
-                {/* Head profile (facing left / 3/4 view) */}
-                <path d="M 36,64 C 33,64 32,54 34,48 C 36,40 44,40 47,44 C 48,46 47,48 49,49 C 50,50 51,52 50,55 C 49,56 47,57 48,59 L 45,60 L 46,63 C 44,65 42,65 39,64 Z" fill="#b0a498" />
-                
-                {/* Eye detail (determined gaze) */}
-                <ellipse cx="38" cy="48" rx="1.5" ry="1" fill="#171717" />
-                <path d="M 35,46 C 37,45 39,45 40,46" stroke="#0a0a0a" strokeWidth="1.2" fill="none" />
-
-                {/* Shading/ear profile */}
-                <path d="M 43,49 C 45,49 45,54 43,54 Z" fill="#948a7e" />
-
-                {/* Fedora Hat */}
-                {/* Hat crown back/side */}
-                <path d="M 30,42 C 28,26 35,16 43,21 C 46,16 53,16 55,42 Z" fill="#1a1a1a" stroke="#0c0c0c" strokeWidth="1" />
-                {/* Crease/dent line shadow */}
-                <path d="M 38,20 Q 42,28 46,19" fill="none" stroke="#0c0c0c" strokeWidth="2.5" />
-                {/* Black Ribbon/Hat band */}
-                <path d="M 31,39 C 31,39 40,36 53,39 L 54,42 Q 40,39 31,42 Z" fill="#000" />
-                {/* Fedora Hat Brim */}
-                <path d="M 22,44 Q 40,33 60,44 L 59,41 Q 40,30 24,41 Z" fill="#262626" stroke="#121212" strokeWidth="0.8" />
-              </g>
-
-            </g>
-          </g>
-        </svg>
-      </div>
+      <DetectiveCharacter
+        detectiveX={detectiveX}
+        detectiveState={detectiveState}
+        detectiveFacingLeft={detectiveFacingLeft}
+        detectiveTransition={detectiveTransition}
+        smokeRings={smokeRings}
+        detectiveRef={detectiveRef}
+      />
 
       {/* --- CAT MIDNIGHT (Animated sprite) --- */}
       <div 
@@ -1242,7 +1331,7 @@ export default function GameScene({
           transition: getTransitionStyle()
         }}
       >
-        <div className="relative w-12 h-12">
+        <div className="relative w-14 h-14">
           {/* Inject inline retro noir CSS animations */}
           <style>{`
             @keyframes cat-tail-wag {

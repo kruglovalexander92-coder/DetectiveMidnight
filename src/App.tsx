@@ -158,6 +158,114 @@ export default function App() {
 
     const currentObj = gameState.objects[id];
     
+    // Multi-room visibility rules for Chapter 2
+    const isChapter2 = gameState.storyState?.mode === 'story' && gameState.storyState?.chapter === 2;
+    const currentLocation = gameState.storyState?.currentLocationId || 'pier';
+
+    const isVisible = (oid: ObjectId) => {
+      if (!isChapter2) return true;
+      if (currentLocation === 'pier') {
+        return ['rug', 'trashcan', 'painting', 'fishbowl'].includes(oid);
+      } else {
+        return ['bookshelf', 'desk', 'safe', 'lamp'].includes(oid);
+      }
+    };
+
+    const getClimbSteps = (from: string, to: string): string[] => {
+      if (from === to) return [];
+      const visible = (oid: ObjectId) => isVisible(oid);
+      
+      const getX = (spot: string): number => {
+        if (spot === 'bookshelf') return 14;
+        if (spot === 'painting') return 31;
+        if (spot === 'desk') return 59;
+        if (spot === 'fishbowl') return 52;
+        if (spot === 'lamp') return 78;
+        if (spot === 'safe') return 92.5;
+        if (spot === 'trashcan') return 85;
+        if (spot === 'rug') return 47;
+        return 45; // 'center'
+      };
+
+      const getHeightClass = (spot: string): 'floor' | 'medium' | 'high' => {
+        if (spot === 'center' || spot === 'rug' || spot === 'trashcan') return 'floor';
+        if (spot === 'bookshelf' || spot === 'painting' || spot === 'lamp') return 'high';
+        return 'medium'; // desk, safe, fishbowl
+      };
+
+      const fromX = getX(from);
+      const toX = getX(to);
+      const toHeight = getHeightClass(to);
+      const fromHeight = getHeightClass(from);
+
+      // If jumping to a high item (bookshelf, painting, lamp) and starting from floor
+      if (toHeight === 'high' && fromHeight === 'floor') {
+        // Only medium-height objects (desk, safe) are valid stepping stones
+        const possibleHelpers: ObjectId[] = ['desk', 'safe'];
+        const bestHelper = possibleHelpers.find(helper => {
+          if (helper === to) return false;
+          if (!visible(helper)) return false;
+          const helperX = getX(helper);
+          const distToTarget = Math.abs(helperX - toX);
+          
+          // Stepping stone must be extremely close (physically nearby) to the target
+          if (distToTarget <= 12) {
+            const isBetween = (fromX <= helperX && helperX <= toX) || (toX <= helperX && helperX <= fromX);
+            return isBetween || distToTarget <= 8;
+          }
+          return false;
+        });
+
+        if (bestHelper) {
+          return [bestHelper, to];
+        }
+      }
+
+      return [to];
+    };
+
+    const getClimbDuration = (from: string, steps: string[]): number => {
+      if (steps.length === 0) return 800;
+      
+      let total = 0;
+      let current = from;
+      
+      for (const step of steps) {
+        const isFromFloor = current === 'center' || current === 'rug' || current === 'trashcan';
+        const isToFloor = step === 'center' || step === 'rug' || step === 'trashcan';
+        
+        if (isFromFloor && isToFloor) {
+          total += 700;
+        } else if (isFromFloor && !isToFloor) {
+          total += 1515;
+        } else if (!isFromFloor && isToFloor) {
+          total += 1365;
+        } else {
+          // Elevated to Elevated. Check distance.
+          const getX = (s: string) => {
+            if (s === 'bookshelf') return 14;
+            if (s === 'painting') return 31;
+            if (s === 'desk') return 59;
+            if (s === 'safe') return 92.5;
+            if (s === 'lamp') return 78;
+            return 45;
+          };
+          const dist = Math.abs(getX(current) - getX(step));
+          if (dist < 25) {
+            total += 900;
+          } else {
+            total += 1915;
+          }
+        }
+        current = step;
+      }
+      
+      return total;
+    };
+
+    const climbSteps = getClimbSteps(gameState.catPosition, id);
+    const climbDelay = getClimbDuration(gameState.catPosition, climbSteps);
+
     // 1. Cat walks to the object
     setGameState(prev => ({
       ...prev,
@@ -178,9 +286,12 @@ export default function App() {
       gameAudio.playPurr();
     }
 
-    // 2. Perform action after walking transition completed (800ms)
+    // 2. Perform action after walking transition completed
     setTimeout(() => {
       setGameState(prev => {
+        const getItemDetail = (itemId: string) => {
+          return (prev.customItems && prev.customItems[itemId]) || (DUMMY_ITEMS as any)[itemId];
+        };
         const objectsCopy = { ...prev.objects };
         const obj = { ...objectsCopy[id] };
         let newAction: GameState['catAction'] = 'idle';
@@ -207,7 +318,7 @@ export default function App() {
             if (!gameState.isMuted) gameAudio.playClueFound();
           } else if (obj.heldItemId && !newInventory.includes(obj.heldItemId)) {
             newInventory.push(obj.heldItemId);
-            const item = (DUMMY_ITEMS as any)[obj.heldItemId];
+            const item = getItemDetail(obj.heldItemId);
             dialogueText = `«Миднайт, выплюнь каку! О... это же ${item.name}! Где ты его откопал?»`;
             dialogueMood = 'thoughtful';
             if (!gameState.isMuted) gameAudio.playClick();
@@ -231,7 +342,7 @@ export default function App() {
             if (!gameState.isMuted) gameAudio.playClueFound();
           } else if (obj.heldItemId && !newInventory.includes(obj.heldItemId)) {
             newInventory.push(obj.heldItemId);
-            const item = (DUMMY_ITEMS as any)[obj.heldItemId];
+            const item = getItemDetail(obj.heldItemId);
             dialogueText = `«Какой погром! Но... постой, из кучи бумаг выкатился предмет: ${item.name}! Кот, ты гений маскировки!»`;
             dialogueMood = 'shocked';
             if (!gameState.isMuted) gameAudio.playClick();
@@ -282,7 +393,7 @@ export default function App() {
             if (!gameState.isMuted) gameAudio.playClueFound();
           } else if (obj.heldItemId && !newInventory.includes(obj.heldItemId)) {
             newInventory.push(obj.heldItemId);
-            const item = (DUMMY_ITEMS as any)[obj.heldItemId];
+            const item = getItemDetail(obj.heldItemId);
             dialogueText = `«Мои драгоценные конспекты! Ой, постой, из распоротого корешка книги "Убийство в Эссексе" выпал ${item.name}! Ловко!»`;
             dialogueMood = 'proud';
             if (!gameState.isMuted) gameAudio.playClick();
@@ -305,7 +416,7 @@ export default function App() {
           
           if (obj.heldItemId && !newInventory.includes(obj.heldItemId)) {
             newInventory.push(obj.heldItemId);
-            const item = (DUMMY_ITEMS as any)[obj.heldItemId];
+            const item = getItemDetail(obj.heldItemId);
             dialogueText = `«О нет! Золотая рыбка! Лови её! Погоди-ка... Вместе с водой на поднос вымыло ${item.name}! Как он там оказался?»`;
             dialogueMood = 'shocked';
             if (!gameState.isMuted) gameAudio.playClick();
@@ -349,7 +460,7 @@ export default function App() {
               obj.locked = false;
               newAction = 'meowing';
               if (!gameState.isMuted) gameAudio.playClick();
-              logText = 'Кот сдвинул лапой замочную скважину, а Барт отпер ее латунным ключом!';
+              logText = 'Кот поскреб лапкой замочную скважину, а Барт отпер её латунным ключом!';
               
               const isSafeCodeViaDesk = prev.solvedSteps.includes('safe_code_via_desk');
 
@@ -401,11 +512,12 @@ export default function App() {
 
         // Check Victory conditions
         let nextStatus = prev.gameStatus;
+        let isPendingVictory = false;
         let updatedCash = prev.economy?.cash ?? 150;
         let recentExpensesList = prev.economy?.recentExpenses ? [...prev.economy.recentExpenses] : [];
 
         if (newFoundClues.length >= 3) {
-          nextStatus = 'won';
+          isPendingVictory = true;
           const isStory = prev.storyState?.mode === 'story';
           const ch = prev.storyState?.chapter ?? 1;
           const reward = isStory ? (ch === 1 ? 200 : ch === 2 ? 300 : 400) : 150;
@@ -446,6 +558,7 @@ export default function App() {
           foundClueIds: newFoundClues,
           logs: newLogs,
           gameStatus: nextStatus,
+          pendingVictory: isPendingVictory || prev.pendingVictory,
           economy: {
             cash: updatedCash,
             recentExpenses: recentExpensesList
@@ -457,7 +570,7 @@ export default function App() {
           }
         };
       });
-    }, 1200);
+    }, climbDelay);
   };
 
   // Safe Code Validation
@@ -493,11 +606,12 @@ export default function App() {
 
         // Check win
         let nextStatus = prev.gameStatus;
+        let isPendingVictory = false;
         let updatedCash = prev.economy?.cash ?? 150;
         let recentExpensesList = prev.economy?.recentExpenses ? [...prev.economy.recentExpenses] : [];
 
         if (newFoundClues.length >= 3) {
-          nextStatus = 'won';
+          isPendingVictory = true;
           const isStory = prev.storyState?.mode === 'story';
           const ch = prev.storyState?.chapter ?? 1;
           const reward = isStory ? (ch === 1 ? 200 : ch === 2 ? 300 : 400) : 150;
@@ -522,6 +636,7 @@ export default function App() {
           inventory: newInventory,
           logs: newLogs,
           gameStatus: nextStatus,
+          pendingVictory: isPendingVictory || prev.pendingVictory,
           economy: {
             cash: updatedCash,
             recentExpenses: recentExpensesList
@@ -714,7 +829,17 @@ export default function App() {
           <NarrativeBox 
             dialogue={gameState.activeDialogue}
             onNext={() => {
-              setGameState(prev => ({ ...prev, activeDialogue: null }));
+              setGameState(prev => {
+                if (prev.pendingVictory) {
+                  return {
+                    ...prev,
+                    activeDialogue: null,
+                    gameStatus: 'won',
+                    pendingVictory: false
+                  };
+                }
+                return { ...prev, activeDialogue: null };
+              });
             }}
           />
         </div>
@@ -727,6 +852,7 @@ export default function App() {
             foundClueIds={gameState.foundClueIds}
             inventory={gameState.inventory}
             safeCode={gameState.safeCode}
+            customItems={gameState.customItems}
           />
 
           {/* Action Log Box */}

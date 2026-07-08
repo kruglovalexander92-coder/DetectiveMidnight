@@ -108,4 +108,6 @@ export interface GameState {
   roomInfo: RoomInfo;
   economy: EconomyState;
   storyState: StoryState;
+  customItems?: Record<string, PuzzleItem>;
+  pendingVictory?: boolean;
 }

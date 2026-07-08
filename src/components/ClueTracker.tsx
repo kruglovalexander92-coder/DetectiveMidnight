@@ -13,6 +13,7 @@ interface ClueTrackerProps {
   foundClueIds: string[];
   inventory: string[];
   safeCode: string;
+  customItems?: Record<string, PuzzleItem>;
 }
 
 interface SelectedDetail {
@@ -34,7 +35,8 @@ export default function ClueTracker({
   currentClues,
   foundClueIds,
   inventory,
-  safeCode
+  safeCode,
+  customItems
  }: ClueTrackerProps) {
   const [activeDetail, setActiveDetail] = useState<SelectedDetail | null>(null);
 
@@ -128,7 +130,7 @@ export default function ClueTracker({
         ) : (
           <div className="flex flex-wrap gap-2">
             {inventory.map((itemId) => {
-              const item = (DUMMY_ITEMS as any)[itemId];
+              const item = (customItems && customItems[itemId]) || (DUMMY_ITEMS as any)[itemId];
               if (!item) return null;
 
               const description = itemId === 'safe_code_note'
