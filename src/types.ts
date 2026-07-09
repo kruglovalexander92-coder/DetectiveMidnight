@@ -81,6 +81,21 @@ export interface EconomyState {
   recentExpenses: { name: string; amount: number; timestamp: string }[];
 }
 
+export interface Job {
+  id: string;
+  title?: string;
+  caseName: string;
+  description: string;
+  reward: number;
+  reputationRequired: number;
+  infoCost: number;
+  timeLimit: number | null;
+  risk: 'low' | 'medium' | 'high';
+  roomTemplateId: 'room_antique' | 'room_ballerina' | 'room_banker' | 'room_captain';
+  completed: boolean;
+  leadPurchased?: boolean;
+}
+
 export interface StoryState {
   mode: 'sandbox' | 'story';
   chapter: number; // 1, 2, 3
@@ -102,7 +117,7 @@ export interface GameState {
   catPosition: ObjectId | 'center';
   catAction: 'idle' | 'walking' | 'scratching' | 'jumping' | 'pushing' | 'meowing';
   isMuted: boolean;
-  gameStatus: 'intro' | 'playing' | 'won';
+  gameStatus: 'intro' | 'playing' | 'won' | 'lost' | 'sandbox_dashboard'; // added lost state and sandbox_dashboard
   logs: GameLog[];
   solvedSteps: string[]; // for tracking what was completed
   roomInfo: RoomInfo;
@@ -110,4 +125,17 @@ export interface GameState {
   storyState: StoryState;
   customItems?: Record<string, PuzzleItem>;
   pendingVictory?: boolean;
+  reputation?: number; // reputation level
+  timerActive?: boolean; // ticking clock active for this case
+  timeLeft?: number; // seconds left
+  timerMax?: number; // initial time limit in seconds
+  isInjured?: boolean; // cat is injured and moves slower or needs treatment
+  hasCatnipSenses?: boolean; // active catnip effect
+  revealedObjects?: ObjectId[]; // objects whose contents are highlighted/known
+  // Calendar & Campaign Sandbox fields
+  currentDay?: number;
+  availableJobs?: Job[];
+  activeJob?: Job | null;
+  daysSurvived?: number;
+  campaignChapters?: Job[];
 }

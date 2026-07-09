@@ -677,7 +677,7 @@ export default function GameScene({
   return (
     <div 
       ref={containerRef}
-      className={`relative w-full aspect-[16/10] ${wallBgClass} border-4 ${borderAccentClass} rounded-none overflow-hidden select-none transition-all duration-300 ${
+      className={`relative w-full max-h-[420px] aspect-[16/10] mx-auto ${wallBgClass} border-4 ${borderAccentClass} rounded-none overflow-hidden select-none transition-all duration-300 ${
         lightning ? 'bg-white/10' : wallBgClass
       }`}
       style={{ boxShadow: 'inset 0 0 100px rgba(0,0,0,0.98)' }}
@@ -1489,6 +1489,59 @@ export default function GameScene({
           )}
         </div>
       </div>
+
+      {/* Senses heightening overlays & purchased rumors */}
+      {(() => {
+        const highlights: React.ReactNode[] = [];
+        if (gameState.hasCatnipSenses) {
+          Object.values(gameState.objects).forEach(obj => {
+            const isVisibleObj = isVisible(obj.id);
+            const hasContent = obj.heldClueId !== null || obj.heldItemId !== null;
+            if (isVisibleObj && hasContent) {
+              highlights.push(
+                <div 
+                  key={`catnip_${obj.id}`}
+                  className="absolute pointer-events-none z-40 flex items-center justify-center"
+                  style={{
+                    left: `${(obj.x ?? 10) + (obj.w ?? 10) / 2 - 2}%`,
+                    top: `${(obj.y ?? 10) + 10}%`,
+                    width: '16px',
+                    height: '16px'
+                  }}
+                >
+                  <div className="w-3 h-3 bg-emerald-400 border border-emerald-300 rounded-full animate-ping absolute" />
+                  <div className="w-2 h-2 bg-emerald-500 rounded-full border border-white/50" />
+                </div>
+              );
+            }
+          });
+        }
+        if (gameState.revealedObjects) {
+          gameState.revealedObjects.forEach(objId => {
+            const obj = gameState.objects[objId];
+            const isVisibleObj = isVisible(objId);
+            if (obj && isVisibleObj) {
+              highlights.push(
+                <div 
+                  key={`rumor_${objId}`}
+                  className="absolute pointer-events-none z-40 flex items-center justify-center animate-bounce"
+                  style={{
+                    left: `${(obj.x ?? 10) + (obj.w ?? 10) / 2 - 4}%`,
+                    top: `${(obj.y ?? 10) - 8}%`,
+                    width: '32px',
+                    height: '32px'
+                  }}
+                >
+                  <div className="px-1.5 py-0.5 bg-amber-950 border border-amber-400 text-amber-300 text-[8px] font-mono font-bold tracking-wider rounded uppercase">
+                    ★ ТУТ!
+                  </div>
+                </div>
+              );
+            }
+          });
+        }
+        return highlights;
+      })()}
 
       {/* --- CODE DIAL LOCK OVERLAY (SAFE KEYPAD) --- */}
       {showSafeLock && (

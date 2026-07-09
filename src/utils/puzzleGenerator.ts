@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Clue, ObjectId, ObjectState, GameState, GameLog, RoomInfo, StoryState, EconomyState, PuzzleItem } from '../types';
+import { Clue, ObjectId, ObjectState, GameState, GameLog, RoomInfo, StoryState, EconomyState, PuzzleItem, Job } from '../types';
 
 export const ALL_CLUES: Clue[] = [
   {
@@ -454,10 +454,113 @@ export function generateCustomItems(roomInfoId: string, safeCode: string): Recor
   };
 }
 
+const JOB_TITLES_POOL = [
+  'Похищение Жожо', 'Шантаж в Палате Общин', 'Тайны сейфа Ллойда',
+  'Забытый перстень герцога', 'Ограбление дилижанса в Сохо', 'След контрабандистов Темзы',
+  'Заговор в Опере «Кармен»', 'Исчезнувший Сапфир лорда', 'Загадочный налет на антиквара',
+  'Подмена картины Рембрандта', 'След фальшивомонетчиков Ист-Энда', 'Разбитые часы лорда',
+  'Шпионский шифр в чайном клубе', 'Тайна маски карнавала', 'Двойной блеф в покерной'
+];
+
+const JOB_DESCRIPTIONS_POOL = [
+  'Герцогиня умоляет вернуть её пуделя Жожо. Похоже, похититель спрятал его ошейник прямо здесь.',
+  'Известного банкира шантажируют тайными письмами. Нам нужно добыть компромат в его кабинете.',
+  'Сейф Ллойда заперт, а ключ утерян. Кто-то спрятал его прямо в комнате, найдите ключ и откройте сейф!',
+  'Королевский бриллиант пропал из запертого бюро. Подозреваемый оставил важные зацепки!',
+  'Тайный агент передал шифрованное послание, но по пути его перехватили. Шифр скрыт в комнате.',
+  'Капитан дирижабля спрятал контрабандные документы прямо перед обыском. Обыщите комнату!',
+  'Кто-то отравил чай известного миллионера. Нам нужно найти флакон с ядом для экспертизы.',
+  'Знаменитую картину подменили копией. Оригинал спрятан где-то в кабинете коллекционера.'
+];
+
+export function generateDailyJobs(day: number, currentReputation: number): Job[] {
+  const count = day === 1 ? (Math.floor(Math.random() * 3) + 2) : Math.floor(Math.random() * 6); // 0 to 5 jobs (day 1 guarantees 2-4 jobs)
+  if (count === 0) return [];
+
+  const rooms: ('room_antique' | 'room_ballerina' | 'room_banker' | 'room_captain')[] = [
+    'room_antique', 'room_ballerina', 'room_banker', 'room_captain'
+  ];
+
+  const jobs: Job[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const r = Math.random();
+    let risk: 'low' | 'medium' | 'high' = 'low';
+    let infoCost = 0;
+    let reputationRequired = 0;
+    let reward = 150;
+    let timeLimit: number | null = null;
+
+    if (r < 0.4) {
+      risk = 'low';
+      reward = Math.floor(Math.random() * 50) + 130; // 130-180
+      reputationRequired = 0;
+      infoCost = 0;
+      timeLimit = Math.random() < 0.3 ? 240 : null;
+    } else if (r < 0.8) {
+      risk = 'medium';
+      reward = Math.floor(Math.random() * 80) + 200; // 200-280
+      reputationRequired = Math.floor(Math.random() * 20) + 10; // 10-30
+      infoCost = Math.floor(Math.random() * 20) + 15; // 15-35
+      timeLimit = 180;
+    } else {
+      risk = 'high';
+      reward = Math.floor(Math.random() * 130) + 320; // 320-450
+      reputationRequired = Math.floor(Math.random() * 30) + 30; // 30-60
+      infoCost = Math.floor(Math.random() * 25) + 40; // 40-65
+      timeLimit = Math.random() < 0.5 ? 120 : 150;
+    }
+
+    // day 1 adjustment: ensure at least some affordable, unlocked jobs
+    if (day === 1 && i < 2) {
+      risk = 'low';
+      reward = 160;
+      reputationRequired = 0;
+      infoCost = 0;
+      timeLimit = null;
+    }
+
+    const roomTemplateId = rooms[Math.floor(Math.random() * rooms.length)];
+    const randomTitle = JOB_TITLES_POOL[Math.floor(Math.random() * JOB_TITLES_POOL.length)];
+    const randomDesc = JOB_DESCRIPTIONS_POOL[Math.floor(Math.random() * JOB_DESCRIPTIONS_POOL.length)];
+    const caseNum = Math.floor(Math.random() * 900) + 100;
+
+    jobs.push({
+      id: `job_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 4)}`,
+      title: randomTitle,
+      caseName: `Дело №${caseNum}: «${randomTitle}»`,
+      description: `«${randomDesc} На кону репутация нашего бюро!»`,
+      reward,
+      reputationRequired,
+      infoCost,
+      timeLimit,
+      risk,
+      roomTemplateId,
+      completed: false,
+      leadPurchased: false
+    });
+  }
+
+  // Guarantee that at least ONE job is playable based on reputation
+  const hasPlayableJob = jobs.some(j => j.reputationRequired <= currentReputation);
+  if (jobs.length > 0 && !hasPlayableJob) {
+    // Force the first job to be low-risk and unlocked for current reputation
+    const firstJob = jobs[0];
+    firstJob.risk = 'low';
+    firstJob.reputationRequired = Math.max(0, currentReputation - 2);
+    firstJob.infoCost = 0;
+    firstJob.reward = Math.floor(Math.random() * 50) + 130;
+  }
+
+  return jobs;
+}
+
 export function generateNewGame(
   mode: 'sandbox' | 'story' = 'sandbox',
   chapter: number = 1,
-  currentCash: number = 150
+  currentCash: number = 150,
+  currentReputation: number = 0,
+  activeJob: Job | null = null
 ): GameState {
   // 1. Generate safe code
   const codeDigits = [
@@ -471,6 +574,13 @@ export function generateNewGame(
   let roomInfo: RoomInfo;
   if (mode === 'story') {
     roomInfo = STORY_TEMPLATES[chapter] || STORY_TEMPLATES[1];
+  } else if (mode === 'sandbox' && activeJob) {
+    const template = ROOM_TEMPLATES.find(t => t.id === activeJob.roomTemplateId) || ROOM_TEMPLATES[0];
+    roomInfo = {
+      ...template,
+      caseName: activeJob.caseName,
+      caseIntro: activeJob.description
+    };
   } else {
     roomInfo = ROOM_TEMPLATES[Math.floor(Math.random() * ROOM_TEMPLATES.length)];
   }
@@ -775,6 +885,55 @@ export function generateNewGame(
     }
   ];
 
+  // Setup ticking clock
+  let timerActive = false;
+  let timeLeft = 0;
+  let timerMax = 0;
+
+  if (mode === 'story') {
+    if (chapter === 2) {
+      timerActive = true;
+      timeLeft = 180; // 3 minutes
+      timerMax = 180;
+    } else if (chapter === 3) {
+      timerActive = true;
+      timeLeft = 150; // 2.5 minutes
+      timerMax = 150;
+    }
+  } else if (mode === 'sandbox') {
+    if (activeJob) {
+      if (activeJob.timeLimit) {
+        timerActive = true;
+        timeLeft = activeJob.timeLimit;
+        timerMax = activeJob.timeLimit;
+      }
+    } else {
+      // If reputation is high, there is a chance of ticking clock!
+      if (currentReputation >= 60) {
+        if (Math.random() < 0.6) {
+          timerActive = true;
+          timeLeft = 150; // 2.5 mins
+          timerMax = 150;
+        }
+      } else if (currentReputation >= 30) {
+        if (Math.random() < 0.35) {
+          timerActive = true;
+          timeLeft = 180; // 3 mins
+          timerMax = 180;
+        }
+      }
+    }
+  }
+
+  if (timerActive) {
+    logs.push({
+      id: `log_timer_init_${Date.now()}`,
+      sender: 'system',
+      text: `⚠️ ВНИМАНИЕ: ОГРАНИЧЕНИЕ ПО ВРЕМЕНИ! Дело должно быть раскрыто за ${Math.floor(timeLeft / 60)} мин. ${timeLeft % 60} сек., иначе подозреваемый сбежит и вы получите штраф!`,
+      timestamp: new Date().toLocaleTimeString()
+    });
+  }
+
   // Set up story state
   const storyState: StoryState = {
     mode,
@@ -809,7 +968,15 @@ export function generateNewGame(
     roomInfo,
     economy,
     storyState,
-    customItems
+    customItems,
+    reputation: currentReputation,
+    timerActive,
+    timeLeft,
+    timerMax,
+    isInjured: false,
+    hasCatnipSenses: false,
+    revealedObjects: [],
+    activeJob
   };
 }
 
@@ -833,3 +1000,153 @@ export const DUMMY_ITEMS = {
     icon: 'Leaf'
   }
 };
+
+export function generateCampaignChain(length: number, currentReputation: number): Job[] {
+  const romanize = (num: number): string => {
+    const roman = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
+    return roman[num - 1] || num.toString();
+  };
+
+  const plots = [
+    {
+      theme: "Рубиновый Коготь",
+      target: "рубиновую статуэтку «Коготь Анубиса»",
+      villain: "барон фон Кроу",
+      locations: [
+        "кабинете лорда Пемброка", 
+        "сейфовом хранилище Ллойда", 
+        "гримерке оперного театра", 
+        "пыльном складе №7", 
+        "каюте капитана сухогруза", 
+        "часовой башне Гринвича", 
+        "тайном приюте в Сохо", 
+        "гондоле дирижабля «Эклипс»", 
+        "главном зале Британского Музея", 
+        "секретном бункере контрабандистов"
+      ],
+      actions: [
+        "провести первый обыск и найти зацепки вора",
+        "взломать шифр сейфа, чтобы узнать о сообщниках барона",
+        "проверить гримерку примы-балерины на наличие улик",
+        "оцепить склад и перехватить упакованные ящики до отправки",
+        "допросить команду и обыскать каюту капитана парохода",
+        "разгадать загадку старых шестеренок и запустить механизм башни",
+        "проникнуть под прикрытием в тайный клуб и найти переписку",
+        "предотвратить диверсию прямо в облаках во время грозы",
+        "найти скрытую потайную дверь среди антикварных экспонатов",
+        "поймать самого барона и вернуть реликвию в музей!"
+      ]
+    },
+    {
+      theme: "Шелковая Маска",
+      target: "чертежи парового супер-оружия Великобритании",
+      villain: "шпион по кличке «Граф»",
+      locations: [
+        "архиве Военного министерства", 
+        "закрытом клубе банкиров", 
+        "балетной ложе театра «Ковент-Гарден»", 
+        "эллинге портовых кранов", 
+        "кабинете инженера Смита", 
+        "заброшенном депо поездов", 
+        "секретной типографии Ист-Энда", 
+        "салоне первого класса поезда «Ориент»", 
+        "особняке австрийского посла", 
+        "подземном коллекторе Лондона"
+      ],
+      actions: [
+        "найти следы кражи документов в главном архиве",
+        "найти спрятанный дубликат ключа в секретном сейфе",
+        "проверить ложу после загадочного обморока дипломата",
+        "обследовать доки и найти зацепку на палубе",
+        "расследовать внезапную пропажу инженера Смита",
+        "исследовать паровоз в депо на наличие тайников",
+        "раскрыть подпольную сеть печати фальшивых паспортов",
+        "обыскать купе подозреваемого во время движения экспресса",
+        "пробраться в кабинет посла во время пышного бала масок",
+        "обезвредить бомбу и вернуть чертежи короне!"
+      ]
+    },
+    {
+      theme: "Синдикат Тумана",
+      target: "легендарные алмазы королевы",
+      villain: "проныра Джек «Семь Хвостов»",
+      locations: [
+        "кабинете ювелира", 
+        "подвальном ломбарде Сохо", 
+        "подсобке джаз-клуба", 
+        "рыбацком домике у Темзы", 
+        "корабельной мастерской", 
+        "забытом склепе на Хайгейтском кладбище", 
+        "офисе лондонской газеты", 
+        "подпольном казино", 
+        "кабинете шефа Скотленд-Ярда", 
+        "штаб-квартире Синдиката"
+      ],
+      actions: [
+        "опросить ювелира и найти первые следы взлома",
+        "отыскать закладную книгу сомнительного оценщика",
+        "отыскать следы встречи бандитов под джазовые ритмы",
+        "проверить заброшенные сети у мутных вод Темзы",
+        "обыграть сообщника в мастерской и осмотреть ящики",
+        "разгадать шифр на старинном надгробии могилы",
+        "найти компромат на журналиста, покрывающего преступников",
+        "найти тайный сейф за игорным столом казино",
+        "понять, кто из инспекторов Скотленд-Ярда сливает информацию",
+        "взять штурмом штаб-квартиру и вернуть сокровища!"
+      ]
+    }
+  ];
+
+  const plot = plots[Math.floor(Math.random() * plots.length)];
+  const rooms: ('room_antique' | 'room_ballerina' | 'room_banker' | 'room_captain')[] = [
+    'room_antique', 'room_ballerina', 'room_banker', 'room_captain'
+  ];
+
+  const jobs: Job[] = [];
+
+  for (let i = 1; i <= length; i++) {
+    const isFirst = i === 1;
+    const isLast = i === length;
+    const roomTemplateId = rooms[(i - 1) % rooms.length];
+
+    let risk: 'low' | 'medium' | 'high' = 'low';
+    if (i > 2 && i < 6) risk = 'medium';
+    if (i >= 6) risk = 'high';
+
+    const reward = 200 + (i - 1) * 75; // e.g. 200, 275, 350, 425...
+    const reputationRequired = (i - 1) * 8; // Chapter I: 0, Chapter II: 8, Chapter III: 16...
+    const timeLimit = i % 2 === 0 ? 300 - i * 15 : null; // time limit on even chapters
+
+    const loc = plot.locations[(i - 1) % plot.locations.length];
+    const act = plot.actions[(i - 1) % plot.actions.length];
+
+    const title = isFirst 
+      ? `Начало расследования: ${plot.theme}` 
+      : isLast 
+        ? `Развязка: ${plot.theme}` 
+        : `По следам ${plot.theme}: Глава ${romanize(i)}`;
+
+    const desc = isFirst
+      ? `Дерзкое преступление потрясло Лондон! Похищены ${plot.target}. Главный подозреваемый — неуловимый ${plot.villain}. Нам предстоит ${act} в ${loc}.`
+      : isLast
+        ? `Мы вышли на финишную прямую! Предстоит совершить финальный рывок: ${act} в ${loc}. Предотвратите побег преступника и верните сокровище!`
+        : `След ведет глубже в тени города. Чтобы найти ${plot.target}, нам нужно ${act} в ${loc}. Будьте осторожны, ${plot.villain} расставил ловушки!`;
+
+    jobs.push({
+      id: `story_chapter_${i}`,
+      caseName: `Сюжет: Глава ${romanize(i)}`,
+      title,
+      description: desc,
+      reward,
+      reputationRequired,
+      infoCost: 0,
+      timeLimit,
+      risk,
+      roomTemplateId,
+      completed: false
+    });
+  }
+
+  return jobs;
+}
+
