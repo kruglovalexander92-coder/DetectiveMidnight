@@ -3,13 +3,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { GameState, Job } from '../types';
 import * as Lucide from 'lucide-react';
 import { gameAudio } from '../utils/AudioEngine';
+import CrimeBoard from './CrimeBoard';
+import SuspectInterrogation from './SuspectInterrogation';
 
 interface SandboxDashboardProps {
   gameState: GameState;
+  setGameState: React.Dispatch<React.SetStateAction<GameState>>;
   onSelectJob: (job: Job) => void;
   onEndDay: () => void;
   onBuyLead: (jobId: string) => void;
@@ -60,6 +63,7 @@ const STORY_CHAPTERS_DATA: Job[] = [
 
 export default function SandboxDashboard({
   gameState,
+  setGameState,
   onSelectJob,
   onEndDay,
   onBuyLead,
@@ -70,6 +74,7 @@ export default function SandboxDashboard({
   const cash = gameState.economy?.cash ?? 150;
   const dailyJobs = gameState.availableJobs ?? [];
   const completedChapters = gameState.storyState?.completedChapters ?? [];
+  const [storyViewMode, setStoryViewMode] = useState<'corkboard' | 'cards' | 'interrogate'>('corkboard');
 
   // Helper for rank name
   const getReputationRank = (rep: number): string => {
@@ -105,7 +110,7 @@ export default function SandboxDashboard({
   };
 
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto p-4 flex flex-col gap-4 relative z-20 animate-fade-in lg:h-[calc(100vh-100px)] lg:max-h-[660px] lg:min-h-[580px]">
+    <div className="flex-1 w-full max-w-7xl mx-auto p-4 flex flex-col gap-4 relative z-20 animate-fade-in min-h-[580px]">
       
       {/* Top dashboard summary board */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-stretch shrink-0">
@@ -253,141 +258,202 @@ export default function SandboxDashboard({
               </div>
             </div>
 
-            <div className="flex justify-between items-center border-b border-amber-850/40 pb-2 mb-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-amber-850/40 pb-2 mb-4 gap-3">
               <div className="flex items-center gap-2">
                 <Lucide.Compass className="w-4 h-4 text-amber-500 animate-spin" style={{ animationDuration: '8s' }} />
                 <h3 className="font-serif text-sm font-bold italic tracking-wide text-amber-100 uppercase">
                   Особые Сюжетные Расследования
                 </h3>
               </div>
-              <span className="font-mono text-[8px] uppercase tracking-widest text-amber-500/40">
-                ДЛИННАЯ ЛИНИЯ РАССЛЕДОВАНИЙ
-              </span>
+              
+              {/* VIEW SWITCHER */}
+              <div className="flex items-center gap-1 bg-black/40 border border-amber-950/40 p-1 self-stretch sm:self-auto shrink-0 select-none">
+                <button
+                  onClick={() => {
+                    try { gameAudio.playClick(); } catch (e) {}
+                    setStoryViewMode('corkboard');
+                  }}
+                  className={`px-3 py-1 font-sans text-[8px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    storyViewMode === 'corkboard'
+                      ? 'bg-amber-600 text-white shadow'
+                      : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+                  }`}
+                  title="Интерактивная доска улик"
+                >
+                  <Lucide.Pin className="w-2.5 h-2.5 rotate-45 text-amber-400" />
+                  <span>Доска улик</span>
+                </button>
+                <button
+                  onClick={() => {
+                    try { gameAudio.playClick(); } catch (e) {}
+                    setStoryViewMode('cards');
+                  }}
+                  className={`px-3 py-1 font-sans text-[8px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    storyViewMode === 'cards'
+                      ? 'bg-amber-600 text-white shadow'
+                      : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+                  }`}
+                  title="Карточки глав"
+                >
+                  <Lucide.Layers className="w-2.5 h-2.5 text-white/50" />
+                  <span>Карточки</span>
+                </button>
+                <button
+                  onClick={() => {
+                    try { gameAudio.playClick(); } catch (e) {}
+                    setStoryViewMode('interrogate');
+                  }}
+                  className={`px-3 py-1 font-sans text-[8px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    storyViewMode === 'interrogate'
+                      ? 'bg-amber-600 text-white shadow'
+                      : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+                  }`}
+                  title="Допрос свидетелей и Фоторобот"
+                >
+                  <Lucide.UserCheck className="w-2.5 h-2.5 text-amber-400" />
+                  <span>Допрос и Фоторобот</span>
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {(gameState.campaignChapters && gameState.campaignChapters.length > 0 
-                ? gameState.campaignChapters 
-                : STORY_CHAPTERS_DATA
-              ).map((chapter, index) => {
-                const chNum = index + 1;
-                const isCompleted = chapter.completed || completedChapters.includes(chNum);
-                
-                // Romanizing helper
-                const romanize = (num: number): string => {
-                  const roman = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
-                  return roman[num - 1] || num.toString();
-                };
-
-                // Dynamic chapter unlocked conditions
-                let isLocked = false;
-                let lockReason = '';
-
-                if (index > 0) {
-                  const prevChapters = gameState.campaignChapters || STORY_CHAPTERS_DATA;
-                  const prevCh = prevChapters[index - 1];
-                  const prevChCompleted = prevCh.completed || completedChapters.includes(chNum - 1);
+            {storyViewMode === 'corkboard' ? (
+              <CrimeBoard 
+                gameState={gameState}
+                STORY_CHAPTERS_DATA={gameState.campaignChapters && gameState.campaignChapters.length > 0 
+                  ? gameState.campaignChapters 
+                  : STORY_CHAPTERS_DATA}
+                onSelectJob={onSelectJob}
+              />
+            ) : storyViewMode === 'cards' ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in">
+                {(gameState.campaignChapters && gameState.campaignChapters.length > 0 
+                  ? gameState.campaignChapters 
+                  : STORY_CHAPTERS_DATA
+                ).map((chapter, index) => {
+                  const chNum = index + 1;
+                  const isCompleted = chapter.completed || completedChapters.includes(chNum);
                   
-                  if (!prevChCompleted) {
-                    isLocked = true;
-                    lockReason = `Требуется раскрыть Главу ${romanize(chNum - 1)}`;
-                  } else if (reputation < chapter.reputationRequired) {
-                    isLocked = true;
-                    lockReason = `Требуется репутация ${chapter.reputationRequired}★`;
+                  // Romanizing helper
+                  const romanize = (num: number): string => {
+                    const roman = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
+                    return roman[num - 1] || num.toString();
+                  };
+
+                  // Dynamic chapter unlocked conditions
+                  let isLocked = false;
+                  let lockReason = '';
+
+                  if (index > 0) {
+                    const prevChapters = gameState.campaignChapters || STORY_CHAPTERS_DATA;
+                    const prevCh = prevChapters[index - 1];
+                    const prevChCompleted = prevCh.completed || completedChapters.includes(chNum - 1);
+                    
+                    if (!prevChCompleted) {
+                      isLocked = true;
+                      lockReason = `Требуется раскрыть Главу ${romanize(chNum - 1)}`;
+                    } else if (reputation < chapter.reputationRequired) {
+                      isLocked = true;
+                      lockReason = `Требуется репутация ${chapter.reputationRequired}★`;
+                    }
                   }
-                }
 
-                // Color codes based on chapters and completeness
-                const borderStyles = isCompleted
-                  ? 'border-emerald-950 bg-emerald-950/5 text-emerald-100/60 opacity-80'
-                  : isLocked
-                    ? 'border-neutral-900/60 bg-neutral-950/50 text-white/30'
-                    : chNum === 1
-                      ? 'border-amber-900/40 bg-[#1e1713] hover:border-amber-700/60'
-                      : chNum % 3 === 2
-                        ? 'border-blue-900/40 bg-[#131a22] hover:border-blue-700/60'
-                        : 'border-purple-900/40 bg-[#1b1522] hover:border-purple-700/60';
+                  // Color codes based on chapters and completeness
+                  const borderStyles = isCompleted
+                    ? 'border-emerald-950 bg-emerald-950/5 text-emerald-100/60 opacity-80'
+                    : isLocked
+                      ? 'border-neutral-900/60 bg-neutral-950/50 text-white/30'
+                      : chNum === 1
+                        ? 'border-amber-900/40 bg-[#1e1713] hover:border-amber-700/60'
+                        : chNum % 3 === 2
+                          ? 'border-blue-900/40 bg-[#131a22] hover:border-blue-700/60'
+                          : 'border-purple-900/40 bg-[#1b1522] hover:border-purple-700/60';
 
-                const iconsPool = ['Compass', 'Anchor', 'Wind', 'BookOpen', 'Shield', 'Key', 'Eye', 'Map', 'Cat', 'Award'];
-                const iconName = iconsPool[(chNum - 1) % iconsPool.length];
-                const Icon = (Lucide as any)[iconName] || Lucide.FileText;
+                  const iconsPool = ['Compass', 'Anchor', 'Wind', 'BookOpen', 'Shield', 'Key', 'Eye', 'Map', 'Cat', 'Award'];
+                  const iconName = iconsPool[(chNum - 1) % iconsPool.length];
+                  const Icon = (Lucide as any)[iconName] || Lucide.FileText;
 
-                return (
-                  <div key={chapter.id} className={`border p-4 flex flex-col justify-between relative transition-all shadow-md ${borderStyles}`}>
-                    {/* Pushpin decor */}
-                    <div className={`absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full border shadow pointer-events-none ${
-                      isCompleted 
-                        ? 'bg-emerald-700 border-emerald-900' 
-                        : isLocked 
-                          ? 'bg-neutral-800 border-neutral-950' 
-                          : 'bg-red-700 border-red-950'
-                    }`} />
+                  return (
+                    <div key={chapter.id} className={`border p-4 flex flex-col justify-between relative transition-all shadow-md ${borderStyles}`}>
+                      {/* Pushpin decor */}
+                      <div className={`absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full border shadow pointer-events-none ${
+                        isCompleted 
+                          ? 'bg-emerald-700 border-emerald-900' 
+                          : isLocked 
+                            ? 'bg-neutral-800 border-neutral-950' 
+                            : 'bg-red-700 border-red-950'
+                      }`} />
 
-                    <div>
-                      <div className="flex justify-between items-start mb-2 border-b border-white/5 pb-1.5">
-                        <span className="font-mono text-[8px] uppercase tracking-wider text-white/40 block">
-                          Сюжет // Глава {romanize(chNum)}
-                        </span>
-                        {isCompleted ? (
-                          <span className="px-1.5 py-0.5 border border-emerald-500/20 bg-emerald-950/40 text-emerald-400 text-[7px] font-mono font-bold uppercase tracking-widest rounded-none">
-                            РАСКРЫТО ✓
+                      <div>
+                        <div className="flex justify-between items-start mb-2 border-b border-white/5 pb-1.5">
+                          <span className="font-mono text-[8px] uppercase tracking-wider text-white/40 block">
+                            Сюжет // Глава {romanize(chNum)}
                           </span>
-                        ) : isLocked ? (
-                          <span className="px-1.5 py-0.5 border border-red-500/25 bg-red-950/20 text-red-400 text-[6.5px] font-mono font-bold uppercase tracking-widest rounded-none flex items-center gap-1">
-                            <Lucide.Lock className="w-2.5 h-2.5" /> ТРЕБУЕТСЯ {chapter.reputationRequired}★
-                          </span>
-                        ) : (
-                          <span className="px-1.5 py-0.5 border border-amber-500/20 bg-amber-950/30 text-amber-400 text-[7px] font-mono font-bold uppercase tracking-widest rounded-none">
-                            ДОСТУПНО
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex gap-2 items-start mb-2">
-                        <div className={`p-1.5 bg-black/40 border border-white/5 shrink-0 ${
-                          isLocked ? 'text-white/20' : isCompleted ? 'text-emerald-500/40' : 'text-amber-400'
-                        }`}>
-                          <Icon className="w-3.5 h-3.5" />
+                          {isCompleted ? (
+                            <span className="px-1.5 py-0.5 border border-emerald-500/20 bg-emerald-950/40 text-emerald-400 text-[7px] font-mono font-bold uppercase tracking-widest rounded-none">
+                              РАСКРЫТО ✓
+                            </span>
+                          ) : isLocked ? (
+                            <span className="px-1.5 py-0.5 border border-red-500/25 bg-red-950/20 text-red-400 text-[6.5px] font-mono font-bold uppercase tracking-widest rounded-none flex items-center gap-1">
+                              <Lucide.Lock className="w-2.5 h-2.5" /> ТРЕБУЕТСЯ {chapter.reputationRequired}★
+                            </span>
+                          ) : (
+                            <span className="px-1.5 py-0.5 border border-amber-500/20 bg-amber-950/30 text-amber-400 text-[7px] font-mono font-bold uppercase tracking-widest rounded-none">
+                              ДОСТУПНО
+                            </span>
+                          )}
                         </div>
-                        <h4 className={`font-serif text-xs font-bold leading-tight ${isCompleted ? 'text-emerald-200/40' : 'text-white'}`}>
-                          {chapter.title}
-                        </h4>
-                      </div>
 
-                      <p className="text-[10px] leading-relaxed text-white/50 mb-4 font-sans line-clamp-3">
-                        {chapter.description}
-                      </p>
-
-                      <div className="space-y-1 font-mono text-[8px] text-white/30 border-t border-white/5 pt-2 mb-3">
-                        <div className="flex justify-between">
-                          <span>Награда дела:</span>
-                          <span className="text-emerald-400 font-bold">+{chapter.reward}$</span>
-                        </div>
-                        {isLocked && lockReason && (
-                          <div className="text-red-400/80 text-[7.5px] italic text-right mt-0.5">
-                            ⚠ {lockReason}
+                        <div className="flex gap-2 items-start mb-2">
+                          <div className={`p-1.5 bg-black/40 border border-white/5 shrink-0 ${
+                            isLocked ? 'text-white/20' : isCompleted ? 'text-emerald-500/40' : 'text-amber-400'
+                          }`}>
+                            <Icon className="w-3.5 h-3.5" />
                           </div>
-                        )}
-                      </div>
-                    </div>
+                          <h4 className={`font-serif text-xs font-bold leading-tight ${isCompleted ? 'text-emerald-200/40' : 'text-white'}`}>
+                            {chapter.title}
+                          </h4>
+                        </div>
 
-                    {!isLocked && (
-                      <button
-                        onClick={() => handleStartJobClick(chapter)}
-                        className={`w-full h-8 font-sans text-[9px] font-bold uppercase tracking-[0.15em] transition-all rounded-none flex items-center justify-center gap-1.5 ${
-                          isCompleted
-                            ? 'bg-neutral-900 border border-white/10 hover:border-white/30 text-white/60 hover:text-white'
-                            : 'bg-amber-600 hover:bg-amber-500 text-white'
-                        }`}
-                      >
-                        <Lucide.Search className="w-3 h-3" />
-                        {isCompleted ? 'Перепройти главу' : 'Начать расследование'}
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                        <p className="text-[10px] leading-relaxed text-white/50 mb-4 font-sans line-clamp-3">
+                          {chapter.description}
+                        </p>
+
+                        <div className="space-y-1 font-mono text-[8px] text-white/30 border-t border-white/5 pt-2 mb-3">
+                          <div className="flex justify-between">
+                            <span>Награда дела:</span>
+                            <span className="text-emerald-400 font-bold">+{chapter.reward}$</span>
+                          </div>
+                          {isLocked && lockReason && (
+                            <div className="text-red-400/80 text-[7.5px] italic text-right mt-0.5">
+                              ⚠ {lockReason}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {!isLocked && (
+                        <button
+                          onClick={() => handleStartJobClick(chapter)}
+                          className={`w-full h-8 font-sans text-[9px] font-bold uppercase tracking-[0.15em] transition-all rounded-none flex items-center justify-center gap-1.5 ${
+                            isCompleted
+                              ? 'bg-neutral-900 border border-white/10 hover:border-white/30 text-white/60 hover:text-white'
+                              : 'bg-amber-600 hover:bg-amber-500 text-white'
+                          }`}
+                        >
+                          <Lucide.Search className="w-3 h-3" />
+                          {isCompleted ? 'Перепройти главу' : 'Начать расследование'}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <SuspectInterrogation 
+                gameState={gameState}
+                setGameState={setGameState}
+              />
+            )}
           </div>
         )}
 

@@ -5,7 +5,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { ObjectId, ObjectState, GameState, Clue, GameLog, Job } from './types';
-import { generateNewGame, DUMMY_ITEMS, ALL_CLUES, generateDailyJobs, generateCampaignChain } from './utils/puzzleGenerator';
+import { generateNewGame, DUMMY_ITEMS, ALL_CLUES, generateDailyJobs, generateCampaignChain, generateInitialSketches } from './utils/puzzleGenerator';
+import { initializeTornNote } from './utils/tornNoteGenerator';
 import { gameAudio } from './utils/AudioEngine';
 
 import GameScene from './components/GameScene';
@@ -16,6 +17,7 @@ import RainEffect from './components/RainEffect';
 import FilmGrain from './components/FilmGrain';
 import AlleywayShop from './components/AlleywayShop';
 import SandboxDashboard from './components/SandboxDashboard';
+import TornNotePuzzle from './components/TornNotePuzzle';
 
 import * as Lucide from 'lucide-react';
 
@@ -115,12 +117,20 @@ export default function App() {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isShopOpen, setIsShopOpen] = useState(false);
   const [isLogOpen, setIsLogOpen] = useState(false);
+  const [isTornNoteOpen, setIsTornNoteOpen] = useState(false);
   const [dayTransition, setDayTransition] = useState<{
     isActive: boolean;
     fromDay: number;
     toDay: number;
     isFadingOut: boolean;
   } | null>(null);
+
+  // Auto-open the torn note puzzle when it is newly created and not yet completed
+  useEffect(() => {
+    if (gameState.activeTornNote && !gameState.activeTornNote.completed) {
+      setIsTornNoteOpen(true);
+    }
+  }, [gameState.activeTornNote?.id]);
 
   // Check if saved game exists in localStorage on mount or state changes
   const [hasSavedGame, setHasSavedGame] = useState<boolean>(false);
@@ -224,6 +234,7 @@ export default function App() {
           setGameState({
             ...parsed,
             campaignChapters,
+            sketches: parsed.sketches || generateInitialSketches(),
             isMuted: !enableAudio
           });
           
@@ -592,6 +603,7 @@ export default function App() {
         const newInventory = [...prev.inventory];
         const newFoundClues = [...prev.foundClueIds];
         const newLogs = [...prev.logs];
+        let newActiveTornNote = prev.activeTornNote;
 
         // Custom action state determination
         if (id === 'rug') {
@@ -624,21 +636,23 @@ export default function App() {
           obj.tipped = true;
           logText = 'Кот с разбегу опрокинул мусорную корзину!';
           
-          if (obj.heldClueId && !newFoundClues.includes(obj.heldClueId)) {
-            newFoundClues.push(obj.heldClueId);
-            const clue = prev.currentClues.find(c => c.id === obj.heldClueId);
-            dialogueText = clue ? clue.findingMessage : 'Улика найдена в мусоре!';
-            dialogueMood = 'shocked';
-            if (!gameState.isMuted) gameAudio.playClueFound();
-          } else if (obj.heldItemId && !newInventory.includes(obj.heldItemId)) {
+          const roomTemplateId = prev.roomInfo?.id || 'room_antique';
+          
+          // Initialize activeTornNote puzzle
+          // Note that we pass the obj.heldClueId so it's unlocked upon solving
+          const notePuzzle = initializeTornNote(roomTemplateId, obj.heldClueId);
+          newActiveTornNote = notePuzzle;
+          obj.heldClueId = null; // Clear from trashcan since it is now locked in the note
+
+          if (obj.heldItemId && !newInventory.includes(obj.heldItemId)) {
             newInventory.push(obj.heldItemId);
             const item = getItemDetail(obj.heldItemId);
-            dialogueText = `«Какой погром! Но... постой, из кучи бумаг выкатился предмет: ${item.name}! Кот, ты гений маскировки!»`;
+            dialogueText = `«Какой погром! Но... постой, из груды мусора выкатился предмет: ${item.name}! И еще тут... куча обрывков секретного письма! Давайте соберем их!»`;
             dialogueMood = 'shocked';
             if (!gameState.isMuted) gameAudio.playClick();
           } else {
-            dialogueText = '«Тьфу! Ну и свинство! Миднайт, весь пол в объедках от вчерашнего пончика! Больше никакого корма до вечера!»';
-            dialogueMood = 'silly';
+            dialogueText = '«Какой погром! Но... постой, Миднайт выкатил из корзины кучу обрывков. Это же разорванное секретное письмо! Давайте сложим его!»';
+            dialogueMood = 'shocked';
           }
         } 
         
@@ -907,6 +921,7 @@ export default function App() {
           catAction: newAction,
           inventory: newInventory,
           foundClueIds: newFoundClues,
+          activeTornNote: newActiveTornNote,
           logs: newLogs,
           gameStatus: nextStatus,
           pendingVictory: isPendingVictory || prev.pendingVictory,
@@ -1374,16 +1389,17 @@ export default function App() {
       {gameState.gameStatus === 'sandbox_dashboard' ? (
         <SandboxDashboard 
           gameState={gameState}
+          setGameState={setGameState}
           onSelectJob={handleSelectJob}
           onEndDay={handleEndDay}
           onBuyLead={handleBuyLead}
           onReturnToMenu={handleReturnToMenu}
         />
       ) : (
-        <main className="flex-1 w-full max-w-7xl mx-auto p-4 flex flex-col lg:flex-row gap-5 relative z-20 lg:h-[calc(100vh-100px)] lg:max-h-[660px] lg:min-h-[580px] lg:overflow-hidden">
+        <main className="flex-1 w-full max-w-7xl mx-auto p-4 flex flex-col lg:flex-row gap-5 relative z-20 min-h-[580px]">
         
         {/* Left side: Game Visuals Grid */}
-        <div className="flex-1 flex flex-col gap-3 justify-between h-full lg:overflow-hidden">
+        <div className="flex-1 flex flex-col gap-3 justify-between">
           <GameScene 
             gameState={gameState} 
             onObjectInteraction={handleObjectInteraction}
@@ -1412,7 +1428,7 @@ export default function App() {
         </div>
 
         {/* Right side: Case files, logs, clues */}
-        <div className="w-full lg:w-[380px] flex flex-col gap-3 lg:h-full lg:overflow-y-auto lg:pr-1.5 custom-scrollbar shrink-0">
+        <div className="w-full lg:w-[380px] flex flex-col gap-3 shrink-0">
           {/* Tracker holds case cards & items */}
           <ClueTracker 
             currentClues={gameState.currentClues}
@@ -1420,6 +1436,8 @@ export default function App() {
             inventory={gameState.inventory}
             safeCode={gameState.safeCode}
             customItems={gameState.customItems}
+            activeTornNote={gameState.activeTornNote}
+            onOpenTornNote={() => setIsTornNoteOpen(true)}
           />
 
           {/* Collapsible Panel Triggers (Shop and Logs) */}
@@ -1997,6 +2015,15 @@ export default function App() {
             )}
           </div>
         </div>
+      )}
+
+      {/* TORN NOTE PUZZLE OVERLAY */}
+      {isTornNoteOpen && gameState.activeTornNote && (
+        <TornNotePuzzle 
+          gameState={gameState}
+          setGameState={setGameState}
+          onClose={() => setIsTornNoteOpen(false)}
+        />
       )}
     </div>
   );

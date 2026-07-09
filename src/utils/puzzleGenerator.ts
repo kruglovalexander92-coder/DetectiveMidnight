@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Clue, ObjectId, ObjectState, GameState, GameLog, RoomInfo, StoryState, EconomyState, PuzzleItem, Job } from '../types';
+import { Clue, ObjectId, ObjectState, GameState, GameLog, RoomInfo, StoryState, EconomyState, PuzzleItem, Job, SuspectSketch } from '../types';
 
 export const ALL_CLUES: Clue[] = [
   {
@@ -976,7 +976,8 @@ export function generateNewGame(
     isInjured: false,
     hasCatnipSenses: false,
     revealedObjects: [],
-    activeJob
+    activeJob,
+    sketches: generateInitialSketches()
   };
 }
 
@@ -1148,5 +1149,64 @@ export function generateCampaignChain(length: number, currentReputation: number)
   }
 
   return jobs;
+}
+
+export function generateInitialSketches(): SuspectSketch[] {
+  return [
+    {
+      id: 'sketch_1',
+      name: 'Вильгельм Артурович (Подельник «Шляпник»)',
+      witnessName: 'Миссис Виггинс',
+      witnessStatement: '«О, господин детектив! Я зашла в кабинет и увидела, как в окно выпрыгнул вор! На голове у него был высокий черный ЦИЛИНДР, на левом глазу блестел господский МОНОКЛЬ, под носом топорщились тонкие ДЖЕНТЛЬМЕНСКИЕ УСЫ, а лицо было смертельно БЛЕДНЫМ, как у вампира!»',
+      targetHair: 'tophat',
+      targetEyes: 'monocle',
+      targetMustache: 'gentleman',
+      targetSkin: 'pale',
+      currentHair: 'short',
+      currentEyes: 'normal',
+      currentMustache: 'none',
+      currentSkin: 'fair',
+      completed: false,
+      accuracy: 0,
+      rewardClaimed: false,
+      unlockedHint: 'Вильгельм скрывается в порту. Стоимость перехода к сюжетной Главе II снижена на 15$!'
+    },
+    {
+      id: 'sketch_2',
+      name: 'Морской Волк «Якорь» (Сообщник у причала)',
+      witnessName: 'Грузчик Билл',
+      witnessStatement: '«Я таскал бочки у Склада №9 и приметил подозрительного типа у воды. Абсолютно ЛЫСЫЙ, носил толстые круглые ОЧКИ, лицо обросло огромной ПИРАТСКОЙ БОРОДОЙ, а кожа была жутко ЗАГОРЕЛОЙ, сразу видно — моряк со стажем!»',
+      targetHair: 'bald',
+      targetEyes: 'glasses',
+      targetMustache: 'beard',
+      targetSkin: 'tanned',
+      currentHair: 'curly',
+      currentEyes: 'angry',
+      currentMustache: 'gentleman',
+      currentSkin: 'pale',
+      completed: false,
+      accuracy: 0,
+      rewardClaimed: false,
+      unlockedHint: 'Якорь проговорился под допросом! Стоимость информации для любых расследований снижена на 10$!'
+    },
+    {
+      id: 'sketch_3',
+      name: 'Барон Сен-Клер (Организатор саботажа)',
+      witnessName: 'Проводник Томас',
+      witnessStatement: '«Тот господин из каюты №12 вел себя крайне нервно. Он обладал пышными КУДРЯВЫМИ волосами, смотрел на меня очень СЕРДИТЫМ взглядом без очков, носил аккуратные закрученные ПИРАТСКИЕ УСЫ и имел обычный здоровый цвет кожи (СВЕТЛЫЙ)!»',
+      targetHair: 'curly',
+      targetEyes: 'angry',
+      targetMustache: 'pirate',
+      targetSkin: 'fair',
+      currentHair: 'tophat',
+      currentEyes: 'monocle',
+      currentMustache: 'none',
+      currentSkin: 'tanned',
+      completed: false,
+      accuracy: 0,
+      rewardClaimed: false,
+      unlockedHint: 'Сен-Клер арестован до взлета! Департамент полиции выплачивает вам премию 150$ и орден Почета (+25★ репутации)!'
+    }
+  ];
 }
 

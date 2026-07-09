@@ -138,4 +138,44 @@ export interface GameState {
   activeJob?: Job | null;
   daysSurvived?: number;
   campaignChapters?: Job[];
+  // Witness Interrogation and Photofit/Sketch state
+  sketches?: SuspectSketch[];
+  activeTornNote?: TornNoteState;
+}
+
+export interface TornNotePiece {
+  id: string;
+  originalIndex: number;
+  textLines: string[];
+  rotation: number; // 0, 90, 180, 270
+  currentSlot: number | null; // index of slot occupied (0 to 5) or null if in tray
+}
+
+export interface TornNoteState {
+  id: string;
+  fullText: string;
+  pieces: TornNotePiece[];
+  completed: boolean;
+  rewardClaimed: boolean;
+  clueIdToUnlock: string | null;
+}
+
+export interface SuspectSketch {
+  id: string;
+  name: string;
+  witnessName: string;
+  witnessStatement: string;
+  targetHair: 'bald' | 'short' | 'curly' | 'tophat';
+  targetEyes: 'glasses' | 'angry' | 'normal' | 'monocle';
+  targetMustache: 'none' | 'gentleman' | 'beard' | 'pirate';
+  targetSkin: 'pale' | 'tanned' | 'fair';
+  // User's current choices during minigame
+  currentHair: 'bald' | 'short' | 'curly' | 'tophat';
+  currentEyes: 'glasses' | 'angry' | 'normal' | 'monocle';
+  currentMustache: 'none' | 'gentleman' | 'beard' | 'pirate';
+  currentSkin: 'pale' | 'tanned' | 'fair';
+  completed: boolean;
+  accuracy: number;
+  rewardClaimed: boolean;
+  unlockedHint: string;
 }
