@@ -51,7 +51,7 @@ async function generateContentWithFallback(
   config: any,
   fallbackGenerator: () => any
 ): Promise<any> {
-  const modelsToTry = [model, "gemini-3.1-flash-lite"];
+  const modelsToTry = [model, "gemini-2.5-flash"];
   let lastError: any = null;
 
   for (const currentModel of modelsToTry) {
