@@ -95,160 +95,19 @@ export default function GameScene({
   const [detectiveX, setDetectiveX] = useState(24);
   const [detectiveState, setDetectiveState] = useState<'idle' | 'walking'>('idle');
   const [detectiveFacingLeft, setDetectiveFacingLeft] = useState(false);
-  const [detectiveTransition, setDetectiveTransition] = useState('left 1000ms ease-in-out');
-  const detectiveWalkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [detectiveTransition, setDetectiveTransition] = useState('none');
 
-  // Map object to X coordinates for references
-  const objectCoords: Record<ObjectId, number> = {
-    bookshelf: objects.bookshelf.x ?? 4,
-    painting: objects.painting.x ?? 25,
-    rug: objects.rug.x ?? 28,
-    desk: objects.desk.x ?? 43,
-    fishbowl: objects.fishbowl.x ?? 48,
-    lamp: objects.lamp.x ?? 74,
-    trashcan: objects.trashcan.x ?? 80,
-    safe: objects.safe.x ?? 87,
-  };
-
-  // Strategic positions for the detective to stand close to objects without overlapping
-  const getDetectiveTargetX = (spot: string) => {
-    if (spot === 'center') return 24;
-    switch (spot) {
-      case 'bookshelf': return 14;
-      case 'painting': return 35;
-      case 'rug': return 36;
-      case 'desk': return 52;
-      case 'fishbowl': return 56;
-      case 'lamp': return 65;
-      case 'trashcan': return 71;
-      case 'safe': return 78;
-      default: return 24;
-    }
-  };
-
-  // Helper to get the exact real-time physical X percentage of the detective inside the game scene
-  const getPhysicalDetectiveX = () => {
-    if (!detectiveRef.current || !containerRef.current) return detectiveX;
-    const detRect = detectiveRef.current.getBoundingClientRect();
-    const containerRect = containerRef.current.getBoundingClientRect();
-    const relativeLeft = detRect.left + detRect.width / 2 - containerRect.left;
-    const pct = (relativeLeft / containerRect.width) * 100;
-    return Math.max(0, Math.min(100, pct));
-  };
-
-  // Sync Detective position with active cat target. 
-  // Detective stays still most of the time except when cat is at the desk, safe, or if he is stepping off the rug.
+  // Place the detective in a static random position facing the larger part of the room upon entering a room or changing location.
   useEffect(() => {
-    if (catPosition === 'center') return;
+    // Elegant positions that don't block critical interactive items
+    const STAND_POSITIONS = [18, 32, 72, 78];
+    const randomPos = STAND_POSITIONS[Math.floor(Math.random() * STAND_POSITIONS.length)];
     
-    let shouldMove = false;
-    let targetX = detectiveX;
-    
-    if (catPosition === 'desk') {
-      shouldMove = true;
-      targetX = getDetectiveTargetX('desk'); // 52
-    } else if (catPosition === 'safe') {
-      shouldMove = true;
-      targetX = getDetectiveTargetX('safe'); // 78
-    } else if (catPosition === 'rug') {
-      const isStandingOnRug = (detectiveX >= 15 && detectiveX <= 70);
-      if (isStandingOnRug) {
-        shouldMove = true;
-        targetX = detectiveX < 45 ? 12 : 78; // Step off the rug to the closer side
-      }
-    }
-    
-    if (detectiveWalkTimeoutRef.current) {
-      clearTimeout(detectiveWalkTimeoutRef.current);
-    }
-    
-    if (!shouldMove) {
-      setDetectiveTransition('none');
-      setDetectiveState('idle');
-      return;
-    }
-    
-    // Stop ongoing transition
-    setDetectiveTransition('none');
+    setDetectiveX(randomPos);
+    setDetectiveFacingLeft(randomPos >= 50); // Face left if on the right side of the screen, face right if on the left side
     setDetectiveState('idle');
-    
-    // Start walk in next tick (30ms) after CSS has processed the snap
-    const walkTimer = setTimeout(() => {
-      const distance = Math.abs(targetX - detectiveX);
-      if (distance < 1) {
-        setDetectiveFacingLeft(targetX < detectiveX);
-        return;
-      }
-      
-      const duration = Math.max(600, distance * 22);
-      setDetectiveTransition(`left ${duration}ms linear`);
-      setDetectiveFacingLeft(targetX < detectiveX);
-      setDetectiveState('walking');
-      setDetectiveX(targetX);
-      
-      detectiveWalkTimeoutRef.current = setTimeout(() => {
-        setDetectiveState('idle');
-      }, duration);
-    }, 30);
-    
-    return () => {
-      clearTimeout(walkTimer);
-      if (detectiveWalkTimeoutRef.current) {
-        clearTimeout(detectiveWalkTimeoutRef.current);
-      }
-    };
-  }, [catPosition]);
-
-  // Sync Detective room entry walk on transition
-  useEffect(() => {
-    if (!hasMultipleRooms) return;
-    
-    if (detectiveWalkTimeoutRef.current) {
-      clearTimeout(detectiveWalkTimeoutRef.current);
-    }
-    
-    if (currentLocation === 'warehouse') {
-      // Walk in from the left door
-      setDetectiveX(-10);
-      setDetectiveFacingLeft(false);
-      setDetectiveState('idle');
-      
-      const t1 = setTimeout(() => {
-        setDetectiveTransition('left 1200ms linear');
-        setDetectiveState('walking');
-        setDetectiveX(18);
-        
-        detectiveWalkTimeoutRef.current = setTimeout(() => {
-          setDetectiveState('idle');
-        }, 1200);
-      }, 100);
-      
-      return () => {
-        clearTimeout(t1);
-        if (detectiveWalkTimeoutRef.current) clearTimeout(detectiveWalkTimeoutRef.current);
-      };
-    } else {
-      // Walk in from the right edge
-      setDetectiveX(110);
-      setDetectiveFacingLeft(true);
-      setDetectiveState('idle');
-      
-      const t1 = setTimeout(() => {
-        setDetectiveTransition('left 1200ms linear');
-        setDetectiveState('walking');
-        setDetectiveX(72);
-        
-        detectiveWalkTimeoutRef.current = setTimeout(() => {
-          setDetectiveState('idle');
-        }, 1200);
-      }, 100);
-      
-      return () => {
-        clearTimeout(t1);
-        if (detectiveWalkTimeoutRef.current) clearTimeout(detectiveWalkTimeoutRef.current);
-      };
-    }
-  }, [currentLocation, hasMultipleRooms]);
+    setDetectiveTransition('none');
+  }, [gameState.roomInfo?.id, currentLocation]);
 
   // Dynamic Cat Animation Sequencer States
   const [currentSpot, setCurrentSpot] = useState<ObjectId | 'center'>(catPosition);
@@ -807,7 +666,7 @@ export default function GameScene({
       <div 
         id="bookshelf-obj"
         onClick={() => handleObjectClick('bookshelf')}
-        className="absolute group cursor-pointer z-20 flex flex-col justify-end transition-all duration-300"
+        className="absolute group cursor-pointer z-20 flex flex-col justify-end"
         style={{
           left: `${(objects.bookshelf.x ?? 4) + (objects.bookshelf.w ?? 20) * 0.1}%`,
           top: `${(objects.bookshelf.y ?? 16) + (objects.bookshelf.h ?? 70) * 0.2}%`,
@@ -886,7 +745,7 @@ export default function GameScene({
       <div
         id="painting-obj"
         onClick={() => handleObjectClick('painting')}
-        className="absolute group cursor-pointer z-10 flex flex-col items-center transition-all duration-300"
+        className="absolute group cursor-pointer z-10 flex flex-col items-center"
         style={{
           left: `${(objects.painting.x ?? 25) + (objects.painting.w ?? 12) * 0.1}%`,
           top: `${(objects.painting.y ?? 15) + (objects.painting.h ?? 12) * 0.1}%`,
@@ -931,7 +790,7 @@ export default function GameScene({
       <div
         id="rug-obj"
         onClick={() => handleObjectClick('rug')}
-        className="absolute group cursor-pointer z-10 transition-all duration-300"
+        className="absolute group cursor-pointer z-10"
         style={{
           left: `${(objects.rug.x ?? 28) + (objects.rug.w ?? 38) * 0.1}%`,
           top: `${(objects.rug.y ?? 82) + (objects.rug.h ?? 16) * 0.2}%`,
@@ -974,7 +833,7 @@ export default function GameScene({
       <div
         id="desk-obj"
         onClick={() => handleObjectClick('desk')}
-        className="absolute group cursor-pointer z-20 flex flex-col justify-end transition-all duration-300"
+        className="absolute group cursor-pointer z-20 flex flex-col justify-end"
         style={{
           left: `${(objects.desk.x ?? 43) + (objects.desk.w ?? 32) * 0.1}%`,
           top: `${(objects.desk.y ?? 58) + (objects.desk.h ?? 32) * 0.2}%`,
@@ -1055,7 +914,7 @@ export default function GameScene({
       <div
         id="fishbowl-obj"
         onClick={() => handleObjectClick('fishbowl')}
-        className="absolute group cursor-pointer z-30 transition-all duration-300"
+        className="absolute group cursor-pointer z-30"
         style={{
           left: `${(objects.fishbowl.x ?? 48) + (objects.fishbowl.w ?? 8) * 0.1}%`,
           top: `${(objects.fishbowl.y ?? 54) + (objects.fishbowl.h ?? 8) * 0.2 + (objects.desk.h ?? 32) * 0.36}%`,
@@ -1113,7 +972,7 @@ export default function GameScene({
       <div
         id="lamp-obj"
         onClick={() => handleObjectClick('lamp')}
-        className="absolute group cursor-pointer z-20 flex flex-col justify-end transition-all duration-300"
+        className="absolute group cursor-pointer z-20 flex flex-col justify-end"
         style={{
           left: `${(objects.lamp.x ?? 74) + (objects.lamp.w ?? 8) * 0.1}%`,
           top: `${(objects.lamp.y ?? 45) + (objects.lamp.h ?? 55) * 0.2}%`,
@@ -1149,7 +1008,7 @@ export default function GameScene({
                 {objects.lamp.toggled && (
                   <div className="absolute top-[80%] w-[450%] h-[550%] left-1/2 -translate-x-1/2 bg-gradient-to-b from-white/20 via-white/5 to-transparent pointer-events-none" 
                        style={{ 
-                         clipPath: 'polygon(35% 0%, 65% 0%, 100% 100%, 0% 100%)',
+                         clipPath: 'polygon(39% 0%, 61% 0%, 100% 100%, 0% 100%)',
                          transformOrigin: 'top center'
                        }} />
                 )}
@@ -1177,7 +1036,7 @@ export default function GameScene({
       <div
         id="trashcan-obj"
         onClick={() => handleObjectClick('trashcan')}
-        className="absolute group cursor-pointer z-15 transition-all duration-300"
+        className="absolute group cursor-pointer z-15"
         style={{
           left: `${(objects.trashcan.x ?? 80) + (objects.trashcan.w ?? 10) * 0.1}%`,
           top: `${(objects.trashcan.y ?? 82) + (objects.trashcan.h ?? 16) * 0.2}%`,
@@ -1239,7 +1098,7 @@ export default function GameScene({
       <div
         id="safe-obj"
         onClick={() => handleObjectClick('safe')}
-        className="absolute group cursor-pointer z-10 flex flex-col justify-end transition-all duration-300"
+        className="absolute group cursor-pointer z-10 flex flex-col justify-end"
         style={{
           left: `${(objects.safe.x ?? 87) + (objects.safe.w ?? 11) * 0.1}%`,
           top: `${(objects.safe.y ?? 66) + (objects.safe.h ?? 28) * 0.2}%`,
@@ -1291,7 +1150,7 @@ export default function GameScene({
         return (
           <div 
             onClick={() => onChangeLocation?.('warehouse')}
-            className="absolute bottom-16 right-[15%] w-[12%] h-[35%] group cursor-pointer z-20 flex flex-col justify-end items-center animate-fade-in"
+            className="absolute bottom-[16%] right-[15%] w-[12%] h-[52%] group cursor-pointer z-20 flex flex-col justify-end items-center animate-fade-in"
           >
             <div className="w-full h-full border-2 border-dashed border-amber-500/40 hover:border-amber-400 bg-black/80 rounded p-3 flex flex-col justify-between items-center shadow-2xl transition-all hover:scale-105">
               <div className="w-2 h-2 bg-amber-500 rounded-full animate-ping" />
@@ -1325,7 +1184,7 @@ export default function GameScene({
         return (
           <div 
             onClick={() => onChangeLocation?.('pier')}
-            className="absolute bottom-16 left-[25%] w-[12%] h-[35%] group cursor-pointer z-20 flex flex-col justify-end items-center animate-fade-in"
+            className="absolute bottom-[16%] left-[25%] w-[12%] h-[52%] group cursor-pointer z-20 flex flex-col justify-end items-center animate-fade-in"
           >
             <div className="w-full h-full border-2 border-dashed border-amber-500/40 hover:border-amber-400 bg-black/80 rounded p-3 flex flex-col justify-between items-center shadow-2xl transition-all hover:scale-105">
               <div className="w-2 h-2 bg-amber-500 rounded-full animate-ping" />

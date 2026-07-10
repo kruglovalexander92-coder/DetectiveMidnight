@@ -696,8 +696,16 @@ export default function App() {
           logText = 'Кот с разбегу опрокинул мусорную корзину!';
           
           const roomTemplateId = prev.roomInfo?.id || 'room_antique';
-          const notePuzzle = initializeTornNote(roomTemplateId, obj.heldClueId);
-          newActiveTornNote = notePuzzle;
+          
+          // Decide if a torn note drops. 
+          // If the trashcan holds a clue, it MUST drop.
+          // Otherwise, we have a 40% chance of dropping a decorative/atmospheric dummy note, and 60% chance of no note.
+          const shouldDropNote = obj.heldClueId !== null || Math.random() < 0.4;
+          
+          if (shouldDropNote) {
+            const notePuzzle = initializeTornNote(roomTemplateId, obj.heldClueId);
+            newActiveTornNote = notePuzzle;
+          }
           obj.heldClueId = null; 
 
           if (obj.heldItemId) {
@@ -707,19 +715,32 @@ export default function App() {
               ateCatnipThisTurn = true;
               obj.heldItemId = null;
               newLogs.push(addLog('system', `🌿 НАХОДКА! Миднайт выудил из мусора кошачью мяту! Травмы излечены, шестое чувство активировано!`));
-              dialogueText = '«Какой погром! Но постой... из мусорной корзины выкатилась кошачья мята! Миднайт тут же съел её, его раны затянулись, а глаза сверкают — шестое чувство полностью активировано! И еще тут куча обрывков секретного письма!»';
+              if (shouldDropNote) {
+                dialogueText = '«Какой погром! Но постой... из мусорной корзины выкатилась кошачья мята! Миднайт тут же съел её, его раны затянулись, а глаза сверкают — шестое чувство полностью активировано! И еще тут куча обрывков секретного письма!»';
+              } else {
+                dialogueText = '«Какой погром! Но постой... из мусорной корзины выкатилась кошачья мята! Миднайт тут же съел её, его раны затянулись, а глаза сверкают — шестое чувство полностью активировано!»';
+              }
               dialogueMood = 'proud';
               if (!prev.isMuted) { try { gameAudio.playPurr(); } catch (e) {} }
             } else if (!newInventory.includes(obj.heldItemId)) {
               newInventory.push(obj.heldItemId);
               const item = getItemDetail(obj.heldItemId);
-              dialogueText = `«Какой погром! Но... постой, из груды мусора выкатился предмет: ${item.name}! И еще тут... куча обрывков секретного письма! Давайте соберем их!»`;
+              if (shouldDropNote) {
+                dialogueText = `«Какой погром! Но... постой, из груды мусора выкатился предмет: ${item.name}! И еще тут... куча обрывков секретного письма! Давайте соберем их!»`;
+              } else {
+                dialogueText = `«Какой погром! Но... постой, из груды мусора выкатился предмет: ${item.name}!»`;
+              }
               dialogueMood = 'shocked';
               if (!prev.isMuted) gameAudio.playClick();
             }
           } else {
-            dialogueText = '«Какой погром! Но... постой, Миднайт выкатил из корзины кучу обрывков. Это же разорванное секретное письмо! Давайте сложить его!»';
-            dialogueMood = 'shocked';
+            if (shouldDropNote) {
+              dialogueText = '«Какой погром! Но... постой, Миднайт выкатил из корзины кучу обрывков. Это же разорванное секретное письмо! Давайте сложить его!»';
+              dialogueMood = 'shocked';
+            } else {
+              dialogueText = '«Ох, какой грохот! Мусорная корзина перевернута вверх дном, но внутри лишь старые газеты и окурки. Ничего полезного...»';
+              dialogueMood = 'serious';
+            }
           }
         } 
         
