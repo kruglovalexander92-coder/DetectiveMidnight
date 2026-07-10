@@ -430,6 +430,78 @@ class AudioEngine {
       osc.stop(now + idx * 0.08 + 1.9);
     });
   }
+
+  playTypewriterKey() {
+    this.init();
+    if (!this.ctx || !this.masterVolume) return;
+
+    const now = this.ctx.currentTime;
+    
+    // Short high-passed click noise
+    const bufferSize = Math.floor(0.015 * this.ctx.sampleRate);
+    const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      output[i] = Math.random() * 2 - 1;
+    }
+    const noiseSource = this.ctx.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(3200 + Math.random() * 800, now);
+
+    const noiseGain = this.ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.07, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.012);
+
+    noiseSource.connect(filter);
+    filter.connect(noiseGain);
+    noiseGain.connect(this.masterVolume);
+    noiseSource.start(now);
+    noiseSource.stop(now + 0.015);
+
+    // Short mechanical pitch-bend transient
+    const osc = this.ctx.createOscillator();
+    const oscGain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(140 + Math.random() * 40, now);
+    osc.frequency.exponentialRampToValueAtTime(1000, now + 0.008);
+
+    oscGain.gain.setValueAtTime(0.09, now);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.014);
+
+    osc.connect(oscGain);
+    oscGain.connect(this.masterVolume);
+    osc.start(now);
+    osc.stop(now + 0.02);
+  }
+
+  playTypewriterBell() {
+    this.init();
+    if (!this.ctx || !this.masterVolume) return;
+
+    const now = this.ctx.currentTime;
+    const freqs = [1850, 2460, 3120];
+    const gains = [0.12, 0.05, 0.03];
+
+    freqs.forEach((freq, idx) => {
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now);
+
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(gains[idx], now + 0.005);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
+      osc.connect(gain);
+      gain.connect(this.masterVolume!);
+      osc.start(now);
+      osc.stop(now + 0.6);
+    });
+  }
 }
 
 export const gameAudio = new AudioEngine();

@@ -65,12 +65,14 @@ export default function GameScene({
     return { x, y, height };
   };
 
-  // Multi-room visibility rules for Chapter 2
+  // Multi-room visibility rules for Chapter 2 and custom multi-room sandbox locations
   const isChapter2 = gameState.storyState?.mode === 'story' && gameState.storyState?.chapter === 2;
+  const isMultiRoom = gameState.roomInfo?.id === 'room_mansion' || gameState.roomInfo?.id === 'room_shop' || gameState.roomInfo?.id === 'room_museum';
+  const hasMultipleRooms = isChapter2 || isMultiRoom;
   const currentLocation = gameState.storyState?.currentLocationId || 'pier';
 
   const isVisible = (id: ObjectId) => {
-    if (!isChapter2) return true;
+    if (!hasMultipleRooms) return true;
     if (currentLocation === 'pier') {
       return ['rug', 'trashcan', 'painting', 'fishbowl'].includes(id);
     } else {
@@ -149,44 +151,38 @@ export default function GameScene({
       shouldMove = true;
       targetX = getDetectiveTargetX('safe'); // 78
     } else if (catPosition === 'rug') {
-      const currentX = getPhysicalDetectiveX();
-      const isStandingOnRug = Math.abs(currentX - 36) < 10;
+      const isStandingOnRug = (detectiveX >= 15 && detectiveX <= 70);
       if (isStandingOnRug) {
         shouldMove = true;
-        targetX = 14; // Step off the rug to the bookshelf area
+        targetX = detectiveX < 45 ? 12 : 78; // Step off the rug to the closer side
       }
     }
-    
-    const currentPhysicalX = getPhysicalDetectiveX();
     
     if (detectiveWalkTimeoutRef.current) {
       clearTimeout(detectiveWalkTimeoutRef.current);
     }
     
     if (!shouldMove) {
-      // Keep detective standing exactly where he physically is right now
-      setDetectiveX(currentPhysicalX);
       setDetectiveTransition('none');
       setDetectiveState('idle');
       return;
     }
     
-    // Stop ongoing transition at exact physical coordinate to prevent double flips/teleports
-    setDetectiveX(currentPhysicalX);
+    // Stop ongoing transition
     setDetectiveTransition('none');
     setDetectiveState('idle');
     
     // Start walk in next tick (30ms) after CSS has processed the snap
     const walkTimer = setTimeout(() => {
-      const distance = Math.abs(targetX - currentPhysicalX);
+      const distance = Math.abs(targetX - detectiveX);
       if (distance < 1) {
-        setDetectiveFacingLeft(targetX < currentPhysicalX);
+        setDetectiveFacingLeft(targetX < detectiveX);
         return;
       }
       
       const duration = Math.max(600, distance * 22);
       setDetectiveTransition(`left ${duration}ms linear`);
-      setDetectiveFacingLeft(targetX < currentPhysicalX);
+      setDetectiveFacingLeft(targetX < detectiveX);
       setDetectiveState('walking');
       setDetectiveX(targetX);
       
@@ -205,7 +201,7 @@ export default function GameScene({
 
   // Sync Detective room entry walk on transition
   useEffect(() => {
-    if (!isChapter2) return;
+    if (!hasMultipleRooms) return;
     
     if (detectiveWalkTimeoutRef.current) {
       clearTimeout(detectiveWalkTimeoutRef.current);
@@ -252,7 +248,7 @@ export default function GameScene({
         if (detectiveWalkTimeoutRef.current) clearTimeout(detectiveWalkTimeoutRef.current);
       };
     }
-  }, [currentLocation, isChapter2]);
+  }, [currentLocation, hasMultipleRooms]);
 
   // Dynamic Cat Animation Sequencer States
   const [currentSpot, setCurrentSpot] = useState<ObjectId | 'center'>(catPosition);
@@ -313,10 +309,9 @@ export default function GameScene({
         const helperX = getX(helper);
         const distToTarget = Math.abs(helperX - toX);
         
-        // Stepping stone must be extremely close (physically nearby) to the target
-        if (distToTarget <= 12) {
-          const isBetween = (fromX <= helperX && helperX <= toX) || (toX <= helperX && helperX <= fromX);
-          return isBetween || distToTarget <= 8;
+        // Stepping stone must be close enough (physically nearby) to the target
+        if (distToTarget <= 30) {
+          return true;
         }
         return false;
       });
@@ -1280,36 +1275,74 @@ export default function GameScene({
       </div>
       )}
 
-      {/* --- DOORS FOR CHAPTER 2 TRANSITIONS --- */}
-      {isChapter2 && currentLocation === 'pier' && (
-        <div 
-          onClick={() => onChangeLocation?.('warehouse')}
-          className="absolute bottom-16 right-[15%] w-[12%] h-[35%] group cursor-pointer z-20 flex flex-col justify-end items-center"
-        >
-          <div className="w-full h-full border-2 border-dashed border-neutral-600 hover:border-white bg-neutral-950/80 rounded p-3 flex flex-col justify-between items-center shadow-2xl transition-all hover:scale-105">
-            <div className="w-2 h-2 bg-yellow-500 rounded-full animate-ping" />
-            <svg viewBox="0 0 24 24" className="w-10 h-10 text-neutral-400 group-hover:text-white transition-colors fill-none stroke-current stroke-1.5">
-              <path d="M15 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8m-3-9 4 4m0 0-4 4m4-4H9" />
-            </svg>
-            <span className="text-[8px] font-sans text-center font-bold tracking-wider text-neutral-400 group-hover:text-white uppercase">Внутрь склада</span>
+      {/* --- DOORS FOR MULTI-ROOM TRANSITIONS --- */}
+      {hasMultipleRooms && currentLocation === 'pier' && (() => {
+        const roomId = gameState.roomInfo?.id;
+        let doorText = 'Внутрь склада';
+        let isStairs = false;
+        if (roomId === 'room_mansion') {
+          doorText = 'На 2-й этаж';
+          isStairs = true;
+        } else if (roomId === 'room_shop') {
+          doorText = 'В подсобку';
+        } else if (roomId === 'room_museum') {
+          doorText = 'В зал скульптур';
+        }
+        return (
+          <div 
+            onClick={() => onChangeLocation?.('warehouse')}
+            className="absolute bottom-16 right-[15%] w-[12%] h-[35%] group cursor-pointer z-20 flex flex-col justify-end items-center animate-fade-in"
+          >
+            <div className="w-full h-full border-2 border-dashed border-amber-500/40 hover:border-amber-400 bg-black/80 rounded p-3 flex flex-col justify-between items-center shadow-2xl transition-all hover:scale-105">
+              <div className="w-2 h-2 bg-amber-500 rounded-full animate-ping" />
+              {isStairs ? (
+                <svg viewBox="0 0 24 24" className="w-10 h-10 text-amber-500/70 group-hover:text-amber-400 transition-colors fill-none stroke-current stroke-1.5">
+                  <path d="M6 20h4v-4h4v-4h4v-4h4V4" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" className="w-10 h-10 text-amber-500/70 group-hover:text-amber-400 transition-colors fill-none stroke-current stroke-1.5">
+                  <path d="M15 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8m-3-9 4 4m0 0-4 4m4-4H9" />
+                </svg>
+              )}
+              <span className="text-[8px] font-sans text-center font-bold tracking-wider text-amber-500/70 group-hover:text-amber-400 uppercase leading-tight">{doorText}</span>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
-      {isChapter2 && currentLocation === 'warehouse' && (
-        <div 
-          onClick={() => onChangeLocation?.('pier')}
-          className="absolute bottom-16 left-[25%] w-[12%] h-[35%] group cursor-pointer z-20 flex flex-col justify-end items-center"
-        >
-          <div className="w-full h-full border-2 border-dashed border-neutral-600 hover:border-white bg-neutral-950/80 rounded p-3 flex flex-col justify-between items-center shadow-2xl transition-all hover:scale-105">
-            <div className="w-2 h-2 bg-yellow-500 rounded-full animate-ping" />
-            <svg viewBox="0 0 24 24" className="w-10 h-10 text-neutral-400 group-hover:text-white transition-colors fill-none stroke-current stroke-1.5">
-              <path d="M10 3H20a2 2 0 0 1 2 2V19a2 2 0 0 1-2 2H10M14 8l-4 4m0 0 4 4m-4-4h10" />
-            </svg>
-            <span className="text-[8px] font-sans text-center font-bold tracking-wider text-neutral-400 group-hover:text-white uppercase">На причал</span>
+      {hasMultipleRooms && currentLocation === 'warehouse' && (() => {
+        const roomId = gameState.roomInfo?.id;
+        let doorText = 'На причал';
+        let isStairs = false;
+        if (roomId === 'room_mansion') {
+          doorText = 'На 1-й этаж';
+          isStairs = true;
+        } else if (roomId === 'room_shop') {
+          doorText = 'В торговый зал';
+        } else if (roomId === 'room_museum') {
+          doorText = 'В зал картин';
+        }
+        return (
+          <div 
+            onClick={() => onChangeLocation?.('pier')}
+            className="absolute bottom-16 left-[25%] w-[12%] h-[35%] group cursor-pointer z-20 flex flex-col justify-end items-center animate-fade-in"
+          >
+            <div className="w-full h-full border-2 border-dashed border-amber-500/40 hover:border-amber-400 bg-black/80 rounded p-3 flex flex-col justify-between items-center shadow-2xl transition-all hover:scale-105">
+              <div className="w-2 h-2 bg-amber-500 rounded-full animate-ping" />
+              {isStairs ? (
+                <svg viewBox="0 0 24 24" className="w-10 h-10 text-amber-500/70 group-hover:text-amber-400 transition-colors fill-none stroke-current stroke-1.5">
+                  <path d="M18 4h-4v4h-4v4h-4v4H2v4" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" className="w-10 h-10 text-amber-500/70 group-hover:text-amber-400 transition-colors fill-none stroke-current stroke-1.5">
+                  <path d="M10 3H20a2 2 0 0 1 2 2V19a2 2 0 0 1-2 2H10M14 8l-4 4m0 0 4 4m-4-4h10" />
+                </svg>
+              )}
+              <span className="text-[8px] font-sans text-center font-bold tracking-wider text-amber-500/70 group-hover:text-amber-400 uppercase leading-tight">{doorText}</span>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* --- DETECTIVE BARTH (Animated character) --- */}
       <DetectiveCharacter
@@ -1323,7 +1356,7 @@ export default function GameScene({
 
       {/* --- CAT MIDNIGHT (Animated sprite) --- */}
       <div 
-        className={`absolute pointer-events-none z-30 flex flex-col items-center justify-end ${getCatSpot(catPosition).height}`}
+        className={`absolute pointer-events-none z-30 flex flex-col items-center justify-end ${getCatSpot(currentSpot).height}`}
         style={{
           left: `${visualCoords.x + (isWandering ? wanderOffset : 0)}%`,
           top: `${visualCoords.y}%`,

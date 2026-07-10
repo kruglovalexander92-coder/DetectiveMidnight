@@ -17,6 +17,7 @@ interface SandboxDashboardProps {
   onEndDay: () => void;
   onBuyLead: (jobId: string) => void;
   onReturnToMenu: () => void;
+  onOpenWriter?: () => void;
 }
 
 const STORY_CHAPTERS_DATA: Job[] = [
@@ -67,12 +68,13 @@ export default function SandboxDashboard({
   onSelectJob,
   onEndDay,
   onBuyLead,
-  onReturnToMenu
+  onReturnToMenu,
+  onOpenWriter
 }: SandboxDashboardProps) {
   const currentDay = gameState.currentDay ?? 1;
   const reputation = gameState.reputation ?? 0;
   const cash = gameState.economy?.cash ?? 150;
-  const dailyJobs = gameState.availableJobs ?? [];
+  const dailyJobs = (gameState.availableJobs ?? []).filter(Boolean);
   const completedChapters = gameState.storyState?.completedChapters ?? [];
   const [storyViewMode, setStoryViewMode] = useState<'corkboard' | 'cards' | 'interrogate'>('corkboard');
 
@@ -219,13 +221,31 @@ export default function SandboxDashboard({
               «Раскрывайте криминальные дела из сводок, чтобы заработать гонорар до наступления темноты!»
             </p>
             
-            <button
-              onClick={handleEndDayClick}
-              className="px-5 h-10 bg-white hover:bg-neutral-200 text-black font-sans text-[10px] font-bold uppercase tracking-[0.2em] rounded-none transition-all flex items-center gap-1.5 shrink-0 shadow hover:scale-[1.01]"
-            >
-              <Lucide.Moon className="w-3.5 h-3.5 fill-black" />
-              Завершить день (-110$)
-            </button>
+            <div className="flex gap-2 flex-wrap justify-center sm:justify-end">
+              {onOpenWriter && (
+                <button
+                  onClick={() => {
+                    try {
+                      gameAudio.playClick();
+                      gameAudio.playTypewriterBell();
+                    } catch (e) {}
+                    onOpenWriter();
+                  }}
+                  className="px-4 h-10 border border-amber-500/35 hover:border-amber-400 bg-amber-950/20 hover:bg-amber-950/40 text-amber-400 font-sans text-[10px] font-bold uppercase tracking-[0.2em] rounded-none transition-all flex items-center gap-1.5 shrink-0 shadow hover:scale-[1.01]"
+                >
+                  <Lucide.PenTool className="w-3.5 h-3.5" />
+                  Кабинет писателя
+                </button>
+              )}
+
+              <button
+                onClick={handleEndDayClick}
+                className="px-5 h-10 bg-white hover:bg-neutral-200 text-black font-sans text-[10px] font-bold uppercase tracking-[0.2em] rounded-none transition-all flex items-center gap-1.5 shrink-0 shadow hover:scale-[1.01]"
+              >
+                <Lucide.Moon className="w-3.5 h-3.5 fill-black" />
+                Завершить день (-110$)
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -344,9 +364,9 @@ export default function SandboxDashboard({
                   let lockReason = '';
 
                   if (index > 0) {
-                    const prevChapters = gameState.campaignChapters || STORY_CHAPTERS_DATA;
+                    const prevChapters = (gameState.campaignChapters && gameState.campaignChapters.length > 0) ? gameState.campaignChapters : STORY_CHAPTERS_DATA;
                     const prevCh = prevChapters[index - 1];
-                    const prevChCompleted = prevCh.completed || completedChapters.includes(chNum - 1);
+                    const prevChCompleted = prevCh ? (prevCh.completed || completedChapters.includes(chNum - 1)) : false;
                     
                     if (!prevChCompleted) {
                       isLocked = true;

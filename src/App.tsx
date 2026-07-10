@@ -18,6 +18,7 @@ import FilmGrain from './components/FilmGrain';
 import AlleywayShop from './components/AlleywayShop';
 import SandboxDashboard from './components/SandboxDashboard';
 import TornNotePuzzle from './components/TornNotePuzzle';
+import WriterMode from './components/WriterMode';
 
 import * as Lucide from 'lucide-react';
 
@@ -118,6 +119,14 @@ export default function App() {
   const [isShopOpen, setIsShopOpen] = useState(false);
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [isTornNoteOpen, setIsTornNoteOpen] = useState(false);
+  
+  // Writer and AI Critic States
+  const [isWriterOpen, setIsWriterOpen] = useState(false);
+  const [showPublishPopup, setShowPublishPopup] = useState(false);
+  const [ratingIdea, setRatingIdea] = useState(5);
+  const [ratingExecution, setRatingExecution] = useState(5);
+  const [isCritiquing, setIsCritiquing] = useState(false);
+  const [critiqueResult, setCritiqueResult] = useState<any | null>(null);
   const [dayTransition, setDayTransition] = useState<{
     isActive: boolean;
     fromDay: number;
@@ -131,6 +140,22 @@ export default function App() {
       setIsTornNoteOpen(true);
     }
   }, [gameState.activeTornNote?.id]);
+
+  // Auto-trigger the "Publish custom campaign" popup when all chapters of a custom campaign are completed
+  useEffect(() => {
+    if (
+      gameState.campaignChapters &&
+      gameState.campaignChapters.length > 0 &&
+      gameState.customCampaignIdea &&
+      gameState.campaignChapters.every(ch => ch.completed) &&
+      !showPublishPopup &&
+      !critiqueResult
+    ) {
+      setShowPublishPopup(true);
+      setRatingIdea(5);
+      setRatingExecution(5);
+    }
+  }, [gameState.campaignChapters, gameState.customCampaignIdea]);
 
   // Check if saved game exists in localStorage on mount or state changes
   const [hasSavedGame, setHasSavedGame] = useState<boolean>(false);
@@ -341,7 +366,7 @@ export default function App() {
   }, [gameState.gameStatus, gameState.timerActive]);
 
   // Handle Shop purchases
-  const handleBuyItem = (itemId: 'catnip' | 'rumor' | 'safe_code') => {
+  const handleBuyItem = (itemId: 'catnip' | 'rumor' | 'safe_code' | 'writer_reset') => {
     if (gameState.gameStatus !== 'playing') return;
     setGameState(prev => {
       const currentCash = prev.economy?.cash ?? 150;
@@ -349,6 +374,7 @@ export default function App() {
       if (itemId === 'catnip') cost = 30;
       else if (itemId === 'rumor') cost = 45;
       else if (itemId === 'safe_code') cost = 60;
+      else if (itemId === 'writer_reset') cost = 25;
 
       if (currentCash < cost) return prev;
 
@@ -360,6 +386,9 @@ export default function App() {
       let newHasCatnipSenses = prev.hasCatnipSenses;
       let newIsInjured = prev.isInjured;
       const newRevealedObjects = [...(prev.revealedObjects || [])];
+
+      let newWriterCasesToday = prev.writerCasesToday;
+      let newWriterNovelLastDay = prev.writerNovelLastDay;
 
       if (itemId === 'catnip') {
         newIsInjured = false;
@@ -421,11 +450,23 @@ export default function App() {
         newDialogueText = `«Барни протянул мне обрывок бумажки: "Р-р-гав! Держи свой шифр от сейфа, Барт: ${prev.safeCode}". Ну вот и всё, сейф у нас в кармане!»`;
         newDialogueMood = 'shocked';
         try { if (!prev.isMuted) gameAudio.playClick(); } catch (e) {}
+      } else if (itemId === 'writer_reset') {
+        newWriterCasesToday = 0;
+        newWriterNovelLastDay = undefined;
+        newLogs.push({
+          id: `log_buy_writer_reset_${Date.now()}`,
+          sender: 'system',
+          text: `💸 Куплены кофе и сигареты (-25$). Лимиты писателя полностью сброшены!`,
+          timestamp: new Date().toLocaleTimeString()
+        });
+        newDialogueText = '«Горячий двойной эспрессо и терпкий сигаретный дым. Мои мысли прояснились, пальцы готовы снова барабанить по клавишам Ундервуда!»';
+        newDialogueMood = 'proud';
+        try { if (!prev.isMuted) gameAudio.playTypewriterBell(); } catch (e) {}
       }
 
       const expensesList = [
         { 
-          name: itemId === 'catnip' ? 'Кошачья мята богов' : itemId === 'rumor' ? 'Слухи у Реми' : 'Шифр у Барни', 
+          name: itemId === 'catnip' ? 'Кошачья мята богов' : itemId === 'rumor' ? 'Слухи у Реми' : itemId === 'safe_code' ? 'Шифр у Барни' : 'Кофе и сигареты писателя', 
           amount: cost, 
           timestamp: new Date().toLocaleTimeString() 
         },
@@ -438,6 +479,8 @@ export default function App() {
         isInjured: newIsInjured,
         hasCatnipSenses: newHasCatnipSenses,
         revealedObjects: newRevealedObjects,
+        writerCasesToday: newWriterCasesToday,
+        writerNovelLastDay: newWriterNovelLastDay,
         logs: newLogs,
         economy: {
           cash: newCash,
@@ -459,12 +502,14 @@ export default function App() {
 
     const currentObj = gameState.objects[id];
     
-    // Multi-room visibility rules for Chapter 2
+    // Multi-room visibility rules for Chapter 2 and custom locations
     const isChapter2 = gameState.storyState?.mode === 'story' && gameState.storyState?.chapter === 2;
+    const isMultiRoom = gameState.roomInfo?.id === 'room_mansion' || gameState.roomInfo?.id === 'room_shop' || gameState.roomInfo?.id === 'room_museum';
+    const hasMultipleRooms = isChapter2 || isMultiRoom;
     const currentLocation = gameState.storyState?.currentLocationId || 'pier';
 
     const isVisible = (oid: ObjectId) => {
-      if (!isChapter2) return true;
+      if (!hasMultipleRooms) return true;
       if (currentLocation === 'pier') {
         return ['rug', 'trashcan', 'painting', 'fishbowl'].includes(oid);
       } else {
@@ -509,10 +554,9 @@ export default function App() {
           const helperX = getX(helper);
           const distToTarget = Math.abs(helperX - toX);
           
-          // Stepping stone must be extremely close (physically nearby) to the target
-          if (distToTarget <= 12) {
-            const isBetween = (fromX <= helperX && helperX <= toX) || (toX <= helperX && helperX <= fromX);
-            return isBetween || distToTarget <= 8;
+          // Stepping stone must be close enough (physically nearby) to the target
+          if (distToTarget <= 30) {
+            return true;
           }
           return false;
         });
@@ -600,15 +644,19 @@ export default function App() {
         let dialogueMood = 'serious';
         let logText = '';
         let dialogueSender: 'detective' | 'cat' | 'system' = 'detective';
+        
         const newInventory = [...prev.inventory];
         const newFoundClues = [...prev.foundClueIds];
         const newLogs = [...prev.logs];
         let newActiveTornNote = prev.activeTornNote;
+        let finalIsInjured = prev.isInjured;
+        let finalHasCatnipSenses = prev.hasCatnipSenses;
+        let ateCatnipThisTurn = false;
 
         // Custom action state determination
         if (id === 'rug') {
           newAction = 'scratching';
-          if (!gameState.isMuted) gameAudio.playScratch();
+          if (!prev.isMuted) gameAudio.playScratch();
           obj.toggled = true;
           logText = 'Кот когтями разодрал край ковра и отвернул его.';
           
@@ -617,13 +665,24 @@ export default function App() {
             const clue = prev.currentClues.find(c => c.id === obj.heldClueId);
             dialogueText = clue ? clue.findingMessage : 'Улика найдена под ковром!';
             dialogueMood = 'shocked';
-            if (!gameState.isMuted) gameAudio.playClueFound();
-          } else if (obj.heldItemId && !newInventory.includes(obj.heldItemId)) {
-            newInventory.push(obj.heldItemId);
-            const item = getItemDetail(obj.heldItemId);
-            dialogueText = `«Миднайт, выплюнь каку! О... это же ${item.name}! Где ты его откопал?»`;
-            dialogueMood = 'thoughtful';
-            if (!gameState.isMuted) gameAudio.playClick();
+            if (!prev.isMuted) gameAudio.playClueFound();
+          } else if (obj.heldItemId) {
+            if (obj.heldItemId === 'catnip') {
+              finalIsInjured = false;
+              finalHasCatnipSenses = true;
+              ateCatnipThisTurn = true;
+              obj.heldItemId = null;
+              newLogs.push(addLog('system', `🌿 НАХОДКА! Миднайт откопал под ковром кошачью мяту! Травмы излечены, шестое чувство активировано!`));
+              dialogueText = '«О-о-о! Миднайт откопал под ковром кошачью мяту и тут же её съел! Его раны затянулись, а глаза сверкают — шестое чувство полностью активировано!»';
+              dialogueMood = 'proud';
+              if (!prev.isMuted) { try { gameAudio.playPurr(); } catch (e) {} }
+            } else if (!newInventory.includes(obj.heldItemId)) {
+              newInventory.push(obj.heldItemId);
+              const item = getItemDetail(obj.heldItemId);
+              dialogueText = `«Миднайт, выплюнь каку! О... это же ${item.name}! Где ты его откопал?»`;
+              dialogueMood = 'thoughtful';
+              if (!prev.isMuted) gameAudio.playClick();
+            }
           } else {
             dialogueText = '«Миднайт, прекрати драть казенный ковер! Иди лучше займись делом!»';
             dialogueMood = 'serious';
@@ -632,33 +691,41 @@ export default function App() {
         
         else if (id === 'trashcan') {
           newAction = 'pushing';
-          if (!gameState.isMuted) gameAudio.playCrash();
+          if (!prev.isMuted) gameAudio.playCrash();
           obj.tipped = true;
           logText = 'Кот с разбегу опрокинул мусорную корзину!';
           
           const roomTemplateId = prev.roomInfo?.id || 'room_antique';
-          
-          // Initialize activeTornNote puzzle
-          // Note that we pass the obj.heldClueId so it's unlocked upon solving
           const notePuzzle = initializeTornNote(roomTemplateId, obj.heldClueId);
           newActiveTornNote = notePuzzle;
-          obj.heldClueId = null; // Clear from trashcan since it is now locked in the note
+          obj.heldClueId = null; 
 
-          if (obj.heldItemId && !newInventory.includes(obj.heldItemId)) {
-            newInventory.push(obj.heldItemId);
-            const item = getItemDetail(obj.heldItemId);
-            dialogueText = `«Какой погром! Но... постой, из груды мусора выкатился предмет: ${item.name}! И еще тут... куча обрывков секретного письма! Давайте соберем их!»`;
-            dialogueMood = 'shocked';
-            if (!gameState.isMuted) gameAudio.playClick();
+          if (obj.heldItemId) {
+            if (obj.heldItemId === 'catnip') {
+              finalIsInjured = false;
+              finalHasCatnipSenses = true;
+              ateCatnipThisTurn = true;
+              obj.heldItemId = null;
+              newLogs.push(addLog('system', `🌿 НАХОДКА! Миднайт выудил из мусора кошачью мяту! Травмы излечены, шестое чувство активировано!`));
+              dialogueText = '«Какой погром! Но постой... из мусорной корзины выкатилась кошачья мята! Миднайт тут же съел её, его раны затянулись, а глаза сверкают — шестое чувство полностью активировано! И еще тут куча обрывков секретного письма!»';
+              dialogueMood = 'proud';
+              if (!prev.isMuted) { try { gameAudio.playPurr(); } catch (e) {} }
+            } else if (!newInventory.includes(obj.heldItemId)) {
+              newInventory.push(obj.heldItemId);
+              const item = getItemDetail(obj.heldItemId);
+              dialogueText = `«Какой погром! Но... постой, из груды мусора выкатился предмет: ${item.name}! И еще тут... куча обрывков секретного письма! Давайте соберем их!»`;
+              dialogueMood = 'shocked';
+              if (!prev.isMuted) gameAudio.playClick();
+            }
           } else {
-            dialogueText = '«Какой погром! Но... постой, Миднайт выкатил из корзины кучу обрывков. Это же разорванное секретное письмо! Давайте сложим его!»';
+            dialogueText = '«Какой погром! Но... постой, Миднайт выкатил из корзины кучу обрывков. Это же разорванное секретное письмо! Давайте сложить его!»';
             dialogueMood = 'shocked';
           }
         } 
         
         else if (id === 'painting') {
           newAction = 'scratching';
-          if (!gameState.isMuted) gameAudio.playScratch();
+          if (!prev.isMuted) gameAudio.playScratch();
           obj.toggled = true;
           logText = 'Кот лапой скосил картину набок.';
 
@@ -669,12 +736,12 @@ export default function App() {
             const clue = prev.currentClues.find(c => c.id === obj.heldClueId);
             dialogueText = clue ? clue.findingMessage : 'Улика найдена за картиной!';
             dialogueMood = 'shocked';
-            if (!gameState.isMuted) gameAudio.playClueFound();
+            if (!prev.isMuted) gameAudio.playClueFound();
           } else if (isSafeCodeBehindPainting && !newInventory.includes('safe_code_note')) {
             newInventory.push('safe_code_note');
             dialogueText = `«Миднайт, ты сдвинул пейзаж... Ого! На стене под картиной нацарапан шифр: [Код сейфа: ${prev.safeCode}]! Запишу в блокнот...»`;
             dialogueMood = 'thoughtful';
-            if (!gameState.isMuted) gameAudio.playClick();
+            if (!prev.isMuted) gameAudio.playClick();
           } else {
             dialogueText = '«Ван Гог бы перевернулся в гробу! Зачем ты раскачиваешь раму, Миднайт? Там нет мышей!»';
             dialogueMood = 'serious';
@@ -683,7 +750,7 @@ export default function App() {
         
         else if (id === 'bookshelf') {
           newAction = 'pushing';
-          if (!gameState.isMuted) gameAudio.playCrash();
+          if (!prev.isMuted) gameAudio.playCrash();
           obj.booksFallen = true;
           logText = 'Кот сбросил увесистые фолианты с полки!';
 
@@ -694,18 +761,29 @@ export default function App() {
             const clue = prev.currentClues.find(c => c.id === obj.heldClueId);
             dialogueText = clue ? clue.findingMessage : 'Улика вывалилась из книг!';
             dialogueMood = 'shocked';
-            if (!gameState.isMuted) gameAudio.playClueFound();
-          } else if (obj.heldItemId && !newInventory.includes(obj.heldItemId)) {
-            newInventory.push(obj.heldItemId);
-            const item = getItemDetail(obj.heldItemId);
-            dialogueText = `«Мои драгоценные конспекты! Ой, постой, из распоротого корешка книги "Убийство в Эссексе" выпал ${item.name}! Ловко!»`;
-            dialogueMood = 'proud';
-            if (!gameState.isMuted) gameAudio.playClick();
+            if (!prev.isMuted) gameAudio.playClueFound();
+          } else if (obj.heldItemId) {
+            if (obj.heldItemId === 'catnip') {
+              finalIsInjured = false;
+              finalHasCatnipSenses = true;
+              ateCatnipThisTurn = true;
+              obj.heldItemId = null;
+              newLogs.push(addLog('system', `🌿 НАХОДКА! Из книги выпала кошачья мята! Травмы излечены, шестое чувство активировано!`));
+              dialogueText = '«Мои драгоценные конспекты летят на пол! Но погоди... из корешка одной из книг выпала засушенная кошачья мята! Миднайт мигом её проглотил. Раны затянулись, шестое чувство активировано!»';
+              dialogueMood = 'proud';
+              if (!prev.isMuted) { try { gameAudio.playPurr(); } catch (e) {} }
+            } else if (!newInventory.includes(obj.heldItemId)) {
+              newInventory.push(obj.heldItemId);
+              const item = getItemDetail(obj.heldItemId);
+              dialogueText = `«Мои драгоценные конспекты! Ой, постой, из распоротого корешка книги "Убийство в Эссексе" выпал ${item.name}! Ловко!»`;
+              dialogueMood = 'proud';
+              if (!prev.isMuted) gameAudio.playClick();
+            }
           } else if (isSafeCodeBehindBooks && !newInventory.includes('safe_code_note')) {
             newInventory.push('safe_code_note');
             dialogueText = `«Ба! На полке в углу, куда падает свет торшера, проступила кодовая комбинация: [${prev.safeCode}]! Это невероятно!»`;
             dialogueMood = 'proud';
-            if (!gameState.isMuted) gameAudio.playClick();
+            if (!prev.isMuted) gameAudio.playClick();
           } else {
             dialogueText = '«Ай! Книги летят прямо на меня! Миднайт, прекрати хулиганить! Это научные труды, а не кошачья когтеточка!»';
             dialogueMood = 'silly';
@@ -714,16 +792,27 @@ export default function App() {
         
         else if (id === 'fishbowl') {
           newAction = 'pushing';
-          if (!gameState.isMuted) gameAudio.playCrash();
+          if (!prev.isMuted) gameAudio.playCrash();
           obj.tipped = true;
           logText = 'Кот опрокинул аквариум! Вода залила комод.';
           
-          if (obj.heldItemId && !newInventory.includes(obj.heldItemId)) {
-            newInventory.push(obj.heldItemId);
-            const item = getItemDetail(obj.heldItemId);
-            dialogueText = `«О нет! Золотая рыбка! Лови её! Погоди-ка... Вместе с водой на поднос вымыло ${item.name}! Как он там оказался?»`;
-            dialogueMood = 'shocked';
-            if (!gameState.isMuted) gameAudio.playClick();
+          if (obj.heldItemId) {
+            if (obj.heldItemId === 'catnip') {
+              finalIsInjured = false;
+              finalHasCatnipSenses = true;
+              ateCatnipThisTurn = true;
+              obj.heldItemId = null;
+              newLogs.push(addLog('system', `🌿 НАХОДКА! Из аквариума вымыло кошачью мяту! Травмы излечены, шестое чувство активировано!`));
+              dialogueText = '«О нет! Золотая рыбка на полу! Но постой... вместе с водой вымыло кошачью мяту! Миднайт мигом слизнул её — раны затянулись, а глаза горят мистическим блеском шестого чувства!»';
+              dialogueMood = 'shocked';
+              if (!prev.isMuted) { try { gameAudio.playPurr(); } catch (e) {} }
+            } else if (!newInventory.includes(obj.heldItemId)) {
+              newInventory.push(obj.heldItemId);
+              const item = getItemDetail(obj.heldItemId);
+              dialogueText = `«О нет! Золотая рыбка! Лови её! Погоди-ка... Вместе с водой на поднос вымыло ${item.name}! Как он там оказался?»`;
+              dialogueMood = 'shocked';
+              if (!prev.isMuted) gameAudio.playClick();
+            }
           } else {
             dialogueText = '«Вода повсюду! Хватит устраивать купание, Миднайт! Рыбка выглядит испуганной, а я промок до нитки!»';
             dialogueMood = 'serious';
@@ -732,7 +821,7 @@ export default function App() {
         
         else if (id === 'lamp') {
           newAction = 'jumping';
-          if (!gameState.isMuted) gameAudio.playClick();
+          if (!prev.isMuted) gameAudio.playClick();
           obj.toggled = !obj.toggled;
           logText = obj.toggled ? 'Кот нажал на рычаг торшера и зажег лампу.' : 'Кот выключил торшер лапой.';
 
@@ -743,7 +832,7 @@ export default function App() {
               newInventory.push('safe_code_note');
               dialogueText = `«Свет озарил пустую полку... Смотри, на задней стенке шкафа проступили цифры: [${prev.safeCode}]! Это код от сейфа!»`;
               dialogueMood = 'shocked';
-              if (!gameState.isMuted) gameAudio.playClick();
+              if (!prev.isMuted) gameAudio.playClick();
             } else if (isSafeCodeViaLamp && !prev.objects.bookshelf.booksFallen) {
               dialogueText = '«Свет горит. Но тени от тяжелых книг на полке мешают что-то разглядеть. Нужно освободить место...»';
               dialogueMood = 'thoughtful';
@@ -760,10 +849,9 @@ export default function App() {
         else if (id === 'desk') {
           if (obj.locked) {
             if (newInventory.includes('key_brass')) {
-              // Unlock desk drawer
               obj.locked = false;
               newAction = 'meowing';
-              if (!gameState.isMuted) gameAudio.playClick();
+              if (!prev.isMuted) gameAudio.playClick();
               logText = 'Кот поскреб лапкой замочную скважину, а Барт отпер её латунным ключом!';
               
               const isSafeCodeViaDesk = prev.solvedSteps.includes('safe_code_via_desk');
@@ -775,7 +863,7 @@ export default function App() {
                   ? `«Замок поддался! Открываю ящик... О боже, да тут ${clue.name}! ${clue.description}»`
                   : 'Найдена улика в столе!';
                 dialogueMood = 'shocked';
-                if (!gameState.isMuted) gameAudio.playClueFound();
+                if (!prev.isMuted) gameAudio.playClueFound();
               }
 
               if (isSafeCodeViaDesk && !newInventory.includes('safe_code_note')) {
@@ -784,12 +872,11 @@ export default function App() {
                 dialogueMood = 'shocked';
               }
               
-              // Consume brass key
               const keyIdx = newInventory.indexOf('key_brass');
               if (keyIdx > -1) newInventory.splice(keyIdx, 1);
             } else {
               newAction = 'meowing';
-              if (!gameState.isMuted) gameAudio.playClick();
+              if (!prev.isMuted) gameAudio.playClick();
               dialogueText = '«Этот выдвижной ящик плотно заперт. Замочная скважина совсем крошечная, латунная. Нам нужен ключ.»';
               dialogueMood = 'thoughtful';
               logText = 'Кот скребется в запертый ящик стола.';
@@ -827,7 +914,6 @@ export default function App() {
         let gotFine = false;
         let fineAmount = 30;
 
-        // Higher chance of hazard when reputation is higher (cases become more interesting & dangerous)
         const currentRep = prev.reputation ?? 0;
         const hazardChance = currentRep >= 60 ? 0.35 : currentRep >= 25 ? 0.25 : 0.15;
 
@@ -843,9 +929,12 @@ export default function App() {
           }
         }
 
+        if (ateCatnipThisTurn) {
+          gotInjured = false;
+        }
+
         // Apply injury
-        let finalIsInjured = prev.isInjured;
-        if (gotInjured && !prev.isInjured) {
+        if (gotInjured && !finalIsInjured) {
           finalIsInjured = true;
           newLogs.push(addLog('system', `⚠️ ТРАВМА! Миднайт поранил лапу о разбитые осколки или падающие предметы! Движения замедлены.`));
           dialogueText = `«Ай! Кот хромает! Миднайт поранил лапку... Мне нужно купить Кошачью мяту в Лавке подворотни, чтобы поскорее залечить его рану!»`;
@@ -931,6 +1020,7 @@ export default function App() {
           },
           reputation: updatedReputation,
           isInjured: finalIsInjured,
+          hasCatnipSenses: finalHasCatnipSenses,
           activeDialogue: {
             sender: dialogueSender,
             text: dialogueText,
@@ -1157,6 +1247,7 @@ export default function App() {
         return {
           ...prev,
           currentDay: nextDay,
+          writerCasesToday: 0,
           daysSurvived: (prev.daysSurvived ?? 0) + (updatedCash >= 0 ? 1 : 0),
           availableJobs: newJobs,
           activeJob: null,
@@ -1240,12 +1331,25 @@ export default function App() {
         return job;
       }) || [];
 
+      // Calculate writer royalties if it was a custom-written case
+      let royaltiesGained = 0;
+      let newLogs = prev.logs ? [...prev.logs] : [];
+      if (prev.activeJob) {
+        const jobId = prev.activeJob.id;
+        if (jobId.startsWith('custom_job_') || jobId.startsWith('custom_campaign_ch_')) {
+          royaltiesGained = Math.round(prev.activeJob.reward * 0.4);
+          newLogs.push(addLog('system', `✍️ НАЧИСЛЕНИЕ РОЯЛТИ: Как создатель дела, вы получаете 40% авторского гонорара (+${royaltiesGained}$ в сейф калибра 30-х)!`));
+        }
+      }
+
       return {
         ...prev,
         gameStatus: 'sandbox_dashboard',
         activeJob: null,
         availableJobs: updatedJobs,
         campaignChapters: updatedCampaignChapters,
+        writerRoyalties: (prev.writerRoyalties ?? 0) + royaltiesGained,
+        logs: newLogs,
         pendingVictory: false,
         storyState: {
           ...prev.storyState,
@@ -1256,27 +1360,106 @@ export default function App() {
     });
   };
 
+  const handlePublishSubmit = async () => {
+    setIsCritiquing(true);
+    setCritiqueResult(null);
+    try {
+      const response = await fetch('/api/writer/critique', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          idea: gameState.customCampaignIdea || 'Детективный роман о Вансе и его коте Миднайте',
+          ratingIdea,
+          ratingExecution
+        })
+      });
+      const data = await response.json();
+      setCritiqueResult(data);
+    } catch (err) {
+      console.error('Critique failed:', err);
+      setCritiqueResult({
+        grade: 'B',
+        sales_performance: 'Посредственный тираж',
+        profit: 100,
+        review: 'Литературный критик не смог достучаться до редакции из-за тумана, но издательство выплатило базовый гонорар за старания.'
+      });
+    } finally {
+      setIsCritiquing(false);
+    }
+  };
+
+  const handleClaimRoyalties = () => {
+    if (!critiqueResult) return;
+    const profit = critiqueResult.profit || 0;
+    
+    setGameState(prev => {
+      const currentCash = prev.economy?.cash ?? 150;
+      
+      const newLogs = [...prev.logs];
+      newLogs.push(addLog('system', `📚 ИЗДАТЕЛЬСТВО: Опубликован роман "${prev.customCampaignIdea || 'Дело Миднайта'}"! Продажи принесли: ${profit}$!`));
+      
+      return {
+        ...prev,
+        economy: {
+          ...prev.economy,
+          cash: currentCash + profit
+        },
+        // Reset custom campaign states so they can write another one!
+        customCampaignIdea: null,
+        campaignChapters: []
+      };
+    });
+    
+    setShowPublishPopup(false);
+    setCritiqueResult(null);
+  };
+
   const handleChangeLocation = (loc: 'pier' | 'warehouse') => {
     if (gameState.gameStatus !== 'playing') return;
     gameAudio.playClick();
-    setGameState(prev => ({
-      ...prev,
-      storyState: {
-        ...prev.storyState,
-        currentLocationId: loc
-      },
-      logs: [
-        ...prev.logs,
-        addLog('system', `Миднайт и Барт переместились: ${loc === 'pier' ? 'Туманный причал' : 'Склад №9'}`)
-      ],
-      activeDialogue: {
-        sender: 'detective',
-        text: loc === 'pier' 
+    setGameState(prev => {
+      const roomId = prev.roomInfo?.id;
+      let logLocName = loc === 'pier' ? 'Туманный причал' : 'Склад №9';
+      let dialogueText = '';
+      
+      if (roomId === 'room_mansion') {
+        logLocName = loc === 'pier' ? 'Первый этаж (Прихожая)' : 'Второй этаж (Гостиная)';
+        dialogueText = loc === 'pier' 
+          ? '«Итак, мы спустились в просторный холл первого этажа. Под ногами скрипит дорогой паркет...»'
+          : '«Мы поднялись по дубовой лестнице на второй этаж. В этой гостиной лорд проводил последние часы...»';
+      } else if (roomId === 'room_shop') {
+        logLocName = loc === 'pier' ? 'Торговый зал' : 'Подсобка и склад';
+        dialogueText = loc === 'pier' 
+          ? '«Мы вернулись в торговый зал лавки. Полки заставлены мешками, но касса пуста...»'
+          : '«Так-так, это служебная подсобка. Здесь темно и пахнет сырой мешковиной. Идеальный тайник!»';
+      } else if (roomId === 'room_museum') {
+        logLocName = loc === 'pier' ? 'Зал картин' : 'Зал скульптур';
+        dialogueText = loc === 'pier' 
+          ? '«Вернулись в картинную галерею. Вековые шедевры молчаливо следят за каждым нашим шагом...»'
+          : '«Мы вошли в зал скульптур. Мраморные статуи отбрасывают длинные, пугающие тени во мраке...»';
+      } else {
+        dialogueText = loc === 'pier' 
           ? '«Бр-р, какой промозглый туман на этом причале! Миднайт, держись ближе к моим ботинкам, чтобы не свалиться в воду!»'
-          : '«Итак, мы пробрались внутрь Склада №9. Здесь темно, хоть глаз выколи... Какие тайны скрывают контрабандисты?»',
-        mood: 'thoughtful'
+          : '«Итак, мы пробрались внутрь Склада №9. Здесь темно, хоть глаз выколи... Какие тайны скрывают контрабандисты?»';
       }
-    }));
+
+      return {
+        ...prev,
+        storyState: {
+          ...prev.storyState,
+          currentLocationId: loc
+        },
+        logs: [
+          ...prev.logs,
+          addLog('system', `Миднайт и Барт переместились: ${logLocName}`)
+        ],
+        activeDialogue: {
+          sender: 'detective',
+          text: dialogueText,
+          mood: 'thoughtful'
+        }
+      };
+    });
   };
 
   return (
@@ -1387,14 +1570,24 @@ export default function App() {
 
       {/* Main Container Layout */}
       {gameState.gameStatus === 'sandbox_dashboard' ? (
-        <SandboxDashboard 
-          gameState={gameState}
-          setGameState={setGameState}
-          onSelectJob={handleSelectJob}
-          onEndDay={handleEndDay}
-          onBuyLead={handleBuyLead}
-          onReturnToMenu={handleReturnToMenu}
-        />
+        <>
+          <SandboxDashboard 
+            gameState={gameState}
+            setGameState={setGameState}
+            onSelectJob={handleSelectJob}
+            onEndDay={handleEndDay}
+            onBuyLead={handleBuyLead}
+            onReturnToMenu={handleReturnToMenu}
+            onOpenWriter={() => setIsWriterOpen(true)}
+          />
+          {isWriterOpen && (
+            <WriterMode
+              gameState={gameState}
+              setGameState={setGameState}
+              onClose={() => setIsWriterOpen(false)}
+            />
+          )}
+        </>
       ) : (
         <main className="flex-1 w-full max-w-7xl mx-auto p-4 flex flex-col lg:flex-row gap-5 relative z-20 min-h-[580px]">
         
@@ -2024,6 +2217,147 @@ export default function App() {
           setGameState={setGameState}
           onClose={() => setIsTornNoteOpen(false)}
         />
+      )}
+
+      {/* WRITER CAMPAIGN CRITIQUE / PUBLISHING OVERLAY */}
+      {showPublishPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md overflow-y-auto">
+          <div className="relative w-full max-w-xl bg-neutral-900 border border-neutral-800 rounded-none p-6 md:p-8 font-mono text-xs text-neutral-300 shadow-2xl animate-fade-in max-h-[90vh] overflow-y-auto custom-scrollbar">
+            {/* Double Border Frame */}
+            <div className="absolute inset-2 border border-neutral-800/60 pointer-events-none" />
+            <div className="absolute inset-3 border border-neutral-800/30 pointer-events-none" />
+            
+            {/* Header */}
+            <div className="text-center mb-6 relative z-10">
+              <span className="text-[10px] text-amber-500 uppercase tracking-[0.3em] font-bold block mb-1">Издательский дом «Граб Стрит»</span>
+              <h2 className="font-serif text-2xl font-bold italic text-white tracking-wide">Издание Бульварного Романа</h2>
+              <div className="h-[1px] bg-neutral-800 my-3" />
+              <p className="text-[11px] text-neutral-400 italic">
+                Вы завершили детективную кампанию: <span className="text-amber-400 font-bold">«{gameState.customCampaignIdea || 'Приключения Ванса и Миднайта'}»</span>
+              </p>
+            </div>
+
+            {!critiqueResult && !isCritiquing ? (
+              <div className="space-y-6 relative z-10">
+                <p className="text-[11px] leading-relaxed text-neutral-400 text-center">
+                  Поздравляем! Ваш детективный роман успешно прошел обкатку в реальных делах. Перед тем как отправить рукопись на печатные станки, оцените свои впечатления от этой истории:
+                </p>
+
+                {/* Rating 1: Idea */}
+                <div className="bg-black/40 p-4 border border-neutral-800/50">
+                  <span className="text-[10px] text-neutral-400 uppercase tracking-widest block mb-2 font-bold">Оценка вашей идеи (Сюжет & Концепция)</span>
+                  <div className="flex items-center gap-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        onClick={() => setRatingIdea(star)}
+                        className="p-1 hover:scale-125 transition-transform cursor-pointer"
+                      >
+                        <Lucide.Star
+                          className={`w-6 h-6 ${
+                            star <= ratingIdea ? 'text-amber-400 fill-amber-400' : 'text-neutral-600'
+                          }`}
+                        />
+                      </button>
+                    ))}
+                    <span className="ml-3 text-amber-400 font-bold text-sm">{ratingIdea}/5</span>
+                  </div>
+                  <p className="text-[9px] text-neutral-500 mt-1">Насколько интересным и интригующим получился основной синопсис дела?</p>
+                </div>
+
+                {/* Rating 2: AI Execution */}
+                <div className="bg-black/40 p-4 border border-neutral-800/50">
+                  <span className="text-[10px] text-neutral-400 uppercase tracking-widest block mb-2 font-bold">Оценка работы ИИ (Генерация глав & Подсказок)</span>
+                  <div className="flex items-center gap-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        onClick={() => setRatingExecution(star)}
+                        className="p-1 hover:scale-125 transition-transform cursor-pointer"
+                      >
+                        <Lucide.Star
+                          className={`w-6 h-6 ${
+                            star <= ratingExecution ? 'text-amber-400 fill-amber-400' : 'text-neutral-600'
+                          }`}
+                        />
+                      </button>
+                    ))}
+                    <span className="ml-3 text-amber-400 font-bold text-sm">{ratingExecution}/5</span>
+                  </div>
+                  <p className="text-[9px] text-neutral-500 mt-1">Оцените качество проработки улик, атмосферных диалогов и интерактивных загадок.</p>
+                </div>
+
+                <button
+                  onClick={handlePublishSubmit}
+                  className="w-full h-12 bg-white hover:bg-neutral-200 text-black font-sans text-xs font-bold uppercase tracking-[0.2em] rounded-none transition-all flex items-center justify-center gap-2 shadow-lg"
+                >
+                  <Lucide.BookOpen className="w-4 h-4" />
+                  Отправить ИИ-Критику и Напечатать Роман
+                </button>
+              </div>
+            ) : isCritiquing ? (
+              <div className="py-12 flex flex-col items-center justify-center space-y-4 relative z-10">
+                <div className="relative">
+                  <div className="w-12 h-12 border-2 border-amber-500/20 border-t-amber-500 rounded-full animate-spin" />
+                  <Lucide.FileText className="w-5 h-5 text-amber-500 absolute inset-0 m-auto animate-pulse" />
+                </div>
+                <div className="text-center">
+                  <span className="text-[10px] uppercase tracking-widest text-amber-400 block font-bold animate-pulse">Печатный пресс запущен</span>
+                  <p className="text-[9px] text-neutral-500 mt-1">Шум свинцовых литер, запах свежей типографской краски...</p>
+                  <p className="text-[9px] text-neutral-500">Редактор внимательно изучает рукопись...</p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-5 relative z-10 animate-fade-in">
+                {/* Book Jacket Mockup */}
+                <div className="bg-black/60 border border-neutral-800 p-5 rounded-none font-serif relative text-left">
+                  <div className="absolute top-3 right-4 border border-amber-500/30 text-amber-500/80 font-mono text-[9px] px-2 py-0.5 uppercase tracking-wider">
+                    ИЗДАНИЕ ОДОБРЕНО
+                  </div>
+                  
+                  <span className="text-[8px] font-mono text-neutral-500 uppercase tracking-widest block mb-1">Рецензируемое произведение</span>
+                  <h3 className="text-white text-base font-bold italic tracking-wide mb-1">«{gameState.customCampaignIdea}»</h3>
+                  <p className="text-[10px] text-neutral-400 font-mono mb-4">Авторы: Сыскное агентство Ванса и ИИ-Ассистент</p>
+                  
+                  <div className="grid grid-cols-2 gap-4 border-t border-neutral-800/60 pt-4 font-mono text-[11px]">
+                    <div>
+                      <span className="text-neutral-500 text-[9px] block">ОЦЕНКА КРИТИКА:</span>
+                      <span className="text-2xl font-serif font-bold text-amber-500 tracking-wide">
+                        {critiqueResult.grade || 'B+'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-neutral-500 text-[9px] block">УСПЕХ В ПРОДАЖАХ:</span>
+                      <span className="text-xs font-bold text-white uppercase tracking-wider block mt-1.5">
+                        {critiqueResult.sales_performance || 'Стабильный спрос'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 bg-neutral-950 p-4 border border-neutral-900 font-serif text-[12px] italic text-neutral-300 leading-relaxed relative">
+                    <Lucide.Quote className="w-8 h-8 text-neutral-800 absolute -top-2 -left-1 opacity-20 pointer-events-none" />
+                    {critiqueResult.review || 'Критик благосклонно отнесся к роману.'}
+                  </div>
+
+                  <div className="mt-4 border-t border-dashed border-neutral-800 pt-3 flex justify-between items-center font-mono">
+                    <span className="text-neutral-500 text-[10px]">ИТОГОВЫЙ ГОНОРАР АВТОРА:</span>
+                    <span className={`text-sm font-bold ${critiqueResult.profit >= 0 ? 'text-green-400' : 'text-red-500'}`}>
+                      {critiqueResult.profit >= 0 ? `+${critiqueResult.profit}$` : `${critiqueResult.profit}$`}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleClaimRoyalties}
+                  className="w-full h-12 bg-amber-500 hover:bg-amber-400 text-black font-sans text-xs font-bold uppercase tracking-[0.2em] rounded-none transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer"
+                >
+                  <Lucide.Coins className="w-4 h-4" />
+                  Забрать Гонорар и Вернуться к Делам
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

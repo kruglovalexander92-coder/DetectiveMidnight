@@ -91,7 +91,7 @@ export interface Job {
   infoCost: number;
   timeLimit: number | null;
   risk: 'low' | 'medium' | 'high';
-  roomTemplateId: 'room_antique' | 'room_ballerina' | 'room_banker' | 'room_captain';
+  roomTemplateId: string;
   completed: boolean;
   leadPurchased?: boolean;
 }
@@ -141,6 +141,24 @@ export interface GameState {
   // Witness Interrogation and Photofit/Sketch state
   sketches?: SuspectSketch[];
   activeTornNote?: TornNoteState;
+  // Writer Mode fields
+  writerRoyalties?: number;
+  writerTotalEarned?: number;
+  writerCasesToday?: number;
+  writerNovelLastDay?: number;
+  customCampaignIdea?: string;
+  customCampaignTitle?: string;
+  publishedBooks?: {
+    id: string;
+    title: string;
+    idea: string;
+    ratingIdea: number;
+    ratingExecution: number;
+    status: 'flop' | 'hit' | 'bestseller';
+    profit: number;
+    review: string;
+    timestamp: string;
+  }[];
 }
 
 export interface TornNotePiece {

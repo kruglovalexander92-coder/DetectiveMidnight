@@ -4,13 +4,18 @@ import * as Lucide from 'lucide-react';
 
 interface AlleywayShopProps {
   gameState: GameState;
-  onBuyItem: (itemId: 'catnip' | 'rumor' | 'safe_code') => void;
+  onBuyItem: (itemId: 'catnip' | 'rumor' | 'safe_code' | 'writer_reset') => void;
 }
 
 export default function AlleywayShop({ gameState, onBuyItem }: AlleywayShopProps) {
   const cash = gameState.economy?.cash ?? 150;
   const isInjured = gameState.isInjured ?? false;
   const hasCatnipSenses = gameState.hasCatnipSenses ?? false;
+
+  const hasLimitsToReset = 
+    (gameState.writerCasesToday ?? 0) > 0 || 
+    (gameState.writerNovelLastDay !== undefined && 
+      ((gameState.currentDay ?? 1) - gameState.writerNovelLastDay) < 3);
 
   const items = [
     {
@@ -45,6 +50,18 @@ export default function AlleywayShop({ gameState, onBuyItem }: AlleywayShopProps
       borderColor: 'border-blue-500/20',
       bgColor: 'bg-blue-950/10',
       active: gameState.inventory.includes('safe_code_note')
+    },
+    {
+      id: 'writer_reset' as const,
+      name: 'Кофе и сигареты писателя',
+      description: 'Крепкий двойной эспрессо и пачка сигарет писателя. Полностью сбрасывает суточный лимит дел и 3-дневный кулдаун бульварного романа.',
+      cost: 25,
+      icon: 'Coffee' as const,
+      color: 'text-rose-400',
+      borderColor: 'border-rose-500/20',
+      bgColor: 'bg-rose-950/10',
+      active: false,
+      disabled: !hasLimitsToReset
     }
   ];
 
@@ -53,6 +70,7 @@ export default function AlleywayShop({ gameState, onBuyItem }: AlleywayShopProps
       case 'Leaf': return <Lucide.Leaf className={className} />;
       case 'HelpCircle': return <Lucide.HelpCircle className={className} />;
       case 'KeyRound': return <Lucide.KeyRound className={className} />;
+      case 'Coffee': return <Lucide.Coffee className={className} />;
       default: return <Lucide.ShoppingBag className={className} />;
     }
   };
@@ -79,7 +97,9 @@ export default function AlleywayShop({ gameState, onBuyItem }: AlleywayShopProps
       <div className="space-y-2.5">
         {items.map((item) => {
           const canAfford = cash >= item.cost;
-          const isDisabled = item.active || (item.id === 'safe_code' && gameState.inventory.includes('safe_code_note'));
+          const isDisabled = item.active || 
+            (item.id === 'safe_code' && gameState.inventory.includes('safe_code_note')) ||
+            ('disabled' in item && item.disabled);
 
           return (
             <div 
