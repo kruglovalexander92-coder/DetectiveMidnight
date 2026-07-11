@@ -43,7 +43,7 @@ const STORY_CHAPTERS_DATA: Job[] = [
     reward: 300,
     reputationRequired: 15,
     infoCost: 0,
-    timeLimit: 180,
+    timeLimit: 210,
     risk: 'medium',
     roomTemplateId: 'room_captain',
     completed: false
@@ -56,7 +56,7 @@ const STORY_CHAPTERS_DATA: Job[] = [
     reward: 400,
     reputationRequired: 30,
     infoCost: 0,
-    timeLimit: 120,
+    timeLimit: 150,
     risk: 'high',
     roomTemplateId: 'room_captain',
     completed: false

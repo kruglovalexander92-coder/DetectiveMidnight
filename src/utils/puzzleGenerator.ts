@@ -1576,33 +1576,33 @@ export function generateNewGame(
   if (mode === 'story') {
     if (chapter === 2) {
       timerActive = true;
-      timeLeft = 180; // 3 minutes
-      timerMax = 180;
+      timeLeft = 210; // 3.5 minutes (increased by 30 seconds)
+      timerMax = 210;
     } else if (chapter === 3) {
       timerActive = true;
-      timeLeft = 150; // 2.5 minutes
-      timerMax = 150;
+      timeLeft = 180; // 3 minutes (increased by 30 seconds)
+      timerMax = 180;
     }
   } else if (mode === 'sandbox') {
     if (activeJob) {
       if (activeJob.timeLimit) {
         timerActive = true;
-        timeLeft = activeJob.timeLimit;
-        timerMax = activeJob.timeLimit;
+        timeLeft = activeJob.timeLimit + 30; // Increased by 30 seconds
+        timerMax = activeJob.timeLimit + 30;
       }
     } else {
       // If reputation is high, there is a chance of ticking clock!
       if (currentReputation >= 60) {
         if (Math.random() < 0.6) {
           timerActive = true;
-          timeLeft = 150; // 2.5 mins
-          timerMax = 150;
+          timeLeft = 180; // 3 mins (increased by 30 seconds)
+          timerMax = 180;
         }
       } else if (currentReputation >= 30) {
         if (Math.random() < 0.35) {
           timerActive = true;
-          timeLeft = 180; // 3 mins
-          timerMax = 180;
+          timeLeft = 210; // 3.5 mins (increased by 30 seconds)
+          timerMax = 210;
         }
       }
     }

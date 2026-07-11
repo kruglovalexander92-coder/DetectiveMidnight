@@ -47,8 +47,8 @@ function getAgencyHint(gameState: GameState): string {
     ? gameState.campaignChapters 
     : [
         { id: 'story_chapter_1', title: 'Похищение Сапфирового Глаза', reputationRequired: 0, reward: 200, infoCost: 0, completed: false, risk: 'low', roomTemplateId: 'room_antique', timeLimit: null },
-        { id: 'story_chapter_2', title: 'Контрабанда в полночь', reputationRequired: 15, reward: 300, infoCost: 0, completed: false, risk: 'medium', roomTemplateId: 'room_captain', timeLimit: 180 },
-        { id: 'story_chapter_3', title: 'Финал в небесах', reputationRequired: 30, reward: 400, infoCost: 0, completed: false, risk: 'high', roomTemplateId: 'room_captain', timeLimit: 120 }
+        { id: 'story_chapter_2', title: 'Контрабанда в полночь', reputationRequired: 15, reward: 300, infoCost: 0, completed: false, risk: 'medium', roomTemplateId: 'room_captain', timeLimit: 210 },
+        { id: 'story_chapter_3', title: 'Финал в небесах', reputationRequired: 30, reward: 400, infoCost: 0, completed: false, risk: 'high', roomTemplateId: 'room_captain', timeLimit: 150 }
       ];
   
   const activeCh = chapters.find((ch, idx) => !ch.completed && !completedChapters.includes(idx + 1));
@@ -1246,6 +1246,35 @@ export default function App() {
     }, 100);
   };
 
+  const handleAbortMission = () => {
+    try {
+      gameAudio.stopAmbientMusic();
+      if (!gameState.isMuted) {
+        gameAudio.playClick();
+      }
+    } catch (e) {}
+    setIsShopOpen(false);
+    setIsLogOpen(false);
+    setGameState(prev => {
+      const newLogs = prev.logs ? [...prev.logs] : [];
+      newLogs.push({
+        id: `log_abort_${Date.now()}`,
+        type: 'system',
+        text: `🚪 РАССЛЕДОВАНИЕ ПРЕРВАНО: Вы прервали дело и вернулись в детективное агентство.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      });
+
+      return {
+        ...prev,
+        gameStatus: 'sandbox_dashboard',
+        activeJob: null,
+        timerActive: false,
+        timeLeft: undefined,
+        logs: newLogs
+      };
+    });
+  };
+
   const handleReturnToMenu = () => {
     gameAudio.stopAmbientMusic();
     setIsShopOpen(false);
@@ -1799,6 +1828,17 @@ export default function App() {
           >
             {gameState.isMuted ? <Lucide.VolumeX className="w-4 h-4" /> : <Lucide.Volume2 className="w-4 h-4" />}
           </button>
+
+           {gameState.gameStatus === 'playing' && (
+            <button 
+              onClick={handleAbortMission}
+              className="px-3 h-8 rounded-none border border-amber-500/30 hover:border-amber-500 bg-amber-950/20 text-[9px] font-sans uppercase tracking-[0.15em] flex items-center gap-1.5 text-amber-400 hover:bg-amber-950/40 transition-all shadow-md"
+              title="Прервать текущее расследование и вернуться в детективное агентство"
+            >
+              <Lucide.Home className="w-3.5 h-3.5 text-amber-500" />
+              В Агентство
+            </button>
+          )}
 
           <button 
             onClick={handleResetGame}

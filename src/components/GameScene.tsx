@@ -215,6 +215,62 @@ export default function GameScene({
     return isLocked ? '/src/img/Office_Safe.png' : '/src/img/Office_Safe_open.png';
   };
 
+  const getDeskImg = () => {
+    const roomId = gameState.roomInfo?.id || '';
+    const idLower = roomId.toLowerCase();
+
+    // Dressing room (Ballerina / etc)
+    if (idLower.includes('ballerina') || idLower.includes('dress')) {
+      if (idLower.includes('2')) {
+        return '/src/img/Dressingr_Console02.png';
+      }
+      if (idLower.includes('drawer')) {
+        return '/src/img/Dressingr_Drawer.png';
+      }
+      return '/src/img/Dressingr_Console01.png';
+    }
+
+    // Grocery / Shop
+    if (idLower.includes('shop') || idLower.includes('grocery') || idLower.includes('bar')) {
+      return '/src/img/Grocery_Table.png';
+    }
+
+    // Cabin / Antique / Attic / Basement
+    if (idLower.includes('cabin') || idLower.includes('antique') || idLower.includes('attic') || idLower.includes('basement') || idLower.includes('chapter_1') || idLower.includes('chapter_3')) {
+      return '/src/img/Cabin_Table.png';
+    }
+
+    // Office / Banker / Mansion / Museum / Default
+    return '/src/img/Office_Table.png';
+  };
+
+  const getBookshelfImg = () => {
+    const roomId = gameState.roomInfo?.id || '';
+    const idLower = roomId.toLowerCase();
+
+    // Cabin / Antique / Attic / Basement
+    if (idLower.includes('cabin') || idLower.includes('antique') || idLower.includes('attic') || idLower.includes('basement') || idLower.includes('chapter_1') || idLower.includes('chapter_3')) {
+      if (idLower.includes('attic') || idLower.includes('basement')) {
+        return '/src/img/Cabin_Shelf02.png';
+      }
+      return '/src/img/Cabin_Shelf01.png';
+    }
+
+    // Grocery / Shop
+    if (idLower.includes('shop') || idLower.includes('grocery') || idLower.includes('bar')) {
+      if (idLower.includes('bar')) {
+        return '/src/img/Grocery_Shelf02.png';
+      }
+      return '/src/img/Grocery_Shelf01.png';
+    }
+
+    // Office / Banker / Mansion / Museum / Default
+    if (idLower.includes('mansion') || idLower.includes('museum')) {
+      return '/src/img/Office_Shelf02.png';
+    }
+    return '/src/img/Office_Shelf01.png';
+  };
+
   const renderRugSVG = (roomId: string, isToggled: boolean) => {
     // Return null to completely remove the blue/slate rectangular background around the rug.
     return null;
@@ -223,43 +279,6 @@ export default function GameScene({
   // Create refs to track physical positions for responsive, frame-exact movement
   const detectiveRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-
-  // Dynamic Coordinates for cat placements (percentages from left and top of container)
-  const getCatSpot = (spot: string) => {
-    if (spot === 'center') return { x: 45, y: 84, height: 'h-16' };
-    const obj = objects[spot as ObjectId];
-    if (!obj) return { x: 45, y: 84, height: 'h-16' };
-    
-    const x = obj.x ? obj.x + (obj.w || 10) / 2 : 45;
-    let y = 84;
-    let height = 'h-14';
-    
-    if (spot === 'bookshelf') {
-      const topNew = (obj.y ?? 16) + (obj.h ?? 70) * 0.2;
-      y = topNew + 12.8;
-    } else if (spot === 'desk') {
-      const topNew = (obj.y ?? 58) + (obj.h ?? 32) * 0.2;
-      y = topNew + 9.6;
-    } else if (spot === 'safe') {
-      const topNew = (obj.y ?? 66) + (obj.h ?? 28) * 0.2;
-      y = topNew + 8.0;
-    } else if (spot === 'painting') {
-      const topNew = (obj.y ?? 15) + (obj.h ?? 12) * 0.1;
-      y = topNew + 8.0;
-    } else if (spot === 'fishbowl') {
-      const deskH = objects.desk.h ?? 32;
-      const topNew = (obj.y ?? 54) + (obj.h ?? 8) * 0.2 + deskH * 0.2;
-      y = topNew + 6.4;
-      height = 'h-12';
-    } else if (spot === 'lamp') {
-      const topNew = (obj.y ?? 45) + (obj.h ?? 55) * 0.2;
-      y = topNew + 4.0;
-    } else if (spot === 'rug') {
-      height = 'h-16';
-    }
-    
-    return { x, y, height };
-  };
 
   // Multi-room visibility rules for Chapter 2 and custom multi-room sandbox locations
   const isFourRoomBuilding = (gameState.storyState?.mode === 'story' && (gameState.storyState?.chapter === 1 || gameState.storyState?.chapter === 3)) || 
@@ -290,6 +309,94 @@ export default function GameScene({
     }
   };
   
+  const deskScale = 1.75;
+  const deskX = (objects.desk?.x ?? 43) - ((objects.desk?.w ?? 32) * (deskScale - 1)) / 2;
+  const deskW = (objects.desk?.w ?? 32) * deskScale;
+  const deskY = (objects.desk?.y ?? 58) - ((objects.desk?.h ?? 32) * (deskScale - 1));
+  const deskH = (objects.desk?.h ?? 32) * deskScale;
+
+  const deskScreenLeft = deskX + deskW * 0.1;
+  const deskScreenWidth = deskW * 0.8;
+  const deskScreenTop = deskY + deskH * 0.2;
+  const deskScreenHeight = deskH * 0.8;
+  const deskTabletopY = deskScreenTop + deskScreenHeight * 0.2;
+
+  const isDeskVisible = isVisible('desk');
+
+  // Dynamic Positioning of Fishbowl
+  let fishbowlLeft = objects.fishbowl?.x ?? 48;
+  let fishbowlTop = objects.fishbowl?.y ?? 54;
+  let fishbowlWidth = objects.fishbowl?.w ?? 8;
+  let fishbowlHeight = objects.fishbowl?.h ?? 8;
+
+  if (isDeskVisible) {
+    fishbowlWidth = deskScreenWidth * 0.35;
+    fishbowlHeight = fishbowlWidth;
+    fishbowlLeft = deskScreenLeft + deskScreenWidth * 0.05;
+    fishbowlTop = deskTabletopY - fishbowlHeight + 1.5;
+  } else {
+    fishbowlLeft = 28;
+    fishbowlWidth = 10;
+    fishbowlHeight = 10;
+    fishbowlTop = 84 - fishbowlHeight + 0.5;
+  }
+
+  // Dynamic Positioning of Safe
+  let safeLeft = objects.safe?.x ?? 87;
+  let safeTop = objects.safe?.y ?? 66;
+  let safeWidth = objects.safe?.w ?? 11;
+  let safeHeight = objects.safe?.h ?? 28;
+
+  if (isDeskVisible) {
+    safeWidth = deskScreenWidth * 0.52;
+    safeHeight = safeWidth * 1.125;
+    safeLeft = deskScreenLeft + deskScreenWidth * 0.43;
+    safeTop = deskTabletopY - safeHeight + 1.5;
+  } else {
+    safeLeft = 58;
+    safeWidth = 16;
+    safeHeight = 18;
+    safeTop = 84 - safeHeight + 1.0;
+  }
+
+  // Dynamic Coordinates for cat placements (percentages from left and top of container)
+  const getCatSpot = (spot: string) => {
+    if (spot === 'center') return { x: 45, y: 84, height: 'h-16' };
+    const obj = objects[spot as ObjectId];
+    if (!obj) return { x: 45, y: 84, height: 'h-16' };
+    
+    if (spot === 'safe') {
+      return { x: safeLeft + safeWidth / 2, y: safeTop + 2, height: 'h-14' };
+    }
+    if (spot === 'fishbowl') {
+      return { x: fishbowlLeft + fishbowlWidth / 2, y: fishbowlTop + 1, height: 'h-12' };
+    }
+    
+    const x = obj.x ? obj.x + (obj.w || 10) / 2 : 45;
+    let y = 84;
+    let height = 'h-14';
+    
+    if (spot === 'bookshelf') {
+      // Pushed up by 2% for depth, scaled to 0.75
+      const topNew = (obj.y ?? 16) + (obj.h ?? 70) * 0.2 - 2;
+      y = topNew + (12.8 * 0.75);
+    } else if (spot === 'desk') {
+      const topNew = (obj.y ?? 58) + (obj.h ?? 32) * 0.2;
+      y = topNew + 9.6;
+    } else if (spot === 'painting') {
+      const topNew = (obj.y ?? 15) + (obj.h ?? 12) * 0.1;
+      y = topNew + 8.0;
+    } else if (spot === 'lamp') {
+      // Pushed up by 2% for depth, scaled to 0.75
+      const topNew = (obj.y ?? 45) + (obj.h ?? 55) * 0.2 - 2;
+      y = topNew + (4.0 * 0.75);
+    } else if (spot === 'rug') {
+      height = 'h-16';
+    }
+    
+    return { x, y, height };
+  };
+
   // Safe combination lock state
   const [showSafeLock, setShowSafeLock] = useState(false);
   const [safeDigits, setSafeDigits] = useState<number[]>([1, 1, 1]);
@@ -770,55 +877,6 @@ export default function GameScene({
   const borderAccentClass = gameState.roomInfo?.accentBorder || 'border-white/10';
   const backgroundUrl = getRoomBackground(gameState.roomInfo?.id, currentLocation);
 
-  const deskX = (objects.desk?.x ?? 43);
-  const deskW = (objects.desk?.w ?? 32);
-  const deskY = (objects.desk?.y ?? 58);
-  const deskH = (objects.desk?.h ?? 32);
-
-  const deskScreenLeft = deskX + deskW * 0.1;
-  const deskScreenWidth = deskW * 0.8;
-  const deskScreenTop = deskY + deskH * 0.2;
-  const deskScreenHeight = deskH * 0.8;
-  const deskTabletopY = deskScreenTop + deskScreenHeight * 0.2;
-
-  const isDeskVisible = isVisible('desk');
-
-  // Dynamic Positioning of Fishbowl
-  let fishbowlLeft = objects.fishbowl?.x ?? 48;
-  let fishbowlTop = objects.fishbowl?.y ?? 54;
-  let fishbowlWidth = objects.fishbowl?.w ?? 8;
-  let fishbowlHeight = objects.fishbowl?.h ?? 8;
-
-  if (isDeskVisible) {
-    fishbowlWidth = deskScreenWidth * 0.35;
-    fishbowlHeight = fishbowlWidth;
-    fishbowlLeft = deskScreenLeft + deskScreenWidth * 0.05;
-    fishbowlTop = deskTabletopY - fishbowlHeight;
-  } else {
-    fishbowlLeft = 28;
-    fishbowlWidth = 10;
-    fishbowlHeight = 10;
-    fishbowlTop = 84 - fishbowlHeight;
-  }
-
-  // Dynamic Positioning of Safe
-  let safeLeft = objects.safe?.x ?? 87;
-  let safeTop = objects.safe?.y ?? 66;
-  let safeWidth = objects.safe?.w ?? 11;
-  let safeHeight = objects.safe?.h ?? 28;
-
-  if (isDeskVisible) {
-    safeWidth = deskScreenWidth * 0.52;
-    safeHeight = safeWidth * 1.125;
-    safeLeft = deskScreenLeft + deskScreenWidth * 0.43;
-    safeTop = deskTabletopY - safeHeight;
-  } else {
-    safeLeft = 58;
-    safeWidth = 16;
-    safeHeight = 18;
-    safeTop = 84 - safeHeight;
-  }
-
   return (
     <div 
       ref={containerRef}
@@ -962,73 +1020,85 @@ export default function GameScene({
       <div 
         id="bookshelf-obj"
         onClick={() => handleObjectClick('bookshelf')}
-        className="absolute group cursor-pointer z-10 flex flex-col justify-end brightness-[0.88] saturate-[95%] transition-all duration-300 hover:brightness-100 hover:saturate-100"
+        className="absolute group cursor-pointer z-10 flex flex-col justify-end brightness-[0.82] saturate-[90%] contrast-[95%] transition-all duration-300 hover:brightness-100 hover:saturate-100 hover:contrast-100"
         style={{
           left: `${(objects.bookshelf.x ?? 4) + (objects.bookshelf.w ?? 20) * 0.1}%`,
-          top: `${(objects.bookshelf.y ?? 16) + (objects.bookshelf.h ?? 70) * 0.2}%`,
-          width: `${(objects.bookshelf.w ?? 20) * 0.8}%`,
-          height: `${(objects.bookshelf.h ?? 70) * 0.8}%`
+          top: `${(objects.bookshelf.y ?? 16) + (objects.bookshelf.h ?? 70) * 0.2 - 2}%`,
+          width: `${(objects.bookshelf.w ?? 20) * 0.75}%`,
+          height: `${(objects.bookshelf.h ?? 70) * 0.75}%`
         }}
       >
-        <div className="relative w-full h-full border-2 border-neutral-750 bg-neutral-900 rounded-md p-1.5 flex flex-col justify-between transition-colors duration-200 group-hover:border-neutral-500 group-hover:bg-neutral-900/90 shadow-2xl">
-          {/* Shelf panels */}
-          {[1, 2, 3, 4].map((shelf) => (
-            <div key={shelf} className="w-full h-[22%] border-b border-neutral-800 flex items-end justify-around px-1 relative">
-              {gameState.roomInfo?.id === 'room_ballerina' ? (
-                /* Ballerina shelves containing slippers and flowers */
-                shelf === 1 ? (
-                  <div className="text-[12px] animate-bounce">🩰</div>
-                ) : shelf === 2 ? (
-                  <div className="text-[11px]">💄🌸</div>
-                ) : shelf === 3 ? (
-                  <div className="text-[12px] opacity-80">🎀</div>
-                ) : (
-                  <div className="w-full h-1 bg-pink-900/40 rounded-sm" />
-                )
-              ) : (
-                /* Standard bookshelf content */
-                shelf === 1 && (
-                  <>
-                    <div className="w-4 h-12 bg-neutral-700 border border-neutral-500 rounded-sm" />
-                    <div className="w-3.5 h-10 bg-neutral-800 border border-neutral-600 rounded-sm" />
-                    <div className="w-4.5 h-11 bg-neutral-700 border border-neutral-500 rounded-sm transform rotate-6 origin-bottom" />
-                  </>
-                )
-              )}
-              {gameState.roomInfo?.id !== 'room_ballerina' && shelf === 2 && (
-                <>
-                  {!objects.bookshelf.booksFallen ? (
-                    <div className="flex gap-0.5 items-end justify-center w-full">
-                      <div className="w-3 h-9 bg-neutral-800 border border-neutral-600 rounded-sm" />
-                      <div className="w-3.5 h-11 bg-neutral-700 border border-neutral-500 rounded-sm" />
-                      <div className="w-3.5 h-10 bg-neutral-800 border border-neutral-600 rounded-sm transform -rotate-12 origin-bottom" />
-                      <div className="w-4 h-11 bg-neutral-600 border border-neutral-500 rounded-sm" />
-                    </div>
+        <div className="relative w-full h-full group-hover:scale-[1.01] transition-transform duration-200">
+          <img 
+            src={getBookshelfImg()} 
+            alt={objects.bookshelf.name}
+            className="absolute inset-0 w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)] z-10"
+            referrerPolicy="no-referrer"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
+          
+          <div className="relative w-full h-full border-2 border-neutral-750 bg-neutral-900 rounded-md p-1.5 flex flex-col justify-between transition-colors duration-200 group-hover:border-neutral-500 group-hover:bg-neutral-900/90 shadow-2xl">
+            {/* Shelf panels */}
+            {[1, 2, 3, 4].map((shelf) => (
+              <div key={shelf} className="w-full h-[22%] border-b border-neutral-800 flex items-end justify-around px-1 relative">
+                {gameState.roomInfo?.id === 'room_ballerina' ? (
+                  /* Ballerina shelves containing slippers and flowers */
+                  shelf === 1 ? (
+                    <div className="text-[12px] animate-bounce">🩰</div>
+                  ) : shelf === 2 ? (
+                    <div className="text-[11px]">💄🌸</div>
+                  ) : shelf === 3 ? (
+                    <div className="text-[12px] opacity-80">🎀</div>
                   ) : (
-                    <div className="w-full text-center text-[10px] font-mono text-neutral-500 italic pb-1">
-                      (Разбросано)
-                    </div>
-                  )}
-                </>
-              )}
-              {gameState.roomInfo?.id !== 'room_ballerina' && shelf === 3 && (
-                <div className="flex gap-1 items-end w-full pl-2">
-                  <div className="w-4 h-10 bg-neutral-800 border border-neutral-600 rounded-sm" />
-                  <div className="w-4 h-11 bg-neutral-700 border border-neutral-500 rounded-sm" />
-                  <div className="w-4 h-9 bg-neutral-600 border border-neutral-400 rounded-sm" />
-                </div>
-              )}
-              {gameState.roomInfo?.id !== 'room_ballerina' && shelf === 4 && (
-                <div className="flex gap-0.5 items-end justify-around w-full">
-                  <div className="w-5 h-8 bg-neutral-700 border border-neutral-600 rounded-sm" />
-                  <div className="w-4 h-10 bg-neutral-800 border border-neutral-600 rounded-sm" />
-                  <div className="w-4 h-9 bg-neutral-600 border border-neutral-500 rounded-sm" />
-                </div>
-              )}
-            </div>
-          ))}
-          {/* Interactive Hover Glow */}
-          <div className="absolute inset-0 border border-transparent group-hover:border-white/20 rounded-md pointer-events-none" />
+                    <div className="w-full h-1 bg-pink-900/40 rounded-sm" />
+                  )
+                ) : (
+                  /* Standard bookshelf content */
+                  shelf === 1 && (
+                    <>
+                      <div className="w-4 h-12 bg-neutral-700 border border-neutral-500 rounded-sm" />
+                      <div className="w-3.5 h-10 bg-neutral-800 border border-neutral-600 rounded-sm" />
+                      <div className="w-4.5 h-11 bg-neutral-700 border border-neutral-500 rounded-sm transform rotate-6 origin-bottom" />
+                    </>
+                  )
+                )}
+                {gameState.roomInfo?.id !== 'room_ballerina' && shelf === 2 && (
+                  <>
+                    {!objects.bookshelf.booksFallen ? (
+                      <div className="flex gap-0.5 items-end justify-center w-full">
+                        <div className="w-3 h-9 bg-neutral-800 border border-neutral-600 rounded-sm" />
+                        <div className="w-3.5 h-11 bg-neutral-700 border border-neutral-500 rounded-sm" />
+                        <div className="w-3.5 h-10 bg-neutral-800 border border-neutral-600 rounded-sm transform -rotate-12 origin-bottom" />
+                        <div className="w-4 h-11 bg-neutral-600 border border-neutral-500 rounded-sm" />
+                      </div>
+                    ) : (
+                      <div className="w-full text-center text-[10px] font-mono text-neutral-500 italic pb-1">
+                        (Разбросано)
+                      </div>
+                    )}
+                  </>
+                )}
+                {gameState.roomInfo?.id !== 'room_ballerina' && shelf === 3 && (
+                  <div className="flex gap-1 items-end w-full pl-2">
+                    <div className="w-4 h-10 bg-neutral-800 border border-neutral-600 rounded-sm" />
+                    <div className="w-4 h-11 bg-neutral-700 border border-neutral-500 rounded-sm" />
+                    <div className="w-4 h-9 bg-neutral-600 border border-neutral-400 rounded-sm" />
+                  </div>
+                )}
+                {gameState.roomInfo?.id !== 'room_ballerina' && shelf === 4 && (
+                  <div className="flex gap-0.5 items-end justify-around w-full">
+                    <div className="w-5 h-8 bg-neutral-700 border border-neutral-600 rounded-sm" />
+                    <div className="w-4 h-10 bg-neutral-800 border border-neutral-600 rounded-sm" />
+                    <div className="w-4 h-9 bg-neutral-600 border border-neutral-500 rounded-sm" />
+                  </div>
+                )}
+              </div>
+            ))}
+            {/* Interactive Hover Glow */}
+            <div className="absolute inset-0 border border-transparent group-hover:border-white/20 rounded-md pointer-events-none" />
+          </div>
         </div>
         <span className="text-center font-sans text-[9px] uppercase tracking-[0.2em] text-white/30 group-hover:text-white/80 transition-colors duration-200 mt-1 block truncate">
           {objects.bookshelf.name}
@@ -1146,13 +1216,44 @@ export default function GameScene({
         onClick={() => handleObjectClick('desk')}
         className="absolute group cursor-pointer z-20 flex flex-col justify-end"
         style={{
-          left: `${(objects.desk.x ?? 43) + (objects.desk.w ?? 32) * 0.1}%`,
-          top: `${(objects.desk.y ?? 58) + (objects.desk.h ?? 32) * 0.2}%`,
-          width: `${(objects.desk.w ?? 32) * 0.8}%`,
-          height: `${(objects.desk.h ?? 32) * 0.8}%`
+          left: `${deskScreenLeft}%`,
+          top: `${deskScreenTop}%`,
+          width: `${deskScreenWidth}%`,
+          height: `${deskScreenHeight}%`
         }}
       >
         <div className="relative w-full h-full flex flex-col justify-end group-hover:scale-[1.01] transition-transform duration-200">
+          {/* Dressing Room Mirror Option */}
+          {gameState.roomInfo?.id === 'room_ballerina' && (
+            <img 
+              src="/src/img/Dressingr_Tablemirror.png" 
+              alt="Dressing mirror" 
+              className="absolute top-[-70%] left-[20%] w-[60%] h-[80%] object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.6)] z-20"
+              referrerPolicy="no-referrer"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
+          )}
+
+          {/* Desk PNG Graphic (Primary overlay) */}
+          <img 
+            src={getDeskImg()} 
+            alt={objects.desk.name}
+            className="absolute inset-x-0 bottom-0 w-full h-full object-contain object-bottom drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)] z-10"
+            referrerPolicy="no-referrer"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
+
+          {/* Lock/Unlock status overlay */}
+          {objects.desk.locked && (
+            <div className="absolute bottom-[40%] left-1/2 -translate-x-1/2 bg-neutral-950/80 px-1.5 py-0.5 rounded border border-neutral-700 text-[8px] tracking-wider font-sans text-neutral-400 z-20 pointer-events-none uppercase">
+              🔒 заперто
+            </div>
+          )}
+
           {/* Desk Surface items */}
           <div className="absolute -top-5 inset-x-2 h-6 flex justify-between items-end pointer-events-none px-3 z-10">
             {gameState.roomInfo?.id === 'room_ballerina' ? (
@@ -1178,7 +1279,7 @@ export default function GameScene({
 
           {gameState.roomInfo?.id === 'room_ballerina' || gameState.roomInfo?.id === 'room_antique' ? (
             /* Chest of Drawers / Dresser (Комод) */
-            <div className="w-full h-[80%] border-2 border-neutral-700 bg-neutral-900 rounded p-1 group-hover:border-neutral-500 shadow-2xl flex flex-col gap-1 justify-between">
+            <div className="hidden">
               {/* Drawer 1 */}
               <div className="w-full h-[28%] border border-neutral-800 bg-neutral-950/40 rounded flex items-center justify-center relative">
                 {/* Brass knob */}
@@ -1197,7 +1298,7 @@ export default function GameScene({
             </div>
           ) : (
             /* Table with Legs (Стол на ножках) */
-            <div className="w-full h-[80%] flex flex-col justify-between">
+            <div className="hidden">
               {/* Tabletop & Drawer box */}
               <div className="w-full h-[45%] border-2 border-neutral-700 bg-neutral-900 rounded-t p-1 shadow-md flex items-center justify-center relative group-hover:border-neutral-500">
                 <div className="w-12 h-3.5 border border-neutral-800 bg-neutral-950/80 rounded flex items-center justify-center relative">
@@ -1283,12 +1384,12 @@ export default function GameScene({
       <div
         id="lamp-obj"
         onClick={() => handleObjectClick('lamp')}
-        className="absolute group cursor-pointer z-[8] flex flex-col justify-end brightness-[0.85] saturate-[90%] transition-all duration-300 hover:brightness-100 hover:saturate-100"
+        className="absolute group cursor-pointer z-[8] flex flex-col justify-end brightness-[0.82] saturate-[85%] transition-all duration-300 hover:brightness-100 hover:saturate-100"
         style={{
           left: `${(objects.lamp.x ?? 74) + (objects.lamp.w ?? 8) * 0.1}%`,
-          top: `${(objects.lamp.y ?? 45) + (objects.lamp.h ?? 55) * 0.2}%`,
-          width: `${(objects.lamp.w ?? 8) * 0.8}%`,
-          height: `${(objects.lamp.h ?? 55) * 0.8}%`
+          top: `${(objects.lamp.y ?? 45) + (objects.lamp.h ?? 55) * 0.2 - 2}%`,
+          width: `${(objects.lamp.w ?? 8) * 0.75}%`,
+          height: `${(objects.lamp.h ?? 55) * 0.75}%`
         }}
       >
         <div className="relative w-full h-full flex flex-col justify-between items-center">
@@ -1449,20 +1550,20 @@ export default function GameScene({
         return (
           <div 
             onClick={() => onChangeLocation?.('warehouse')}
-            className="absolute bottom-[16%] right-[1.5%] w-[5.5%] h-[52%] group cursor-pointer z-20 flex flex-col justify-end items-center animate-fade-in opacity-50 hover:opacity-100 transition-all duration-300"
+            className="absolute bottom-[16%] right-[0.5%] w-[3.5%] h-[52%] group cursor-pointer z-20 flex flex-col justify-end items-center animate-fade-in opacity-25 hover:opacity-90 transition-all duration-300"
           >
             <div className="w-full h-full border border-dashed border-amber-500/40 hover:border-amber-400 bg-black/95 rounded p-1 flex flex-col justify-between items-center shadow-2xl transition-all hover:scale-105">
               <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
               {isStairs ? (
-                <svg viewBox="0 0 24 24" className="w-6 h-6 text-amber-500/70 group-hover:text-amber-400 transition-colors fill-none stroke-current stroke-1.5">
+                <svg viewBox="0 0 24 24" className="w-5 h-5 text-amber-500/70 group-hover:text-amber-400 transition-colors fill-none stroke-current stroke-1.5">
                   <path d="M6 20h4v-4h4v-4h4v-4h4V4" />
                 </svg>
               ) : (
-                <svg viewBox="0 0 24 24" className="w-6 h-6 text-amber-500/70 group-hover:text-amber-400 transition-colors fill-none stroke-current stroke-1.5">
+                <svg viewBox="0 0 24 24" className="w-5 h-5 text-amber-500/70 group-hover:text-amber-400 transition-colors fill-none stroke-current stroke-1.5">
                   <path d="M15 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8m-3-9 4 4m0 0-4 4m4-4H9" />
                 </svg>
               )}
-              <span className="text-[6px] font-sans text-center font-semibold tracking-tighter text-amber-500/70 group-hover:text-amber-400 uppercase leading-none truncate w-full">{doorText}</span>
+              <span className="text-[5px] font-sans text-center font-semibold tracking-tighter text-amber-500/70 group-hover:text-amber-400 uppercase leading-none truncate w-full">{doorText}</span>
             </div>
           </div>
         );
@@ -1483,20 +1584,20 @@ export default function GameScene({
         return (
           <div 
             onClick={() => onChangeLocation?.('pier')}
-            className="absolute bottom-[16%] left-[1.5%] w-[5.5%] h-[52%] group cursor-pointer z-20 flex flex-col justify-end items-center animate-fade-in opacity-50 hover:opacity-100 transition-all duration-300"
+            className="absolute bottom-[16%] left-[0.5%] w-[3.5%] h-[52%] group cursor-pointer z-20 flex flex-col justify-end items-center animate-fade-in opacity-25 hover:opacity-90 transition-all duration-300"
           >
             <div className="w-full h-full border border-dashed border-amber-500/40 hover:border-amber-400 bg-black/95 rounded p-1 flex flex-col justify-between items-center shadow-2xl transition-all hover:scale-105">
               <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
               {isStairs ? (
-                <svg viewBox="0 0 24 24" className="w-6 h-6 text-amber-500/70 group-hover:text-amber-400 transition-colors fill-none stroke-current stroke-1.5">
+                <svg viewBox="0 0 24 24" className="w-5 h-5 text-amber-500/70 group-hover:text-amber-400 transition-colors fill-none stroke-current stroke-1.5">
                   <path d="M18 4h-4v4h-4v4h-4v4H2v4" />
                 </svg>
               ) : (
-                <svg viewBox="0 0 24 24" className="w-6 h-6 text-amber-500/70 group-hover:text-amber-400 transition-colors fill-none stroke-current stroke-1.5">
+                <svg viewBox="0 0 24 24" className="w-5 h-5 text-amber-500/70 group-hover:text-amber-400 transition-colors fill-none stroke-current stroke-1.5">
                   <path d="M10 3H20a2 2 0 0 1 2 2V19a2 2 0 0 1-2 2H10M14 8l-4 4m0 0 4 4m-4-4h10" />
                 </svg>
               )}
-              <span className="text-[6px] font-sans text-center font-semibold tracking-tighter text-amber-500/70 group-hover:text-amber-400 uppercase leading-none truncate w-full">{doorText}</span>
+              <span className="text-[5px] font-sans text-center font-semibold tracking-tighter text-amber-500/70 group-hover:text-amber-400 uppercase leading-none truncate w-full">{doorText}</span>
             </div>
           </div>
         );
@@ -1578,35 +1679,35 @@ export default function GameScene({
           {/* Staircase to Attic (Left side) */}
           <div 
             onClick={() => onChangeLocation?.('attic')}
-            className="absolute bottom-[20%] left-[1.5%] w-[5%] h-[48%] group cursor-pointer z-20 flex flex-col justify-end items-center opacity-50 hover:opacity-100 transition-all duration-300"
+            className="absolute bottom-[20%] left-[0.5%] w-[3.5%] h-[48%] group cursor-pointer z-20 flex flex-col justify-end items-center opacity-25 hover:opacity-90 transition-all duration-300"
           >
             <div className="w-full h-full border border-cyan-500/30 hover:border-cyan-400 bg-slate-950/95 rounded p-1 flex flex-col justify-between items-center shadow-2xl transition-all hover:scale-105">
               <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse" />
-              <svg viewBox="0 0 24 24" className="w-6 h-6 text-cyan-500/70 group-hover:text-cyan-400 transition-colors fill-none stroke-current stroke-1.5">
+              <svg viewBox="0 0 24 24" className="w-5 h-5 text-cyan-500/70 group-hover:text-cyan-400 transition-colors fill-none stroke-current stroke-1.5">
                 <path d="M6 20h4v-4h4v-4h4v-4h4V4" />
               </svg>
-              <span className="text-[6px] font-mono text-center font-bold tracking-tight text-cyan-500/70 group-hover:text-cyan-400 uppercase leading-none truncate w-full">На чердак</span>
+              <span className="text-[5px] font-mono text-center font-bold tracking-tight text-cyan-500/70 group-hover:text-cyan-400 uppercase leading-none truncate w-full">Чердак</span>
             </div>
           </div>
 
           {/* Door to Study (Right side) */}
           <div 
             onClick={() => onChangeLocation?.('study')}
-            className="absolute bottom-[20%] right-[1.5%] w-[5%] h-[48%] group cursor-pointer z-20 flex flex-col justify-end items-center opacity-50 hover:opacity-100 transition-all duration-300"
+            className="absolute bottom-[20%] right-[0.5%] w-[3.5%] h-[48%] group cursor-pointer z-20 flex flex-col justify-end items-center opacity-25 hover:opacity-90 transition-all duration-300"
           >
             <div className="w-full h-full border border-cyan-500/30 hover:border-cyan-400 bg-slate-950/95 rounded p-1 flex flex-col justify-between items-center shadow-2xl transition-all hover:scale-105">
               <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse" />
-              <svg viewBox="0 0 24 24" className="w-6 h-6 text-cyan-500/70 group-hover:text-cyan-400 transition-colors fill-none stroke-current stroke-1.5">
+              <svg viewBox="0 0 24 24" className="w-5 h-5 text-cyan-500/70 group-hover:text-cyan-400 transition-colors fill-none stroke-current stroke-1.5">
                 <path d="M15 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8m-3-9 4 4m0 0-4 4m4-4H9" />
               </svg>
-              <span className="text-[6px] font-mono text-center font-bold tracking-tight text-cyan-500/70 group-hover:text-cyan-400 uppercase leading-none truncate w-full">В кабинет</span>
+              <span className="text-[5px] font-mono text-center font-bold tracking-tight text-cyan-500/70 group-hover:text-cyan-400 uppercase leading-none truncate w-full">Кабинет</span>
             </div>
           </div>
 
           {/* Trapdoor hatch to Basement (Middle floor) */}
           <div 
             onClick={() => onChangeLocation?.('basement')}
-            className="absolute bottom-[2%] left-[47%] w-[6%] h-[11%] group cursor-pointer z-20 flex flex-col justify-end items-center opacity-50 hover:opacity-100 transition-all duration-300"
+            className="absolute bottom-[0.5%] left-[47%] w-[6%] h-[11%] group cursor-pointer z-20 flex flex-col justify-end items-center opacity-25 hover:opacity-90 transition-all duration-300"
           >
             <div className="w-full h-full border border-amber-500/30 hover:border-amber-400 bg-slate-950/95 rounded p-1 flex flex-col justify-between items-center shadow-2xl transition-all hover:scale-105">
               <span className="text-[5px] font-mono text-center font-bold tracking-tight text-amber-500/70 group-hover:text-amber-400 uppercase leading-none truncate w-full">Люк</span>
@@ -1622,14 +1723,14 @@ export default function GameScene({
       {isFourRoomBuilding && currentLocation === 'study' && (
         <div 
           onClick={() => onChangeLocation?.('hall')}
-          className="absolute bottom-[20%] left-[1.5%] w-[5%] h-[48%] group cursor-pointer z-20 flex flex-col justify-end items-center opacity-50 hover:opacity-100 transition-all duration-300"
+          className="absolute bottom-[20%] left-[0.5%] w-[3.5%] h-[48%] group cursor-pointer z-20 flex flex-col justify-end items-center opacity-25 hover:opacity-90 transition-all duration-300"
         >
           <div className="w-full h-full border border-cyan-500/30 hover:border-cyan-400 bg-slate-950/95 rounded p-1 flex flex-col justify-between items-center shadow-2xl transition-all hover:scale-105">
             <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse" />
-            <svg viewBox="0 0 24 24" className="w-6 h-6 text-cyan-500/70 group-hover:text-cyan-400 transition-colors fill-none stroke-current stroke-1.5">
+            <svg viewBox="0 0 24 24" className="w-5 h-5 text-cyan-500/70 group-hover:text-cyan-400 transition-colors fill-none stroke-current stroke-1.5">
               <path d="M10 3H20a2 2 0 0 1 2 2V19a2 2 0 0 1-2 2H10M14 8l-4 4m0 0 4 4m-4-4h10" />
             </svg>
-            <span className="text-[6px] font-mono text-center font-bold tracking-tight text-cyan-500/70 group-hover:text-cyan-400 uppercase leading-none truncate w-full">В холл</span>
+            <span className="text-[5px] font-mono text-center font-bold tracking-tight text-cyan-500/70 group-hover:text-cyan-400 uppercase leading-none truncate w-full">В холл</span>
           </div>
         </div>
       )}
@@ -1637,14 +1738,14 @@ export default function GameScene({
       {isFourRoomBuilding && currentLocation === 'attic' && (
         <div 
           onClick={() => onChangeLocation?.('hall')}
-          className="absolute bottom-[20%] left-[1.5%] w-[5%] h-[48%] group cursor-pointer z-20 flex flex-col justify-end items-center opacity-50 hover:opacity-100 transition-all duration-300"
+          className="absolute bottom-[20%] left-[0.5%] w-[3.5%] h-[48%] group cursor-pointer z-20 flex flex-col justify-end items-center opacity-25 hover:opacity-90 transition-all duration-300"
         >
           <div className="w-full h-full border border-cyan-500/30 hover:border-cyan-400 bg-slate-950/95 rounded p-1 flex flex-col justify-between items-center shadow-2xl transition-all hover:scale-105">
             <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse" />
-            <svg viewBox="0 0 24 24" className="w-6 h-6 text-cyan-500/70 group-hover:text-cyan-400 transition-colors fill-none stroke-current stroke-1.5">
+            <svg viewBox="0 0 24 24" className="w-5 h-5 text-cyan-500/70 group-hover:text-cyan-400 transition-colors fill-none stroke-current stroke-1.5">
               <path d="M18 4h-4v4h-4v4h-4v4H2v4" />
             </svg>
-            <span className="text-[6px] font-mono text-center font-bold tracking-tight text-cyan-500/70 group-hover:text-cyan-400 uppercase leading-none truncate w-full">Спуститься</span>
+            <span className="text-[5px] font-mono text-center font-bold tracking-tight text-cyan-500/70 group-hover:text-cyan-400 uppercase leading-none truncate w-full">Спуск</span>
           </div>
         </div>
       )}
@@ -1652,14 +1753,14 @@ export default function GameScene({
       {isFourRoomBuilding && currentLocation === 'basement' && (
         <div 
           onClick={() => onChangeLocation?.('hall')}
-          className="absolute bottom-[20%] left-[1.5%] w-[5%] h-[48%] group cursor-pointer z-20 flex flex-col justify-end items-center opacity-50 hover:opacity-100 transition-all duration-300"
+          className="absolute bottom-[20%] left-[0.5%] w-[3.5%] h-[48%] group cursor-pointer z-20 flex flex-col justify-end items-center opacity-25 hover:opacity-90 transition-all duration-300"
         >
           <div className="w-full h-full border border-cyan-500/30 hover:border-cyan-400 bg-slate-950/95 rounded p-1 flex flex-col justify-between items-center shadow-2xl transition-all hover:scale-105">
             <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse" />
-            <svg viewBox="0 0 24 24" className="w-6 h-6 text-cyan-500/70 group-hover:text-cyan-400 transition-colors fill-none stroke-current stroke-1.5">
+            <svg viewBox="0 0 24 24" className="w-5 h-5 text-cyan-500/70 group-hover:text-cyan-400 transition-colors fill-none stroke-current stroke-1.5">
               <path d="M12 4v16M8 8h8M8 12h8M8 16h8" />
             </svg>
-            <span className="text-[6px] font-mono text-center font-bold tracking-tight text-cyan-500/70 group-hover:text-cyan-400 uppercase leading-none truncate w-full">Подняться</span>
+            <span className="text-[5px] font-mono text-center font-bold tracking-tight text-cyan-500/70 group-hover:text-cyan-400 uppercase leading-none truncate w-full">Подъем</span>
           </div>
         </div>
       )}
