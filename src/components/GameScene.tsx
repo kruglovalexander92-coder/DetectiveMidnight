@@ -76,6 +76,20 @@ export default function GameScene({
     }
   };
 
+  const getRugImg = () => {
+    const roomId = gameState.roomInfo?.id || '';
+    const isToggled = objects.rug.toggled;
+    const idLower = roomId.toLowerCase();
+
+    if (idLower.includes('shop') || idLower.includes('grocery')) {
+      return isToggled ? '/src/img/Grocery_Rug02.png' : '/src/img/Grocery_Rug01.png';
+    }
+    if (idLower.includes('office') || idLower.includes('bank') || idLower.includes('mansion') || idLower.includes('museum')) {
+      return isToggled ? '/src/img/Office_Rug02.png' : '/src/img/Office_Rug01.png';
+    }
+    return isToggled ? '/src/img/Cabin_Rug02.png' : '/src/img/Cabin_Rug01.png';
+  };
+
   // Create refs to track physical positions for responsive, frame-exact movement
   const detectiveRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -856,27 +870,45 @@ export default function GameScene({
         }}
       >
         <div 
-          className={`w-full h-full border-2 border-neutral-700/50 bg-neutral-900/80 flex items-center justify-center transition-all duration-300 relative ${
-            objects.rug.toggled ? 'skew-x-12 translate-x-3 scale-x-95 border-neutral-500' : 'group-hover:scale-[1.01]'
+          className={`w-full h-full flex items-center justify-center transition-all duration-300 relative ${
+            objects.rug.toggled ? 'skew-x-12 translate-x-3 scale-x-95' : 'group-hover:scale-[1.01]'
           }`}
           style={{ 
             clipPath: 'polygon(12% 0%, 88% 0%, 100% 100%, 0% 100%)',
-            backgroundImage: gameState.roomInfo?.id === 'room_ballerina'
-              ? 'repeating-linear-gradient(45deg, #2d1b22, #2d1b22 4px, #3d242f 4px, #3d242f 8px)' // pink accent
-              : gameState.roomInfo?.id === 'room_captain'
-              ? 'repeating-linear-gradient(45deg, #13222d, #13222d 4px, #1a2f3d 4px, #1a2f3d 8px)' // captain navy-themed
-              : 'repeating-linear-gradient(45deg, #1c1c1c, #1c1c1c 4px, #262626 4px, #262626 8px)' 
           }}
         >
+          {/* Base CSS stylized rug that acts as background and fallback */}
+          <div 
+            className="absolute inset-0 border-2 border-neutral-700/50 bg-neutral-900/80 flex items-center justify-center"
+            style={{ 
+              backgroundImage: gameState.roomInfo?.id === 'room_ballerina'
+                ? 'repeating-linear-gradient(45deg, #2d1b22, #2d1b22 4px, #3d242f 4px, #3d242f 8px)' // pink accent
+                : gameState.roomInfo?.id === 'room_captain'
+                ? 'repeating-linear-gradient(45deg, #13222d, #13222d 4px, #1a2f3d 4px, #1a2f3d 8px)' // captain navy-themed
+                : 'repeating-linear-gradient(45deg, #1c1c1c, #1c1c1c 4px, #262626 4px, #262626 8px)' 
+            }}
+          />
+
+          {/* PNG image loaded on top, which hides itself if it fails to load */}
+          <img 
+            src={getRugImg()} 
+            alt={objects.rug.name}
+            className="absolute inset-0 w-full h-full object-fill drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] transition-opacity duration-300 z-10"
+            referrerPolicy="no-referrer"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
+
           {/* Folded edge indicating interaction */}
           {objects.rug.toggled && (
-            <div className="absolute right-0 top-0 bottom-0 w-8 bg-neutral-950 border-l border-neutral-500 rounded-r shadow-inner flex items-center justify-center">
+            <div className="absolute right-0 top-0 bottom-0 w-8 bg-neutral-950/95 border-l border-neutral-500 rounded-r shadow-inner flex items-center justify-center z-20">
               <span className="text-[9px] font-mono text-neutral-400">ПОДНЯТ</span>
             </div>
           )}
           {/* Direct clue glow if revealed */}
           {objects.rug.toggled && objects.rug.heldClueId && !foundClueIds.includes(objects.rug.heldClueId) && (
-            <div className="absolute left-8 top-1/2 -translate-y-1/2 w-4 h-4 bg-white/25 rounded-full animate-ping pointer-events-none" />
+            <div className="absolute left-8 top-1/2 -translate-y-1/2 w-4 h-4 bg-white/25 rounded-full animate-ping pointer-events-none z-20" />
           )}
         </div>
         <span className="text-center font-sans text-[9px] uppercase tracking-[0.2em] text-white/30 group-hover:text-white/80 transition-colors duration-200 block truncate mt-1">
