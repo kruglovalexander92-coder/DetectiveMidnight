@@ -24,6 +24,58 @@ export default function GameScene({
   const { objects, catPosition, catAction, safeCode, foundClueIds } = gameState;
   const [lightning, setLightning] = useState(false);
 
+  const getRoomBackground = (roomId: string | undefined, currentLocation: 'pier' | 'warehouse') => {
+    if (!roomId) return null;
+    if (currentLocation === 'pier') {
+      if (roomId === 'room_shop') return '/src/img/Grocery_.png';
+      if (roomId === 'room_mansion') return '/src/img/Office_01.png';
+      if (roomId === 'room_museum') return '/src/img/Office_02.png';
+      return '/src/img/Industrial_.png';
+    }
+    switch (roomId) {
+      case 'room_antique':
+      case 'story_chapter_1':
+        return '/src/img/Cabin_03.png';
+      case 'room_ballerina':
+        return '/src/img/Dressingr_.png';
+      case 'room_banker':
+        return '/src/img/Office_01.png';
+      case 'room_captain':
+      case 'story_chapter_2':
+        return '/src/img/Office_02.png';
+      case 'room_shop':
+        return '/src/img/Grocery_.png';
+      case 'room_mansion':
+        return '/src/img/Office_01.png';
+      case 'room_museum':
+        return '/src/img/Office_01.png';
+      case 'room_basement':
+      case 'room_alleyway':
+      case 'story_chapter_3':
+        return '/src/img/Industrial_.png';
+      case 'room_attic':
+        return '/src/img/Cabin_03.png';
+      default:
+        const idLower = roomId.toLowerCase();
+        if (idLower.includes('cabin') || idLower.includes('antique') || idLower.includes('attic') || idLower.includes('basement')) {
+          return '/src/img/Cabin_03.png';
+        }
+        if (idLower.includes('ballerina') || idLower.includes('dress')) {
+          return '/src/img/Dressingr_.png';
+        }
+        if (idLower.includes('grocer') || idLower.includes('shop')) {
+          return '/src/img/Grocery_.png';
+        }
+        if (idLower.includes('industr') || idLower.includes('ware') || idLower.includes('pier')) {
+          return '/src/img/Industrial_.png';
+        }
+        if (idLower.includes('office') || idLower.includes('bank') || idLower.includes('mansion')) {
+          return '/src/img/Office_01.png';
+        }
+        return '/src/img/Cabin_03.png';
+    }
+  };
+
   // Create refs to track physical positions for responsive, frame-exact movement
   const detectiveRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -525,16 +577,21 @@ export default function GameScene({
     return () => clearInterval(interval);
   }, [gameState.gameStatus]);
 
-  const wallBgClass = gameState.roomInfo?.wallColor || 'bg-[#050505]';
   const borderAccentClass = gameState.roomInfo?.accentBorder || 'border-white/10';
+  const backgroundUrl = getRoomBackground(gameState.roomInfo?.id, currentLocation);
 
   return (
     <div 
       ref={containerRef}
-      className={`relative w-full max-h-[420px] aspect-[16/10] mx-auto ${wallBgClass} border-4 ${borderAccentClass} rounded-none overflow-hidden select-none transition-all duration-300 ${
-        lightning ? 'bg-white/10' : wallBgClass
-      }`}
-      style={{ boxShadow: 'inset 0 0 100px rgba(0,0,0,0.98)' }}
+      className={`relative w-full max-h-[420px] aspect-[16/10] mx-auto border-4 ${borderAccentClass} rounded-none overflow-hidden select-none transition-all duration-300`}
+      style={{ 
+        boxShadow: 'inset 0 0 120px rgba(0,0,0,0.98)',
+        backgroundColor: lightning ? '#e5e5e5' : '#050505',
+        backgroundImage: backgroundUrl ? `linear-gradient(to bottom, rgba(0,0,0,0.35), rgba(0,0,0,0.7)), url(${backgroundUrl})` : 'none',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
     >
       {/* Dynamic Rain Window, Porthole, or Dressing Mirror */}
       {gameState.roomInfo?.id === 'room_ballerina' ? (
@@ -674,10 +731,10 @@ export default function GameScene({
           height: `${(objects.bookshelf.h ?? 70) * 0.8}%`
         }}
       >
-        <div className="relative w-full h-full border-2 border-neutral-600 bg-neutral-900 rounded-md p-1.5 flex flex-col justify-between transition-colors duration-200 group-hover:border-neutral-400 group-hover:bg-neutral-900/90 shadow-2xl">
+        <div className="relative w-full h-full border-2 border-neutral-750 bg-neutral-900 rounded-md p-1.5 flex flex-col justify-between transition-colors duration-200 group-hover:border-neutral-500 group-hover:bg-neutral-900/90 shadow-2xl">
           {/* Shelf panels */}
           {[1, 2, 3, 4].map((shelf) => (
-            <div key={shelf} className="w-full h-[22%] border-b border-neutral-700 flex items-end justify-around px-1 relative">
+            <div key={shelf} className="w-full h-[22%] border-b border-neutral-800 flex items-end justify-around px-1 relative">
               {gameState.roomInfo?.id === 'room_ballerina' ? (
                 /* Ballerina shelves containing slippers and flowers */
                 shelf === 1 ? (
@@ -754,29 +811,29 @@ export default function GameScene({
         }}
       >
         <div 
-          className={`w-full h-full border-4 border-neutral-500 bg-neutral-900 transition-all duration-500 flex items-center justify-center relative shadow-xl ${
-            objects.painting.toggled ? 'rotate-[15deg] translate-y-1' : ''
+          className={`w-full h-full border-4 border-neutral-600 bg-neutral-900 transition-all duration-500 flex items-center justify-center relative shadow-xl ${
+            objects.painting.toggled ? 'rotate-[15deg] translate-y-1' : 'group-hover:scale-[1.03]'
           }`}
         >
           {/* Custom painting graphic based on setting */}
           {gameState.roomInfo?.id === 'room_ballerina' ? (
-            <div className="w-[80%] h-[80%] border-2 border-neutral-700 bg-neutral-950 flex items-center justify-center overflow-hidden relative">
+            <div className="w-[80%] h-[80%] border-2 border-neutral-750 bg-neutral-950 flex items-center justify-center overflow-hidden relative">
               <span className="text-[16px] animate-pulse">🩰</span>
             </div>
           ) : (gameState.roomInfo?.id === 'room_captain' || gameState.roomInfo?.id === 'story_chapter_2') ? (
-            <div className="w-[80%] h-[80%] border-2 border-neutral-700 bg-blue-950 flex items-center justify-center overflow-hidden relative">
+            <div className="w-[80%] h-[80%] border-2 border-neutral-750 bg-blue-950/40 flex items-center justify-center overflow-hidden relative">
               <span className="text-[16px]">⛵</span>
             </div>
           ) : (
             /* Classic Portrait */
-            <div className="w-[80%] h-[80%] border-2 border-neutral-700 bg-neutral-950 flex flex-col justify-end items-center overflow-hidden">
+            <div className="w-[80%] h-[80%] border-2 border-neutral-750 bg-neutral-950 flex flex-col justify-end items-center overflow-hidden">
               <div className="w-6 h-6 rounded-full bg-neutral-800 border border-neutral-600 mb-1" />
               <div className="w-10 h-10 rounded-t-full bg-neutral-700 border border-neutral-500" />
             </div>
           )}
           {/* Tiny paper sticking out */}
           {!objects.painting.toggled && (
-            <div className="absolute -bottom-1 right-1 w-2 h-4 bg-neutral-400 transform rotate-12" />
+            <div className="absolute -bottom-1 right-1 w-2.5 h-4 bg-neutral-400 transform rotate-12 shadow-md border border-neutral-500" />
           )}
         </div>
         <span className="text-center font-sans text-[9px] uppercase tracking-[0.2em] text-white/30 group-hover:text-white/80 transition-colors duration-200 mt-1 truncate w-full">
@@ -799,7 +856,7 @@ export default function GameScene({
         }}
       >
         <div 
-          className={`w-full h-full bg-neutral-900/80 flex items-center justify-center transition-all duration-300 relative ${
+          className={`w-full h-full border-2 border-neutral-700/50 bg-neutral-900/80 flex items-center justify-center transition-all duration-300 relative ${
             objects.rug.toggled ? 'skew-x-12 translate-x-3 scale-x-95 border-neutral-500' : 'group-hover:scale-[1.01]'
           }`}
           style={{ 
@@ -819,7 +876,7 @@ export default function GameScene({
           )}
           {/* Direct clue glow if revealed */}
           {objects.rug.toggled && objects.rug.heldClueId && !foundClueIds.includes(objects.rug.heldClueId) && (
-            <div className="absolute left-8 top-1/2 -translate-y-1/2 w-4 h-4 bg-white/25 rounded-full animate-ping" />
+            <div className="absolute left-8 top-1/2 -translate-y-1/2 w-4 h-4 bg-white/25 rounded-full animate-ping pointer-events-none" />
           )}
         </div>
         <span className="text-center font-sans text-[9px] uppercase tracking-[0.2em] text-white/30 group-hover:text-white/80 transition-colors duration-200 block truncate mt-1">
@@ -945,9 +1002,9 @@ export default function GameScene({
             }`}>
               {/* Water layer */}
               {!objects.fishbowl.tipped ? (
-                <div className="absolute bottom-0 inset-x-0 h-[70%] bg-neutral-800/40 relative">
-                  {/* Swim fish */}
-                  <div className="absolute top-2 left-2 w-3 h-1.5 bg-neutral-500 rounded-full animate-bounce" />
+                <div className="absolute inset-0 bg-neutral-800/40">
+                  {/* Swim fish emoji */}
+                  <div className="absolute top-2 left-2 text-[10px] animate-bounce">🐠</div>
                   {/* Shiny key on bottom if still there */}
                   {objects.fishbowl.heldItemId === 'key_brass' && (
                     <div className="absolute bottom-1 left-3 w-4 h-2 bg-yellow-200/50 rounded-sm transform rotate-12 border border-yellow-300/40 animate-pulse" />
@@ -1125,7 +1182,7 @@ export default function GameScene({
             <div className="w-1.5 h-6 bg-neutral-600 rounded" />
 
             {/* Lock status led */}
-            <div className={`absolute top-1 right-1 w-2 h-2 rounded-full ${objects.safe.locked ? 'bg-neutral-800' : 'bg-green-400 border border-green-300'} animate-pulse`} />
+            <div className={`absolute top-1 right-1 w-2 h-2 rounded-full ${objects.safe.locked ? 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)]' : 'bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.8)]'} animate-pulse pointer-events-none`} />
           </div>
         </div>
         <span className="text-center font-sans text-[9px] uppercase tracking-[0.2em] text-white/30 group-hover:text-white/80 transition-colors duration-200 mt-1 block truncate w-full">
