@@ -4,9 +4,10 @@
  */
 
 import React, { useState, useEffect, useRef } from "react";
-import { GameState, Job } from "../types";
+import { GameState, Job, CaseFolder } from "../types";
 import * as Lucide from "lucide-react";
 import { gameAudio } from "../utils/AudioEngine";
+import { extractCaseTags, evaluateCaseFolder } from "../utils/tagHelper";
 
 interface WriterModeProps {
   gameState: GameState;
@@ -26,6 +27,110 @@ export default function WriterMode({
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [writerError, setWriterError] = useState<string | null>(null);
   const [isShiftActive, setIsShiftActive] = useState(false);
+
+  const [rightPanelTab, setRightPanelTab] = useState<'novels' | 'folders'>('novels');
+  const [newFolderTitle, setNewFolderTitle] = useState('');
+  const [showNewFolderInput, setShowNewFolderInput] = useState(false);
+
+  const handleCreateFolder = () => {
+    if (!newFolderTitle.trim()) return;
+    try { gameAudio.playClick(); } catch (e) {}
+    const newFolder: CaseFolder = {
+      id: `folder_${Date.now()}`,
+      title: newFolderTitle.trim(),
+      tags: [],
+      caseIds: [],
+      status: 'writing',
+      timestamp: new Date().toLocaleDateString('ru-RU'),
+    };
+    setGameState(prev => ({
+      ...prev,
+      caseFolders: [...(prev.caseFolders ?? []), newFolder]
+    }));
+    setNewFolderTitle('');
+    setShowNewFolderInput(false);
+  };
+
+  const handleFileCaseToFolder = (folderId: string, caseId: string) => {
+    try { gameAudio.playClick(); } catch (e) {}
+    setGameState(prev => {
+      const folders = (prev.caseFolders ?? []).map(f => {
+        if (f.id === folderId) {
+          const updatedIds = [...f.caseIds, caseId];
+          const cases = (prev.availableJobs ?? []).filter(j => updatedIds.includes(j.id));
+          const tagsSet = new Set<string>();
+          cases.forEach(c => {
+            extractCaseTags(c.title || c.caseName || '', c.description || '').forEach(t => tagsSet.add(t));
+          });
+          return {
+            ...f,
+            caseIds: updatedIds,
+            tags: Array.from(tagsSet).slice(0, 4)
+          };
+        }
+        return f;
+      });
+      return { ...prev, caseFolders: folders };
+    });
+  };
+
+  const handleUnfileCase = (folderId: string, caseId: string) => {
+    try { gameAudio.playClick(); } catch (e) {}
+    setGameState(prev => {
+      const folders = (prev.caseFolders ?? []).map(f => {
+        if (f.id === folderId) {
+          const updatedIds = f.caseIds.filter(id => id !== caseId);
+          const cases = (prev.availableJobs ?? []).filter(j => updatedIds.includes(j.id));
+          const tagsSet = new Set<string>();
+          cases.forEach(c => {
+            extractCaseTags(c.title || c.caseName || '', c.description || '').forEach(t => tagsSet.add(t));
+          });
+          return {
+            ...f,
+            caseIds: updatedIds,
+            tags: Array.from(tagsSet).slice(0, 4)
+          };
+        }
+        return f;
+      });
+      return { ...prev, caseFolders: folders };
+    });
+  };
+
+  const handlePublishFolder = (folderId: string) => {
+    try {
+      gameAudio.playClick();
+      gameAudio.playClueFound();
+    } catch (e) {}
+    
+    setGameState(prev => {
+      const folder = (prev.caseFolders ?? []).find(f => f.id === folderId);
+      if (!folder) return prev;
+      
+      const evalResult = evaluateCaseFolder(folder.caseIds, prev.availableJobs ?? []);
+      
+      const updatedFolders = (prev.caseFolders ?? []).map(f => {
+        if (f.id === folderId) {
+          return {
+            ...f,
+            status: 'published' as const,
+            rating: evalResult.rating,
+            review: evalResult.review,
+            bestsellerRank: evalResult.score,
+            profit: evalResult.profit,
+            tags: evalResult.allTags.slice(0, 4)
+          };
+        }
+        return f;
+      });
+      
+      return {
+        ...prev,
+        caseFolders: updatedFolders,
+        writerRoyalties: (prev.writerRoyalties ?? 0) + evalResult.profit
+      };
+    });
+  };
 
   // Claim Royalties sound handler
   const claimRoyalties = () => {
@@ -645,86 +750,328 @@ export default function WriterMode({
             </button>
           </div>
 
-          {/* LIST OF PUBLISHED NOVELS */}
-          <div className="flex-1 border border-neutral-800 bg-[#080809] p-3 md:p-4 flex flex-col relative overflow-hidden min-h-[150px] lg:min-h-0">
+          {/* DUAL TAB PANEL: LIST OF PUBLISHED NOVELS & CASE FOLDERS */}
+          <div className="flex-1 border border-neutral-800 bg-[#080809] p-3 md:p-4 flex flex-col relative overflow-hidden min-h-[220px] lg:min-h-0">
             <div className="absolute top-0 right-0 w-12 h-12 border-t border-r border-white/5 pointer-events-none" />
             
-            <div className="flex justify-between items-center border-b border-white/10 pb-2 mb-2">
-              <div className="flex items-center gap-1.5">
-                <Lucide.BookOpen className="w-3.5 h-3.5 text-amber-500" />
-                <h3 className="font-serif text-xs font-bold text-white uppercase tracking-wider italic">
-                  Изданные романы ({gameState.publishedBooks?.length ?? 0})
-                </h3>
-              </div>
-              <span className="font-mono text-[7px] text-white/30 uppercase tracking-wider">
-                ЛОНДОН 1930
-              </span>
+            {/* Tab selector headers */}
+            <div className="flex border-b border-white/10 mb-2.5">
+              <button
+                onClick={() => {
+                  try { gameAudio.playClick(); } catch (e) {}
+                  setRightPanelTab('novels');
+                }}
+                className={`flex-1 pb-1.5 font-serif text-[10px] uppercase tracking-wider font-bold text-center transition-all border-b-2 rounded-none ${
+                  rightPanelTab === 'novels'
+                    ? 'border-amber-500 text-white'
+                    : 'border-transparent text-white/45 hover:text-white/70'
+                }`}
+              >
+                Романы ({gameState.publishedBooks?.length ?? 0})
+              </button>
+              <button
+                onClick={() => {
+                  try { gameAudio.playClick(); } catch (e) {}
+                  setRightPanelTab('folders');
+                }}
+                className={`flex-1 pb-1.5 font-serif text-[10px] uppercase tracking-wider font-bold text-center transition-all border-b-2 rounded-none ${
+                  rightPanelTab === 'folders'
+                    ? 'border-amber-500 text-white'
+                    : 'border-transparent text-white/45 hover:text-white/70'
+                }`}
+              >
+                Папки Дел ({gameState.caseFolders?.length ?? 0})
+              </button>
             </div>
 
             <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 text-left pr-1 min-h-0">
-              {!gameState.publishedBooks || gameState.publishedBooks.length === 0 ? (
-                <div className="h-full flex flex-col justify-center items-center text-center py-6">
-                  <Lucide.BookMarked className="w-6 h-6 text-white/10 mb-1.5" />
-                  <p className="font-serif text-[10px] text-white/40 italic max-w-[180px]">
-                    «На полках еще нет ваших книг. Напишите сюжетную кампанию на три главы, пройдите ее и опубликуйте детективный роман!»
-                  </p>
-                </div>
-              ) : (
-                gameState.publishedBooks.map((book) => {
-                  const statusColors = 
-                    book.status === 'bestseller' 
-                      ? 'border-amber-500/30 bg-amber-950/15 text-amber-300' 
-                      : book.status === 'hit'
-                        ? 'border-sky-500/30 bg-sky-950/15 text-sky-300'
-                        : 'border-red-500/20 bg-red-950/15 text-red-400';
+              {rightPanelTab === 'novels' ? (
+                /* TAB 1: STANDARD PUBLISHED NOVELS */
+                !gameState.publishedBooks || gameState.publishedBooks.length === 0 ? (
+                  <div className="h-full flex flex-col justify-center items-center text-center py-6">
+                    <Lucide.BookMarked className="w-6 h-6 text-white/10 mb-1.5" />
+                    <p className="font-serif text-[10px] text-white/40 italic max-w-[180px]">
+                      «На полках еще нет ваших книг. Напишите сюжетную кампанию на три главы, пройдите ее и опубликуйте детективный роман!»
+                    </p>
+                  </div>
+                ) : (
+                  gameState.publishedBooks.map((book) => {
+                    const statusColors = 
+                      book.status === 'bestseller' 
+                        ? 'border-amber-500/30 bg-amber-950/15 text-amber-300' 
+                        : book.status === 'hit'
+                          ? 'border-sky-500/30 bg-sky-950/15 text-sky-300'
+                          : 'border-red-500/20 bg-red-950/15 text-red-400';
 
-                  const statusLabels = {
-                    bestseller: '★ БЕСТСЕЛЛЕР ★',
-                    hit: '✓ УСПЕШНЫЙ ХИТ',
-                    flop: '⚠ ПРОВАЛ ПРОДАЖ'
-                  };
+                    const statusLabels = {
+                      bestseller: '★ БЕСТСЕЛЛЕР ★',
+                      hit: '✓ УСПЕШНЫЙ ХИТ',
+                      flop: '⚠ ПРОВАЛ ПРОДАЖ'
+                    };
 
-                  return (
-                    <div key={book.id} className="border border-white/5 bg-black/40 p-2.5 relative hover:border-white/15 transition-all">
-                      <div className="flex justify-between items-start mb-1">
-                        <h4 className="font-serif text-[10px] md:text-[11px] font-bold text-amber-100 leading-tight">
-                          «{book.title}»
-                        </h4>
-                        <span className="font-mono text-[7px] text-white/30">{book.timestamp}</span>
-                      </div>
-
-                      <div className={`border p-1 text-[7px] font-mono font-bold tracking-widest text-center my-1 uppercase ${statusColors}`}>
-                        {statusLabels[book.status] || 'ОПУБЛИКОВАНО'}
-                      </div>
-
-                      <p className="font-serif text-[9px] md:text-[9.5px] italic text-white/50 leading-normal mb-2">
-                        Идея: "{book.idea}"
-                      </p>
-
-                      <div className="bg-neutral-950/80 p-2 border border-white/5 mb-1 text-[9px]">
-                        <div className="font-mono text-[7px] text-amber-500/80 font-bold uppercase mb-1 flex items-center gap-1">
-                          <Lucide.MessageSquare className="w-2.5 h-2.5" /> Колонки Критика Лондона:
+                    return (
+                      <div key={book.id} className="border border-white/5 bg-black/40 p-2.5 relative hover:border-white/15 transition-all">
+                        <div className="flex justify-between items-start mb-1">
+                          <h4 className="font-serif text-[10px] md:text-[11px] font-bold text-amber-100 leading-tight">
+                            «{book.title}»
+                          </h4>
+                          <span className="font-mono text-[7px] text-white/30">{book.timestamp}</span>
                         </div>
-                        <p className="font-serif text-[9px] md:text-[9.5px] text-white/70 italic leading-snug">
-                          {book.review}
+
+                        <div className={`border p-1 text-[7px] font-mono font-bold tracking-widest text-center my-1 uppercase ${statusColors}`}>
+                          {statusLabels[book.status] || 'ОПУБЛИКОВАНО'}
+                        </div>
+
+                        <p className="font-serif text-[9px] md:text-[9.5px] italic text-white/50 leading-normal mb-2">
+                          Идея: "{book.idea}"
                         </p>
-                      </div>
 
-                      <div className="flex justify-between font-mono text-[7.5px] md:text-[8px] text-white/30 border-t border-white/5 pt-1.5 mt-1.5">
-                        <div className="flex items-center gap-1">
-                          <span>Оценки:</span>
-                          <span className="text-amber-400">Идея: {book.ratingIdea}★</span>
-                          <span>/</span>
-                          <span className="text-purple-400">ИИ: {book.ratingExecution}★</span>
+                        <div className="bg-neutral-950/80 p-2 border border-white/5 mb-1 text-[9px]">
+                          <div className="font-mono text-[7px] text-amber-500/80 font-bold uppercase mb-1 flex items-center gap-1">
+                            <Lucide.MessageSquare className="w-2.5 h-2.5" /> Колонки Критика Лондона:
+                          </div>
+                          <p className="font-serif text-[9px] md:text-[9.5px] text-white/70 italic leading-snug">
+                            {book.review}
+                          </p>
                         </div>
-                        <div>
-                          <span>Выручка:</span>
-                          <span className="text-emerald-400 font-bold ml-1">+{book.profit}$</span>
+
+                        <div className="flex justify-between font-mono text-[7.5px] md:text-[8px] text-white/30 border-t border-white/5 pt-1.5 mt-1.5">
+                          <div className="flex items-center gap-1">
+                            <span>Оценки:</span>
+                            <span className="text-amber-400">Идея: {book.ratingIdea}★</span>
+                            <span>/</span>
+                            <span className="text-purple-400">ИИ: {book.ratingExecution}★</span>
+                          </div>
+                          <div>
+                            <span>Выручка:</span>
+                            <span className="text-emerald-400 font-bold ml-1">+{book.profit}$</span>
+                          </div>
                         </div>
+                      </div>
+                    );
+                  })
+                )
+              ) : (
+                /* TAB 2: CASE FOLDERS (РОМАНЫ-ПАПКИ) */
+                <div className="space-y-3">
+                  {/* Create New Folder Button or Form */}
+                  {!showNewFolderInput ? (
+                    <button
+                      onClick={() => {
+                        try { gameAudio.playClick(); } catch (e) {}
+                        setShowNewFolderInput(true);
+                      }}
+                      className="w-full h-8 bg-zinc-950 border border-dashed border-zinc-800 hover:border-amber-600/50 hover:bg-amber-950/10 text-amber-500 font-sans text-[8.5px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5"
+                    >
+                      <Lucide.FolderPlus className="w-3.5 h-3.5" />
+                      Новый роман-папка
+                    </button>
+                  ) : (
+                    <div className="border border-amber-900/30 bg-neutral-950 p-2.5 space-y-2">
+                      <div className="font-serif text-[9px] font-bold text-amber-200 uppercase tracking-wide">
+                        Название нового романа-папки:
+                      </div>
+                      <input
+                        type="text"
+                        value={newFolderTitle}
+                        onChange={(e) => setNewFolderTitle(e.target.value)}
+                        placeholder="например, Загадка пекарни Бейкера..."
+                        className="w-full h-7 bg-neutral-900 border border-white/10 text-white font-serif text-[9.5px] px-2 rounded-none outline-none focus:border-amber-500"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleCreateFolder();
+                        }}
+                      />
+                      <div className="flex gap-1.5 justify-end">
+                        <button
+                          onClick={() => {
+                            try { gameAudio.playClick(); } catch (e) {}
+                            setShowNewFolderInput(false);
+                            setNewFolderTitle('');
+                          }}
+                          className="h-6 px-2.5 border border-white/10 text-white/50 hover:text-white hover:border-white/20 font-mono text-[7.5px] uppercase tracking-wider transition-all"
+                        >
+                          Отмена
+                        </button>
+                        <button
+                          onClick={handleCreateFolder}
+                          disabled={!newFolderTitle.trim()}
+                          className="h-6 px-3 bg-amber-600 hover:bg-amber-500 disabled:bg-neutral-800 text-white font-mono text-[7.5px] uppercase tracking-wider transition-all font-bold"
+                        >
+                          Создать
+                        </button>
                       </div>
                     </div>
-                  );
-                })
+                  )}
+
+                  {/* List of Folders */}
+                  {!gameState.caseFolders || gameState.caseFolders.length === 0 ? (
+                    <div className="h-full flex flex-col justify-center items-center text-center py-6">
+                      <Lucide.FolderHeart className="w-6 h-6 text-white/10 mb-1.5" />
+                      <p className="font-serif text-[10px] text-white/40 italic max-w-[200px] leading-relaxed">
+                        «Кабинет чист. Создайте папку-роман, чтобы подшивать туда обычные дела писателя с пересекающимися событиями, объединяя их сквозной интригой!»
+                      </p>
+                    </div>
+                  ) : (
+                    gameState.caseFolders.map((folder) => {
+                      const filedCases = (gameState.availableJobs ?? []).filter(j => folder.caseIds.includes(j.id));
+                      const isCaseFiledGlobal = (caseId: string) => (gameState.caseFolders ?? []).some(f => f.caseIds.includes(caseId));
+                      const unfiledCustomCases = (gameState.availableJobs ?? []).filter(j => j.id.startsWith('custom_job_') && !isCaseFiledGlobal(j.id));
+
+                      const isPublished = folder.status === 'published';
+
+                      const rankColors = 
+                        folder.bestsellerRank && folder.bestsellerRank >= 80 
+                          ? 'border-amber-500/30 bg-amber-950/15 text-amber-300' 
+                          : folder.bestsellerRank && folder.bestsellerRank >= 60
+                            ? 'border-sky-500/30 bg-sky-950/15 text-sky-300'
+                            : 'border-zinc-800 bg-neutral-900 text-white/60';
+
+                      const rankLabel = 
+                        folder.bestsellerRank && folder.bestsellerRank >= 80 
+                          ? '★ СУПЕР-БЕСТСЕЛЛЕР ★' 
+                          : folder.bestsellerRank && folder.bestsellerRank >= 60
+                            ? '✓ УСПЕШНЫЙ ХИТ'
+                            : '📖 РОМАН-ПАПКА';
+
+                      return (
+                        <div key={folder.id} className="border border-white/5 bg-black/45 p-2.5 space-y-2 relative hover:border-white/10 transition-all">
+                          <div className="flex justify-between items-start">
+                            <div className="flex items-center gap-1 text-amber-100 font-serif text-[10px] font-bold">
+                              <Lucide.Folder className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                              <span>«{folder.title}»</span>
+                            </div>
+                            <span className="font-mono text-[7px] text-white/30 shrink-0">{folder.timestamp}</span>
+                          </div>
+
+                          {/* Subheading / Tags */}
+                          {folder.tags && folder.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {folder.tags.map((tag, tIdx) => (
+                                <span key={tIdx} className="bg-amber-950/20 text-amber-400 px-1 py-0.5 border border-amber-500/10 text-[7px] font-mono rounded-none">
+                                  #{tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Status and Rating badge */}
+                          {isPublished && (
+                            <div className="space-y-1.5">
+                              <div className={`border p-1 text-[7px] font-mono font-bold tracking-widest text-center uppercase ${rankColors}`}>
+                                {rankLabel} (Специфика: {folder.bestsellerRank}%)
+                              </div>
+                              <div className="flex justify-between font-mono text-[7px] text-white/30">
+                                <div className="flex items-center gap-0.5">
+                                  <span>Оценка:</span>
+                                  {Array.from({ length: folder.rating || 3 }).map((_, i) => (
+                                    <Lucide.Star key={i} className="w-2.5 h-2.5 fill-amber-400 text-amber-400 shrink-0" />
+                                  ))}
+                                </div>
+                                <div className="text-emerald-400 font-bold">
+                                  Выручка: +{folder.profit}$
+                                </div>
+                              </div>
+                              <p className="font-serif text-[9px] text-white/70 italic bg-neutral-950/80 p-2 border border-white/5 leading-normal">
+                                {folder.review}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Filed Cases List */}
+                          <div className="space-y-1 border-t border-white/5 pt-1.5">
+                            <div className="font-mono text-[7px] text-white/40 uppercase mb-1 flex justify-between">
+                              <span>Подшитые дела ({folder.caseIds.length})</span>
+                              {isPublished && <span className="text-emerald-500 font-bold">Опубликовано ✓</span>}
+                            </div>
+                            {folder.caseIds.length === 0 ? (
+                              <p className="font-serif text-[8.5px] text-white/30 italic">
+                                Папка пуста. Подшейте обычные дела писателя ниже.
+                              </p>
+                            ) : (
+                              filedCases.map(c => {
+                                const title = c.title || c.caseName || '';
+                                const tags = extractCaseTags(title, c.description || '');
+                                return (
+                                  <div key={c.id} className="bg-neutral-900/60 p-1.5 border border-white/5 flex justify-between items-center text-[8.5px] font-serif">
+                                    <div>
+                                      <div className="font-bold text-white/80 leading-tight">«{c.caseName}»</div>
+                                      <div className="flex gap-1 mt-0.5">
+                                        {tags.map((t, idx) => (
+                                          <span key={idx} className="text-[6.5px] font-mono text-white/40">#{t}</span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                    {!isPublished && (
+                                      <button
+                                        onClick={() => handleUnfileCase(folder.id, c.id)}
+                                        className="text-red-400 hover:text-red-300 font-mono text-[7px] font-bold p-1 border border-red-500/10 hover:bg-red-950/20"
+                                        title="Извлечь из папки"
+                                      >
+                                        [Удалить]
+                                      </button>
+                                    )}
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+
+                          {/* Action - File/Attach Case */}
+                          {!isPublished && (
+                            <div className="space-y-1.5 pt-1 border-t border-dashed border-white/5">
+                              {unfiledCustomCases.length > 0 ? (
+                                <div className="bg-neutral-950 p-1.5 border border-white/5 space-y-1">
+                                  <div className="font-mono text-[7px] text-amber-500/80 font-bold uppercase">
+                                    Доступные дела писателя ({unfiledCustomCases.length}):
+                                  </div>
+                                  <div className="max-h-[85px] overflow-y-auto custom-scrollbar space-y-1">
+                                    {unfiledCustomCases.map(c => {
+                                      const title = c.title || c.caseName || '';
+                                      const tags = extractCaseTags(title, c.description || '');
+                                      return (
+                                        <div key={c.id} className="bg-zinc-900/50 p-1 flex justify-between items-center text-[8px] font-serif hover:bg-zinc-900">
+                                          <div className="truncate max-w-[125px]">
+                                            <span className="text-white block truncate font-bold">«{c.caseName}»</span>
+                                            <span className="text-[6.5px] font-mono text-white/30 block truncate">#{tags.join(', #')}</span>
+                                          </div>
+                                          <button
+                                            onClick={() => handleFileCaseToFolder(folder.id, c.id)}
+                                            className="bg-amber-950/40 text-amber-400 font-mono text-[7px] font-bold px-1.5 py-0.5 border border-amber-500/20 hover:bg-amber-500 hover:text-black transition-all"
+                                          >
+                                            Подшить
+                                          </button>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              ) : (
+                                <p className="font-serif text-[8.5px] text-white/30 italic text-center">
+                                  «Нет новых дел для подшивания. Создайте одиночное дело на печатной машинке!»
+                                </p>
+                              )}
+
+                              {/* Publish button */}
+                              {folder.caseIds.length >= 2 ? (
+                                <button
+                                  onClick={() => handlePublishFolder(folder.id)}
+                                  className="w-full h-7 bg-amber-600 hover:bg-amber-500 text-white font-sans text-[8px] font-bold uppercase tracking-wider transition-all rounded-none flex items-center justify-center gap-1 shadow"
+                                >
+                                  <Lucide.BookOpen className="w-3 h-3" />
+                                  Опубликовать роман-папку
+                                </button>
+                              ) : (
+                                <div className="text-center font-serif text-[7.5px] text-amber-200/50 italic leading-snug">
+                                  * Подшейте как минимум 2 дела, чтобы издать готовый роман-папку.
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               )}
             </div>
           </div>

@@ -136,7 +136,7 @@ export default function CrimeBoard({
     <div className="flex-1 w-full flex flex-col relative select-none">
       
       {/* CORKBOARD VIEW CONTAINER */}
-      <div className="relative w-full h-[540px] border-[12px] border-[#2c1d11] bg-[#1a110a] shadow-inner overflow-hidden flex flex-col justify-between">
+      <div className="relative w-full h-[440px] border-[10px] border-[#2c1d11] bg-[#1a110a] shadow-inner overflow-hidden flex flex-col justify-between">
         {/* Cork pattern overlay */}
         <div className="absolute inset-0 bg-[radial-gradient(#100a06_1.5px,transparent_1.5px)] [background-size:12px_12px] opacity-40 pointer-events-none" />
         <div className="absolute inset-0 bg-gradient-to-b from-[#2a1b10]/20 via-transparent to-black/60 pointer-events-none" />

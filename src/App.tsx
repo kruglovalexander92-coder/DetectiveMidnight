@@ -22,7 +22,51 @@ import WriterMode from './components/WriterMode';
 
 import * as Lucide from 'lucide-react';
 
+function getAgencyHint(gameState: GameState): string {
+  const cash = gameState.economy?.cash ?? 0;
+  const reputation = gameState.reputation ?? 0;
+  const completedJobs = (gameState.availableJobs ?? []).filter(j => j && j.completed);
+  const incompleteJobs = (gameState.availableJobs ?? []).filter(j => j && !j.completed);
+  const incompleteSketches = (gameState.sketches ?? []).filter(s => s && !s.completed);
+  const currentDay = gameState.currentDay ?? 1;
+
+  if (cash < 110 && incompleteJobs.length > 0) {
+    return "Наш бюджет опасно низок! В конце дня снимутся налоги и расходы (-110$), и если мы уйдем в минус — агентство закроют. Срочно выезжай на любое доступное дело!";
+  }
+  if (incompleteSketches.length > 0) {
+    return "Свидетели ждут в приемной! Загляни во вкладку «Допрос и Фоторобот», чтобы составить фотороботы преступников на 100%. Это даст важнейшие зацепки перед началом расследований!";
+  }
+  if (incompleteJobs.length > 0) {
+    const firstJob = incompleteJobs[0];
+    return `В сводках есть нераскрытое оперативное дело: "${firstJob.title}". Кликай по карточке и нажимай «Начать расследование», чтобы выехать на место!`;
+  }
+  
+  // Story chapters hint
+  const completedChapters = gameState.storyState?.completedChapters ?? [];
+  const chapters = gameState.campaignChapters && gameState.campaignChapters.length > 0 
+    ? gameState.campaignChapters 
+    : [
+        { id: 'story_chapter_1', title: 'Похищение Сапфирового Глаза', reputationRequired: 0, reward: 200, infoCost: 0, completed: false, risk: 'low', roomTemplateId: 'room_antique', timeLimit: null },
+        { id: 'story_chapter_2', title: 'Контрабанда в полночь', reputationRequired: 15, reward: 300, infoCost: 0, completed: false, risk: 'medium', roomTemplateId: 'room_captain', timeLimit: 180 },
+        { id: 'story_chapter_3', title: 'Финал в небесах', reputationRequired: 30, reward: 400, infoCost: 0, completed: false, risk: 'high', roomTemplateId: 'room_captain', timeLimit: 120 }
+      ];
+  
+  const activeCh = chapters.find((ch, idx) => !ch.completed && !completedChapters.includes(idx + 1));
+  if (activeCh && currentDay >= 3) {
+    if (reputation < (activeCh.reputationRequired ?? 0)) {
+      return `Для продвижения по сюжету к главе "${activeCh.title}" нам не хватает репутации (нужно ${activeCh.reputationRequired}★, у нас ${reputation}★). Раскрывай ежедневные дела в сводках!`;
+    }
+    return `Мы готовы к крупному делу! Сюжетная глава "${activeCh.title}" ждет нас. Нажимай на карточку главы ниже!`;
+  }
+  
+  return "Все оперативные дела на сегодня завершены! Барт, мы отлично потрудились. Пора нажать на кнопку «Завершить день», чтобы оплатить счета и перейти к следующему дню.";
+}
+
 function getLogicalHint(gameState: GameState): string {
+  if (gameState.gameStatus === 'sandbox_dashboard') {
+    return getAgencyHint(gameState);
+  }
+
   const { objects, inventory, foundClueIds, safeCode, solvedSteps } = gameState;
 
   // Find easy spot (rug, trashcan, painting holding a clue)
@@ -763,6 +807,13 @@ export default function App() {
             dialogueText = `«Миднайт, ты сдвинул пейзаж... Ого! На стене под картиной нацарапан шифр: [Код сейфа: ${prev.safeCode}]! Запишу в блокнот...»`;
             dialogueMood = 'thoughtful';
             if (!prev.isMuted) gameAudio.playClick();
+          } else if (obj.heldItemId && !newInventory.includes(obj.heldItemId)) {
+            newInventory.push(obj.heldItemId);
+            const item = getItemDetail(obj.heldItemId);
+            dialogueText = `«Миднайт сдвинул картину лапой... Ба, да за рамой скотчем был приклеен ${item.name}! Какая интересная находка!»`;
+            dialogueMood = 'shocked';
+            obj.heldItemId = null;
+            if (!prev.isMuted) gameAudio.playClick();
           } else {
             dialogueText = '«Ван Гог бы перевернулся в гробу! Зачем ты раскачиваешь раму, Миднайт? Там нет мышей!»';
             dialogueMood = 'serious';
@@ -892,6 +943,14 @@ export default function App() {
                 dialogueText += ` Кроме того, под двойным дном лежит бумажка! Это комбинация от сейфа: [${prev.safeCode}]!`;
                 dialogueMood = 'shocked';
               }
+
+              if (obj.heldItemId && !newInventory.includes(obj.heldItemId)) {
+                newInventory.push(obj.heldItemId);
+                const item = getItemDetail(obj.heldItemId);
+                dialogueText += ` И еще... посмотри-ка! В ящике лежит ${item.name}!`;
+                obj.heldItemId = null;
+                dialogueMood = 'shocked';
+              }
               
               const keyIdx = newInventory.indexOf('key_brass');
               if (keyIdx > -1) newInventory.splice(keyIdx, 1);
@@ -904,6 +963,12 @@ export default function App() {
             }
           } else {
             dialogueText = '«Ящик стола уже открыт. Здесь только засохшая чернильница и пыль времени...»';
+            if (obj.heldItemId && !newInventory.includes(obj.heldItemId)) {
+              newInventory.push(obj.heldItemId);
+              const item = getItemDetail(obj.heldItemId);
+              dialogueText += ` Но погоди, под бумагами припрятан ${item.name}!`;
+              obj.heldItemId = null;
+            }
             dialogueMood = 'serious';
             logText = 'Кот заглянул в уже открытый стол.';
           }
@@ -1060,6 +1125,7 @@ export default function App() {
         const objectsCopy = { ...prev.objects };
         const safeObj = { ...objectsCopy['safe'] };
         safeObj.locked = false;
+        objectsCopy['safe'] = safeObj;
         
         const newFoundClues = [...prev.foundClueIds];
         const newInventory = [...prev.inventory];
@@ -1184,10 +1250,49 @@ export default function App() {
     gameAudio.stopAmbientMusic();
     setIsShopOpen(false);
     setIsLogOpen(false);
-    setGameState(prev => ({
-      ...prev,
-      gameStatus: 'intro'
-    }));
+    setGameState(prev => {
+      let updatedJobs = prev.availableJobs;
+      let updatedCampaignChapters = prev.campaignChapters;
+      let updatedCompletedChapters = prev.storyState?.completedChapters ? [...prev.storyState.completedChapters] : [];
+
+      if (prev.gameStatus === 'won' || prev.gameStatus === 'playing') {
+        // Mark current activeJob as completed in availableJobs
+        updatedJobs = prev.availableJobs?.map(job => {
+          if (prev.activeJob && job.id === prev.activeJob.id) {
+            return { ...job, completed: true };
+          }
+          return job;
+        }) || [];
+
+        // Check if story chapter is completed, add to completedChapters array
+        if (prev.storyState?.mode === 'story' && prev.storyState?.chapter) {
+          const finishedCh = prev.storyState.chapter;
+          if (!updatedCompletedChapters.includes(finishedCh)) {
+            updatedCompletedChapters.push(finishedCh);
+          }
+        }
+
+        // Also mark completed in campaignChapters!
+        updatedCampaignChapters = prev.campaignChapters?.map(job => {
+          if (prev.activeJob && job.id === prev.activeJob.id) {
+            return { ...job, completed: true };
+          }
+          return job;
+        }) || [];
+      }
+
+      return {
+        ...prev,
+        availableJobs: updatedJobs,
+        campaignChapters: updatedCampaignChapters,
+        storyState: prev.storyState ? {
+          ...prev.storyState,
+          completedChapters: updatedCompletedChapters
+        } : undefined,
+        gameStatus: 'intro',
+        activeJob: null
+      };
+    });
   };
 
   const handleSelectJob = (job: Job) => {
@@ -1435,15 +1540,89 @@ export default function App() {
     setCritiqueResult(null);
   };
 
-  const handleChangeLocation = (loc: 'pier' | 'warehouse') => {
+  const handleChangeLocation = (loc: 'pier' | 'warehouse' | 'hall' | 'study' | 'attic' | 'basement') => {
     if (gameState.gameStatus !== 'playing') return;
     gameAudio.playClick();
     setGameState(prev => {
       const roomId = prev.roomInfo?.id;
-      let logLocName = loc === 'pier' ? 'Туманный причал' : 'Склад №9';
+      let logLocName = '';
       let dialogueText = '';
-      
-      if (roomId === 'room_mansion') {
+      let isTransitionBlocked = false;
+      let blockDialogue = '';
+      const updatedSolvedSteps = [...(prev.solvedSteps || [])];
+      const updatedInventory = [...(prev.inventory || [])];
+
+      // Chapter 2 / Multi-Room / Sandbox 2-room Layout: Block Warehouse if not unlocked
+      if (loc === 'warehouse') {
+        const isUnlocked = updatedSolvedSteps.includes('unlocked_warehouse');
+        if (!isUnlocked) {
+          if (updatedInventory.includes('key_door')) {
+            updatedSolvedSteps.push('unlocked_warehouse');
+          } else {
+            isTransitionBlocked = true;
+            blockDialogue = '«Дверь на склад закрыта на прочный стальной замок! Нам нужен Стальной дверной ключ. Миднайт, посмотри на причале!»';
+          }
+        }
+      }
+
+      // 4-Room Layouts (Chapter 1 / 3): Block Attic and Basement
+      if (loc === 'attic') {
+        const isUnlocked = updatedSolvedSteps.includes('unlocked_attic');
+        if (!isUnlocked) {
+          if (updatedInventory.includes('key_door')) {
+            updatedSolvedSteps.push('unlocked_attic');
+          } else {
+            isTransitionBlocked = true;
+            blockDialogue = '«Дверь на чердак заперта! Требуется стальной дверной ключ... Кажется, в кабинете хозяина на столе был запертый ящик стола — ключ может быть там.»';
+          }
+        }
+      }
+
+      if (loc === 'basement') {
+        const isUnlocked = updatedSolvedSteps.includes('unlocked_basement');
+        if (!isUnlocked) {
+          if (updatedInventory.includes('passcard')) {
+            updatedSolvedSteps.push('unlocked_basement');
+          } else {
+            isTransitionBlocked = true;
+            blockDialogue = '«Люк в подвал заблокирован электронным замком Синдиката! Требуется Электронная ключ-карта. Интересно, заговорщики не прячут её на чердаке?»';
+          }
+        }
+      }
+
+      if (isTransitionBlocked) {
+        return {
+          ...prev,
+          activeDialogue: {
+            sender: 'detective',
+            text: blockDialogue,
+            mood: 'thoughtful'
+          },
+          logs: [
+            ...prev.logs,
+            {
+              id: `log_blocked_${Date.now()}`,
+              sender: 'system',
+              text: '🔒 Путь заблокирован! Требуется специальный ключ или допуск.',
+              timestamp: new Date().toLocaleTimeString()
+            }
+          ]
+        };
+      }
+
+      if (loc === 'hall') {
+        logLocName = 'Холл особняка';
+        dialogueText = '«Мы спустились в холодный скрипучий холл первого этажа. Под ковром или в мусорной корзине точно что-то скрыто...»';
+      } else if (loc === 'study') {
+        logLocName = 'Кабинет хозяина';
+        dialogueText = '«Вот мы и в кабинете. На лакированном столе разбросаны шифры, лампа отбрасывает косые тени на стены...»';
+      } else if (loc === 'attic') {
+        logLocName = 'Пыльный чердак';
+        dialogueText = '«Уф, ну и пылища! Под самой крышей воет ветер, а среди старых книг и винтажных портретов таятся грязные тайны...»';
+      } else if (loc === 'basement') {
+        logLocName = 'Сырой подвал';
+        dialogueText = '«Мы спустились по винтовой лестнице в подвал. С потолка капает сырость, а в углу стоит массивный стальной сейф...»';
+      } else if (roomId === 'room_mansion') {
         logLocName = loc === 'pier' ? 'Первый этаж (Прихожая)' : 'Второй этаж (Гостиная)';
         dialogueText = loc === 'pier' 
           ? '«Итак, мы спустились в просторный холл первого этажа. Под ногами скрипит дорогой паркет...»'
@@ -1459,20 +1638,29 @@ export default function App() {
           ? '«Вернулись в картинную галерею. Вековые шедевры молчаливо следят за каждым нашим шагом...»'
           : '«Мы вошли в зал скульптур. Мраморные статуи отбрасывают длинные, пугающие тени во мраке...»';
       } else {
+        logLocName = loc === 'pier' ? 'Туманный причал' : 'Склад №9';
         dialogueText = loc === 'pier' 
           ? '«Бр-р, какой промозглый туман на этом причале! Миднайт, держись ближе к моим ботинкам, чтобы не свалиться в воду!»'
           : '«Итак, мы пробрались внутрь Склада №9. Здесь темно, хоть глаз выколи... Какие тайны скрывают контрабандисты?»';
       }
 
+      let systemLogMsg = `Миднайт и Барт переместились: ${logLocName}`;
+      if (updatedSolvedSteps.length > prev.solvedSteps.length) {
+        if (loc === 'warehouse') systemLogMsg = `🔓 Вы использовали Стальной ключ и отперли дверь на Склад!`;
+        if (loc === 'attic') systemLogMsg = `🔓 Вы использовали Стальной ключ и отперли дверь на Чердак!`;
+        if (loc === 'basement') systemLogMsg = `🔓 Вы использовали Ключ-карту и отперли Люк в подвал!`;
+      }
+
       return {
         ...prev,
+        solvedSteps: updatedSolvedSteps,
         storyState: {
           ...prev.storyState,
           currentLocationId: loc
         },
         logs: [
           ...prev.logs,
-          addLog('system', `Миднайт и Барт переместились: ${logLocName}`)
+          addLog('system', systemLogMsg)
         ],
         activeDialogue: {
           sender: 'detective',
@@ -1519,11 +1707,55 @@ export default function App() {
 
         {/* Global Controls */}
         <div className="flex items-center gap-4">
-          {gameState.timerActive && gameState.timeLeft !== undefined && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 border border-red-500/40 bg-red-950/40 animate-pulse text-[10px] font-mono font-bold text-red-400 uppercase tracking-widest leading-none">
-              <Lucide.Clock className="w-3.5 h-3.5 shrink-0" />
-              <span>ВРЕМЯ: {Math.floor(gameState.timeLeft / 60)}:{(gameState.timeLeft % 60) < 10 ? '0' : ''}{gameState.timeLeft % 60}</span>
-            </div>
+          {gameState.gameStatus === 'sandbox_dashboard' ? (
+            (() => {
+              const completedCount = (gameState.availableJobs ?? []).filter(j => j && j.completed).length;
+              let simulatedTime = '09:00';
+              let desc = 'Утро (До темноты: 9 ч.)';
+              if (completedCount === 1) {
+                simulatedTime = '12:00';
+                desc = 'Полдень (До темноты: 6 ч.)';
+              } else if (completedCount === 2) {
+                simulatedTime = '15:00';
+                desc = 'День (До темноты: 3 ч.)';
+              } else if (completedCount >= 3) {
+                simulatedTime = '18:00';
+                desc = 'Вечер (Стемнело! Пора закрывать день)';
+              }
+
+              return (
+                <button
+                  onClick={() => {
+                    gameAudio.playClick();
+                    let chatDesc = "Пора приниматься за расследования!";
+                    if (completedCount === 1) chatDesc = "Половина дня впереди, работаем!";
+                    if (completedCount === 2) chatDesc = "Солнце клонится к закату. Успеем ли закрыть последнее дело?";
+                    if (completedCount >= 3) chatDesc = "На город опустились густые сумерки. Пора завершать день!";
+                    
+                    setGameState(prev => ({
+                      ...prev,
+                      activeDialogue: {
+                        sender: 'detective',
+                        text: `«Барт взглянул на свои карманные часы: "${simulatedTime}. ${chatDesc}"»`,
+                        mood: 'thoughtful'
+                      }
+                    }));
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-amber-500/40 bg-amber-950/30 hover:bg-amber-950/50 text-[10px] font-mono font-bold text-amber-400 uppercase tracking-widest leading-none cursor-pointer transition-all"
+                  title="Посмотреть время рабочего дня"
+                >
+                  <Lucide.Clock className="w-3.5 h-3.5 shrink-0 animate-pulse text-amber-500" />
+                  <span>ВРЕМЯ: {simulatedTime} ({desc})</span>
+                </button>
+              );
+            })()
+          ) : (
+            gameState.timerActive && gameState.timeLeft !== undefined && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 border border-red-500/40 bg-red-950/40 animate-pulse text-[10px] font-mono font-bold text-red-400 uppercase tracking-widest leading-none">
+                <Lucide.Clock className="w-3.5 h-3.5 shrink-0" />
+                <span>ВРЕМЯ: {Math.floor(gameState.timeLeft / 60)}:{(gameState.timeLeft % 60) < 10 ? '0' : ''}{gameState.timeLeft % 60}</span>
+              </div>
+            )
           )}
 
           <div className="flex gap-2">
@@ -2058,10 +2290,55 @@ export default function App() {
                     <button 
                       onClick={() => {
                         gameAudio.playClick();
-                        const nextChNum = (gameState.storyState?.chapter ?? 1) + 1;
+                        const currentChNum = gameState.storyState?.chapter ?? 1;
+                        const nextChNum = currentChNum + 1;
                         const nextJob = gameState.campaignChapters?.find(j => j.id === `story_chapter_${nextChNum}`);
                         if (nextJob) {
-                          handleSelectJob(nextJob);
+                          setGameState(prev => {
+                            const updatedJobs = prev.availableJobs?.map(job => {
+                              if (prev.activeJob && job.id === prev.activeJob.id) {
+                                return { ...job, completed: true };
+                              }
+                              return job;
+                            }) || [];
+
+                            let updatedCompletedChapters = prev.storyState?.completedChapters ? [...prev.storyState.completedChapters] : [];
+                            if (prev.storyState?.mode === 'story' && prev.storyState?.chapter) {
+                              const finishedCh = prev.storyState.chapter;
+                              if (!updatedCompletedChapters.includes(finishedCh)) {
+                                updatedCompletedChapters.push(finishedCh);
+                              }
+                            }
+
+                            const updatedCampaignChapters = prev.campaignChapters?.map(job => {
+                              if (prev.activeJob && job.id === prev.activeJob.id) {
+                                return { ...job, completed: true };
+                              }
+                              return job;
+                            }) || [];
+
+                            const cleanState = generateNewGame(
+                              'story',
+                              nextChNum,
+                              prev.economy?.cash || 150,
+                              prev.reputation || 0,
+                              nextJob
+                            );
+
+                            return {
+                              ...cleanState,
+                              availableJobs: updatedJobs,
+                              campaignChapters: updatedCampaignChapters,
+                              currentDay: prev.currentDay,
+                              daysSurvived: prev.daysSurvived,
+                              gameStatus: 'playing',
+                              isMuted: prev.isMuted,
+                              storyState: {
+                                ...cleanState.storyState,
+                                completedChapters: updatedCompletedChapters
+                              }
+                            };
+                          });
                         } else {
                           handleReturnToDashboard();
                         }

@@ -1221,8 +1221,8 @@ export function generateNewGame(
     clue3.findingMessage = 'Кот сбрасывает флакон со снотворным. Барт кричит: «Вот оно! Главная улика! Капитан, арестуйте вон того господина в шляпе-котелке! Дело о Сапфировом Глазе закрыто!»';
   }
 
-  // 4. Position and size generation with collision-free slots
-  const floorCandidates = ['bookshelf', 'desk', 'safe', 'lamp', 'trashcan'] as ObjectId[];
+  // 4. Position and size generation with collision-free slots (floor-standing items only)
+  const floorCandidates = ['bookshelf', 'desk', 'lamp', 'trashcan'] as ObjectId[];
   const shuffledFloor = shuffleArray(floorCandidates);
   
   // Find an item for the left side (must be narrow, desk is 26% wide)
@@ -1231,8 +1231,8 @@ export function generateNewGame(
   shuffledFloor.splice(leftIndex, 1); // remove from list
   
   // Assign left position
-  const leftW = leftId === 'bookshelf' ? 15 : leftId === 'safe' ? 12 : 8;
-  const leftH = leftId === 'bookshelf' ? 68 : leftId === 'safe' ? 26 : leftId === 'lamp' ? 52 : 14;
+  const leftW = leftId === 'bookshelf' ? 15 : 8;
+  const leftH = leftId === 'bookshelf' ? 68 : leftId === 'lamp' ? 52 : 14;
   const leftX = 2;
   const leftY = 84 - leftH;
   
@@ -1244,8 +1244,8 @@ export function generateNewGame(
   const padding = 3.5; // padding between items
   
   for (const id of shuffledFloor) {
-    const w = id === 'desk' ? 26 : id === 'bookshelf' ? 15 : id === 'safe' ? 12 : 8;
-    const h = id === 'desk' ? 32 : id === 'bookshelf' ? 68 : id === 'safe' ? 26 : id === 'lamp' ? 52 : 14;
+    const w = id === 'desk' ? 26 : id === 'bookshelf' ? 15 : 8;
+    const h = id === 'desk' ? 32 : id === 'bookshelf' ? 68 : id === 'lamp' ? 52 : 14;
     
     let finalX = currentX;
     if (finalX + w > 99) {
@@ -1263,10 +1263,11 @@ export function generateNewGame(
   }
   
   // Painting (wall object) - hangs on left or right wall, avoiding center window [35, 65]
+  // Shifted exactly to the middle of the wall section (Left wall center = 11.5, Right wall center = 76.5)
   const paintingOnLeft = Math.random() > 0.5;
   const paintingW = 12;
   const paintingH = 15;
-  const paintingX = paintingOnLeft ? 4 : 80;
+  const paintingX = paintingOnLeft ? 11.5 : 76.5;
   const paintingY = 16;
   
   // Rug (flat floor object) - centered
@@ -1275,12 +1276,21 @@ export function generateNewGame(
   const rugW = 38;
   const rugH = 14;
   
-  // Fishbowl (sits on desk)
+  // Fishbowl (sits on desk left)
   const deskPos = floorPositions['desk'];
+  const physicalDeskSurfaceY = deskPos.y + deskPos.h * 0.2; // sitting on the actual visible surface of the desk
+
   const fishbowlW = 8;
   const fishbowlH = 8;
-  const fishbowlX = deskPos.x + 3; // placed on desk left
-  const fishbowlY = deskPos.y - fishbowlH; // sitting on desk surface
+  const fishbowlX = deskPos.x + 1; // placed on desk left
+  const fishbowlY = physicalDeskSurfaceY - fishbowlH; // sitting on desk surface
+
+  // Safe (sits on desk right - more realistic, secure, and larger proportional height)
+  // Twice as large as the original (originally 10x11, now 16x18)
+  const safeW = 16;
+  const safeH = 18;
+  const safeX = deskPos.x + 9; // placed on desk right side
+  const safeY = physicalDeskSurfaceY - safeH; // sitting on desk surface
 
   // Define initial objects with custom names & descriptions from room template and dynamic positions
   const objects: Record<ObjectId, ObjectState> = {
@@ -1342,10 +1352,10 @@ export function generateNewGame(
       locked: true,
       heldClueId: null,
       heldItemId: null,
-      x: floorPositions.safe.x,
-      y: floorPositions.safe.y,
-      w: floorPositions.safe.w,
-      h: floorPositions.safe.h,
+      x: safeX,
+      y: safeY,
+      w: safeW,
+      h: safeH,
       shape: 'rect'
     },
     lamp: {
@@ -1416,47 +1426,124 @@ export function generateNewGame(
   };
 
   // --- procedural dependency assembly ---
+  const isFourRoomBuilding = (mode === 'story' && (chapter === 1 || chapter === 3)) || roomInfo.id.startsWith('custom_campaign_ch_');
+  const isChapter2 = mode === 'story' && chapter === 2;
+  const isMultiRoom = roomInfo.id === 'room_mansion' || roomInfo.id === 'room_shop' || roomInfo.id === 'room_museum';
+
   const directSpotPool: ObjectId[] = ['rug', 'trashcan', 'painting'];
   const indirectSpotPool: ObjectId[] = ['bookshelf', 'fishbowl'];
 
   const shuffledDirect = shuffleArray(directSpotPool);
   const shuffledIndirect = shuffleArray(indirectSpotPool);
 
-  // Clue 1: Simple / Direct placement
-  const easySpot = shuffledDirect[0];
-  objects[easySpot].heldClueId = clue1.id;
+  const solvedSteps: string[] = [];
 
-  // Clue 2: Medium (Requires key_brass to open desk drawer)
-  objects['desk'].heldClueId = clue2.id;
-  
-  // Key spot: hide brass key in one of the indirect spots (bookshelf or fishbowl)
-  const keySpot = shuffledIndirect[0];
-  objects[keySpot].heldItemId = 'key_brass';
-
-  // Clue 3: Hard (Requires Safe Code to open Safe)
-  objects['safe'].heldClueId = clue3.id;
-
-  // Hide the safe code
-  const safeCodeMethods = ['lamp_light', 'painting_back', 'desk_drawer'];
-  const chosenMethod = safeCodeMethods[Math.floor(Math.random() * safeCodeMethods.length)];
-
-  const solvedSteps = [];
-
-  if (chosenMethod === 'lamp_light') {
-    objects['lamp'].description += ' На абажуре изнутри видны следы когтей.';
-    solvedSteps.push('safe_code_via_lamp');
-  } else if (chosenMethod === 'painting_back') {
-    objects['painting'].description += ' Кажется, за рамой торчит клочок пергамента.';
-    solvedSteps.push('safe_code_via_painting');
+  if (isFourRoomBuilding) {
+    // 4-room layout:
+    // Hall (start): rug, trashcan
+    // Study: desk, lamp
+    // Attic: bookshelf, painting
+    // Basement: safe, fishbowl
+    
+    // 1. Easy Clue 1 goes into hall trashcan
+    objects['trashcan'].heldClueId = clue1.id;
+    
+    // 2. key_brass goes under hall rug
+    objects['rug'].heldItemId = 'key_brass';
+    
+    // 3. desk (in study) contains Clue 2 AND key_door (to unlock attic)!
+    objects['desk'].heldClueId = clue2.id;
+    objects['desk'].heldItemId = 'key_door';
+    
+    // 4. bookshelf or painting (in attic) contains the passcard (to unlock basement)!
+    const atticSpot = Math.random() > 0.5 ? 'bookshelf' : 'painting';
+    objects[atticSpot].heldItemId = 'passcard';
+    
+    // 5. safe (in basement) contains Clue 3
+    objects['safe'].heldClueId = clue3.id;
+    
+    // 6. Fishbowl contains a secret cipher that can be taken back as carry-over evidence!
+    objects['fishbowl'].heldItemId = 'secret_cipher';
+    
+    // 7. Safe code notes (placed in study or attic)
+    const safeCodeMethods = ['lamp_light', 'painting_back'];
+    const chosenMethod = safeCodeMethods[Math.floor(Math.random() * safeCodeMethods.length)];
+    if (chosenMethod === 'lamp_light') {
+      objects['lamp'].description += ' На абажуре изнутри видны следы когтей.';
+      solvedSteps.push('safe_code_via_lamp');
+    } else {
+      objects['painting'].description += ' Кажется, за рамой торчит клочок пергамента.';
+      solvedSteps.push('safe_code_via_painting');
+    }
+  } else if (isChapter2 || isMultiRoom) {
+    // 2-room layout (Pier and Warehouse):
+    // Pier: rug, trashcan, painting, fishbowl
+    // Warehouse: bookshelf, desk, safe, lamp
+    
+    // 1. Clue 1 is hidden under Pier Rug
+    objects['rug'].heldClueId = clue1.id;
+    
+    // 2. key_door (to warehouse) is hidden in Pier trashcan!
+    objects['trashcan'].heldItemId = 'key_door';
+    
+    // 3. key_brass (to desk) is hidden in Pier fishbowl!
+    objects['fishbowl'].heldItemId = 'key_brass';
+    
+    // 4. desk (in warehouse) contains Clue 2
+    objects['desk'].heldClueId = clue2.id;
+    
+    // 5. bookshelf (in warehouse) contains a secret_cipher (carry-over evidence!)
+    objects['bookshelf'].heldItemId = 'secret_cipher';
+    
+    // 6. safe (in warehouse) contains Clue 3
+    objects['safe'].heldClueId = clue3.id;
+    
+    // 7. Safe code notes
+    const safeCodeMethods = ['lamp_light', 'painting_back'];
+    const chosenMethod = safeCodeMethods[Math.floor(Math.random() * safeCodeMethods.length)];
+    if (chosenMethod === 'lamp_light') {
+      objects['lamp'].description += ' На абажуре изнутри видны следы когтей.';
+      solvedSteps.push('safe_code_via_lamp');
+    } else {
+      objects['painting'].description += ' Кажется, за рамой торчит клочок пергамента.';
+      solvedSteps.push('safe_code_via_painting');
+    }
   } else {
-    objects['desk'].heldItemId = 'safe_code_note';
-    solvedSteps.push('safe_code_via_desk');
-  }
+    // Traditional Single-Room Layout
+    // Clue 1: Simple / Direct placement
+    const easySpot = shuffledDirect[0];
+    objects[easySpot].heldClueId = clue1.id;
 
-  // Dummy catnip placement
-  const dummySpots = [shuffledDirect[1], shuffledDirect[2], shuffledIndirect[1]].filter(s => s !== keySpot && s !== easySpot);
-  if (dummySpots.length > 0) {
-    objects[dummySpots[0]].heldItemId = 'catnip';
+    // Clue 2: Medium (Requires key_brass to open desk drawer)
+    objects['desk'].heldClueId = clue2.id;
+    
+    // Key spot: hide brass key in one of the indirect spots (bookshelf or fishbowl)
+    const keySpot = shuffledIndirect[0];
+    objects[keySpot].heldItemId = 'key_brass';
+
+    // Clue 3: Hard (Requires Safe Code to open Safe)
+    objects['safe'].heldClueId = clue3.id;
+
+    // Hide the safe code
+    const safeCodeMethods = ['lamp_light', 'painting_back', 'desk_drawer'];
+    const chosenMethod = safeCodeMethods[Math.floor(Math.random() * safeCodeMethods.length)];
+
+    if (chosenMethod === 'lamp_light') {
+      objects['lamp'].description += ' На абажуре изнутри видны следы когтей.';
+      solvedSteps.push('safe_code_via_lamp');
+    } else if (chosenMethod === 'painting_back') {
+      objects['painting'].description += ' Кажется, за рамой торчит клочок пергамента.';
+      solvedSteps.push('safe_code_via_painting');
+    } else {
+      objects['desk'].heldItemId = 'safe_code_note';
+      solvedSteps.push('safe_code_via_desk');
+    }
+
+    // Dummy catnip placement
+    const dummySpots = [shuffledDirect[1], shuffledDirect[2], shuffledIndirect[1]].filter(s => s !== keySpot && s !== easySpot);
+    if (dummySpots.length > 0) {
+      objects[dummySpots[0]].heldItemId = 'catnip';
+    }
   }
 
   // Set up initial logs
@@ -1583,6 +1670,24 @@ export const DUMMY_ITEMS = {
     name: 'Латунный ключ',
     description: 'Маленький резной ключ с напылением. Идеально подходит для выдвижного ящика стола.',
     icon: 'Key'
+  },
+  key_door: {
+    id: 'key_door',
+    name: 'Стальной ключ от двери',
+    description: 'Тяжелый стальной ключ. Подходит для запертых дверей в другие комнаты или переходы.',
+    icon: 'KeyRound'
+  },
+  passcard: {
+    id: 'passcard',
+    name: 'Электронная ключ-карта',
+    description: 'Высокотехнологичный пропуск с магнитной полосой Синдиката. Позволяет обходить электронные замки и защищенные сектора.',
+    icon: 'CreditCard'
+  },
+  secret_cipher: {
+    id: 'secret_cipher',
+    name: 'Секретный шифр Синдиката',
+    description: 'Шифрованная записка заговорщиков со временем и местом встречи контрабандистов. Полезна как пропуск в секретные миссии.',
+    icon: 'FileText'
   },
   safe_code_note: {
     id: 'safe_code_note',

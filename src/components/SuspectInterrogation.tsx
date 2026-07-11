@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GameState, SuspectSketch } from '../types';
 import * as Lucide from 'lucide-react';
 import { gameAudio } from '../utils/AudioEngine';
@@ -11,17 +11,25 @@ import { gameAudio } from '../utils/AudioEngine';
 interface SuspectInterrogationProps {
   gameState: GameState;
   setGameState: React.Dispatch<React.SetStateAction<GameState>>;
+  initialActiveSketchId?: string;
 }
 
 export default function SuspectInterrogation({
   gameState,
-  setGameState
+  setGameState,
+  initialActiveSketchId
 }: SuspectInterrogationProps) {
-  const [activeSketchId, setActiveSketchId] = useState<string>('sketch_1');
+  const sketches = gameState.sketches ?? [];
+  const [activeSketchId, setActiveSketchId] = useState<string>(initialActiveSketchId || (sketches[0]?.id || 'sketch_1'));
+
+  useEffect(() => {
+    if (initialActiveSketchId) {
+      setActiveSketchId(initialActiveSketchId);
+    }
+  }, [initialActiveSketchId]);
   const [interrogationLogs, setInterrogationLogs] = useState<Record<string, string[]>>({});
   const [message, setMessage] = useState<{ text: string; type: 'info' | 'success' | 'error' } | null>(null);
 
-  const sketches = gameState.sketches ?? [];
   const currentSketch = sketches.find(s => s.id === activeSketchId) || sketches[0];
 
   if (!currentSketch) return null;
@@ -401,7 +409,7 @@ export default function SuspectInterrogation({
     <div className="w-full flex flex-col gap-4 animate-fade-in text-white/90">
       
       {/* Upper Navigation of Suspects */}
-      <div className="grid grid-cols-3 gap-2 shrink-0 select-none">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 shrink-0 select-none">
         {sketches.map((sketch) => {
           const isActive = sketch.id === activeSketchId;
           return (
@@ -426,7 +434,7 @@ export default function SuspectInterrogation({
                 )}
               </div>
               <span className="font-serif text-[10px] font-black tracking-wide truncate max-w-full">
-                {sketch.completed ? sketch.name.split(' ')[0] : `Подозреваемый #${sketch.id.split('_')[1]}`}
+                {sketch.name}
               </span>
               <span className="font-mono text-[6.5px] text-white/40 uppercase mt-0.5 tracking-wider">
                 Свидетель: {sketch.witnessName.split(' ')[1] || sketch.witnessName}

@@ -99,7 +99,7 @@ export interface Job {
 export interface StoryState {
   mode: 'sandbox' | 'story';
   chapter: number; // 1, 2, 3
-  currentLocationId: 'pier' | 'warehouse'; // for Chapter 2 multi-location transitions
+  currentLocationId: 'pier' | 'warehouse' | 'hall' | 'study' | 'attic' | 'basement'; // multi-room locations
   completedChapters: number[];
 }
 
@@ -159,6 +159,20 @@ export interface GameState {
     review: string;
     timestamp: string;
   }[];
+  caseFolders?: CaseFolder[];
+}
+
+export interface CaseFolder {
+  id: string;
+  title: string;
+  tags: string[];
+  caseIds: string[]; // custom job IDs filed under this folder
+  status: 'writing' | 'published';
+  rating?: number; // 1 to 5 stars
+  review?: string;
+  bestsellerRank?: number; // 0-100 score based on tag coherence
+  profit?: number;
+  timestamp: string;
 }
 
 export interface TornNotePiece {
