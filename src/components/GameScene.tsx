@@ -11,6 +11,7 @@ import { DetectiveCharacter } from './DetectiveCharacter';
 interface GameSceneProps {
   gameState: GameState;
   onObjectInteraction: (id: ObjectId, action: string) => void;
+  onDetectiveInteraction: () => void;
   onEnterSafeCode: (code: string) => boolean;
   onChangeLocation?: (location: 'pier' | 'warehouse' | 'hall' | 'study' | 'attic' | 'basement') => void;
 }
@@ -18,6 +19,7 @@ interface GameSceneProps {
 export default function GameScene({
   gameState,
   onObjectInteraction,
+  onDetectiveInteraction,
   onEnterSafeCode,
   onChangeLocation
 }: GameSceneProps) {
@@ -215,6 +217,142 @@ export default function GameScene({
     return isLocked ? '/src/img/Office_Safe.png' : '/src/img/Office_Safe_open.png';
   };
 
+  const getSafeStandImg = () => {
+    const roomId = gameState.roomInfo?.id || '';
+    const idLower = roomId.toLowerCase();
+
+    if (idLower.includes('ballerina') || idLower.includes('dress')) return '/src/img/Dressingr_Safe_Shelf1.png';
+    if (idLower.includes('shop') || idLower.includes('grocery') || idLower.includes('bar')) return '/src/img/Grocery_Safe_Shelf1.png';
+    if (idLower.includes('captain') || idLower.includes('chapter_2')) return '/src/img/Cabin_Safe_Shelf1.png';
+    if (idLower.includes('office') || idLower.includes('banker')) return '/src/img/Office_Safe_Shelf1.png';
+
+    return '/src/img/Mansion_Safe_Shelf1.png';
+  };
+
+  const getFishbowlImg = () => {
+    const roomId = gameState.roomInfo?.id || '';
+    const idLower = roomId.toLowerCase();
+    const isBroken = !!objects.fishbowl.broken || !!objects.fishbowl.tipped;
+
+    if (isBroken) {
+      if (idLower.includes('mansion') || idLower.includes('ballerina')) return '/src/img/Aquarium/Mansion_Aquarium_Broken.png';
+      if (idLower.includes('cabin') || idLower.includes('attic') || idLower.includes('basement') || idLower.includes('captain')) return '/src/img/Aquarium/Cabin_Aquarium_01_break.png';
+      if (idLower.includes('shop') || idLower.includes('grocery') || idLower.includes('bar')) return '/src/img/Aquarium/Grocery_Aquarium_01_break.png';
+      if (idLower.includes('industr')) return '/src/img/Aquarium/Industrial_Aquarium_01_break.png';
+      if (idLower.includes('office') || idLower.includes('banker')) return '/src/img/Aquarium/Office_Aquarium_01_break.png';
+      return '/src/img/Aquarium/Mansion_Aquarium_Broken.png';
+    }
+
+    if (idLower.includes('mansion') || idLower.includes('ballerina')) return '/src/img/Aquarium/Mansion_Aquarium_Empty.png';
+    if (idLower.includes('cabin') || idLower.includes('attic') || idLower.includes('basement') || idLower.includes('captain')) return '/src/img/Aquarium/Cabin_Aquarium_01_empty.png';
+    if (idLower.includes('shop') || idLower.includes('grocery') || idLower.includes('bar')) return '/src/img/Aquarium/Grocery_Aquarium_01_empty.png';
+    if (idLower.includes('industr')) return '/src/img/Aquarium/Industrial_Aquarium_01_empty.png';
+    if (idLower.includes('office') || idLower.includes('banker')) return '/src/img/Aquarium/Office_Aquarium_01_empty.png';
+    return '/src/img/Aquarium/Mansion_Aquarium_Empty.png';
+  };
+
+  const getFishbowlStandImg = () => {
+    const roomId = gameState.roomInfo?.id || '';
+    const idLower = roomId.toLowerCase();
+
+    if (idLower.includes('ballerina') || idLower.includes('dress')) return '/src/img/Dressingr_Safe_Shelf1.png';
+    if (idLower.includes('shop') || idLower.includes('grocery') || idLower.includes('bar')) return '/src/img/Grocery_Safe_Shelf1.png';
+    if (idLower.includes('captain') || idLower.includes('chapter_2') || idLower.includes('basement') || idLower.includes('cabin') || idLower.includes('attic')) return '/src/img/Cabin_Safe_Shelf1.png';
+    if (idLower.includes('office') || idLower.includes('banker')) return '/src/img/Office_Safe_Shelf1.png';
+
+    return '/src/img/Mansion_Safe_Shelf1.png';
+  };
+
+  const renderFishes = () => {
+    const roomId = gameState.roomInfo?.id || '';
+    const idHash = roomId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    
+    // Choose big fish: 11 or 12
+    const bigFishNum = 11 + (idHash % 2);
+    
+    // Choose 2 small fishes (between 02 and 10)
+    const sf1Num = 2 + (idHash % 9);
+    let sf2Num = 2 + ((idHash + 4) % 9);
+    if (sf1Num === sf2Num) sf2Num = (sf2Num % 9) + 2;
+
+    const getFishPath = (num: number) => {
+      const numStr = num < 10 ? `0${num}` : `${num}`;
+      return `/src/img/Aquarium_fish/Aquarium_fish_${numStr}.png`;
+    };
+
+    const sf1Img = getFishPath(sf1Num);
+    const sf2Img = getFishPath(sf2Num);
+    const bfImg = getFishPath(bigFishNum);
+
+    const isBroken = !!objects.fishbowl.broken || !!objects.fishbowl.tipped;
+
+    if (isBroken) {
+      return (
+        <div className="absolute inset-0 w-full h-full flex items-end justify-around pb-1 px-2">
+          {/* Big Fish lying at bottom, twitching */}
+          <div className="relative w-[30%] h-[22%] flex items-center justify-center animate-fish-twitch">
+            <img
+              src={bfImg}
+              alt="Рыба"
+              className="w-full h-full object-contain"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+          {/* Small fish 1 */}
+          <div className="relative w-[18%] h-[15%] flex items-center justify-center animate-fish-twitch" style={{ animationDelay: '0.6s' }}>
+            <img
+              src={sf1Img}
+              alt="Рыбка"
+              className="w-full h-full object-contain"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+          {/* Small fish 2 */}
+          <div className="relative w-[16%] h-[14%] flex items-center justify-center animate-fish-twitch" style={{ animationDelay: '1.3s' }}>
+            <img
+              src={sf2Img}
+              alt="Рыбка"
+              className="w-full h-full object-contain"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="absolute inset-0 w-full h-full overflow-hidden">
+        {/* Big fish swimming */}
+        <div className="absolute left-[12%] top-[35%] w-[34%] h-[28%] animate-swim-slow">
+          <img
+            src={bfImg}
+            alt="Рыба"
+            className="w-full h-full object-contain"
+            referrerPolicy="no-referrer"
+          />
+        </div>
+        {/* Small fish 1 swimming */}
+        <div className="absolute left-[38%] top-[20%] w-[20%] h-[18%] animate-swim-medium">
+          <img
+            src={sf1Img}
+            alt="Рыбка"
+            className="w-full h-full object-contain"
+            referrerPolicy="no-referrer"
+          />
+        </div>
+        {/* Small fish 2 swimming */}
+        <div className="absolute left-[18%] top-[55%] w-[18%] h-[16%] animate-swim-fast">
+          <img
+            src={sf2Img}
+            alt="Рыбка"
+            className="w-full h-full object-contain"
+            referrerPolicy="no-referrer"
+          />
+        </div>
+      </div>
+    );
+  };
+
   const getDeskImg = () => {
     const roomId = gameState.roomInfo?.id || '';
     const idLower = roomId.toLowerCase();
@@ -298,14 +436,14 @@ export default function GameScene({
       } else if (currentLocation === 'attic') {
         return ['bookshelf', 'painting'].includes(id);
       } else if (currentLocation === 'basement') {
-        return ['safe', 'fishbowl'].includes(id);
+        return ['safe', 'fishbowl', 'safeStand'].includes(id);
       }
       return false;
     }
     if (currentLocation === 'pier') {
       return ['rug', 'trashcan', 'painting', 'fishbowl'].includes(id);
     } else {
-      return ['bookshelf', 'desk', 'safe', 'lamp'].includes(id);
+      return ['bookshelf', 'desk', 'safe', 'lamp', 'safeStand'].includes(id);
     }
   };
   
@@ -323,22 +461,42 @@ export default function GameScene({
 
   const isDeskVisible = isVisible('desk');
 
-  // Dynamic Positioning of Fishbowl
-  let fishbowlLeft = objects.fishbowl?.x ?? 48;
-  let fishbowlTop = objects.fishbowl?.y ?? 54;
-  let fishbowlWidth = objects.fishbowl?.w ?? 8;
-  let fishbowlHeight = objects.fishbowl?.h ?? 8;
+  // Dynamic Positioning of SafeStand
+  let safeStandLeft = objects.safeStand?.x ?? 58;
+  let safeStandTop = objects.safeStand?.y ?? 84;
+  let safeStandWidth = objects.safeStand?.w ?? 16;
+  let safeStandHeight = objects.safeStand?.h ?? 18;
 
-  if (isDeskVisible) {
-    fishbowlWidth = deskScreenWidth * 0.35;
-    fishbowlHeight = fishbowlWidth;
-    fishbowlLeft = deskScreenLeft + deskScreenWidth * 0.05;
-    fishbowlTop = deskTabletopY - fishbowlHeight + 1.5;
-  } else {
-    fishbowlLeft = 28;
-    fishbowlWidth = 10;
-    fishbowlHeight = 10;
-    fishbowlTop = 84 - fishbowlHeight + 0.5;
+  if (isVisible('safeStand')) {
+    // If visible, place it on the left side instead of near the desk
+    safeStandLeft = 10;
+    safeStandWidth = 25; // 20 * 1.25 = 25
+    safeStandHeight = 25; // 20 * 1.25 = 25
+    safeStandTop = 84 - safeStandHeight + 1.0;
+  }
+
+  // Dynamic Positioning of Fishbowl & its Stand (Cabinet)
+  // Let's place it opposite to the safe stand!
+  const isSafeStandOnLeft = safeStandLeft < 50;
+
+  let fishbowlStandLeft = isSafeStandOnLeft ? 74 : 14;
+  let fishbowlStandWidth = 20;
+  let fishbowlStandHeight = 20;
+  let fishbowlStandTop = 84 - fishbowlStandHeight + 1.0;
+
+  const roomId = gameState.roomInfo?.id || '';
+  const idLower = roomId.toLowerCase();
+  const isRoundAquarium = idLower.includes('shop') || idLower.includes('grocery') || idLower.includes('bar');
+
+  let fishbowlWidth = isRoundAquarium ? 24 : 20;
+  let fishbowlHeight = isRoundAquarium ? 22 : 18;
+  let fishbowlLeft = fishbowlStandLeft + (fishbowlStandWidth - fishbowlWidth) / 2;
+  let fishbowlTop = fishbowlStandTop - fishbowlHeight + 12.8;
+
+  // Dynamic Positioning of Lamp
+  let lampLeft = objects.lamp?.x ?? 74;
+  if (isVisible('safeStand')) {
+    lampLeft = isSafeStandOnLeft ? 86 : 5;
   }
 
   // Dynamic Positioning of Safe
@@ -347,11 +505,16 @@ export default function GameScene({
   let safeWidth = objects.safe?.w ?? 11;
   let safeHeight = objects.safe?.h ?? 28;
 
-  if (isDeskVisible) {
+  if (isVisible('safeStand')) {
+    safeWidth = safeStandWidth * 0.68; // (0.8 * 0.85) = 0.68 approx 15% reduction
+    safeHeight = safeStandHeight * 1.0; // Adjusted for better fit
+    safeLeft = safeStandLeft + (safeStandWidth - safeWidth) / 2;
+    safeTop = safeStandTop - safeHeight + 11.0; // Adjusted to sit on top of stand
+  } else if (isDeskVisible) {
     safeWidth = deskScreenWidth * 0.52;
     safeHeight = safeWidth * 1.125;
     safeLeft = deskScreenLeft + deskScreenWidth * 0.43;
-    safeTop = deskTabletopY - safeHeight + 1.5;
+    safeTop = deskTabletopY - safeHeight + 3.5;
   } else {
     safeLeft = 58;
     safeWidth = 16;
@@ -426,6 +589,30 @@ export default function GameScene({
     setDetectiveTransition('none');
   }, [gameState.roomInfo?.id, currentLocation]);
 
+  const handleDetectiveInteraction = () => {
+    onDetectiveInteraction();
+    
+    // Move detective
+    const STAND_POSITIONS = [18, 32, 50, 72, 78];
+    const availablePositions = STAND_POSITIONS.filter(pos => Math.abs(pos - detectiveX) > 10);
+    if (availablePositions.length > 0) {
+      const nextX = availablePositions[Math.floor(Math.random() * availablePositions.length)];
+      const distance = Math.abs(nextX - detectiveX);
+      const duration = Math.max(2.0, distance * 0.06); // seconds
+
+      setDetectiveFacingLeft(nextX < detectiveX);
+      setDetectiveTransition(`left ${duration}s ease-in-out`);
+      setDetectiveState('walking');
+      setDetectiveX(nextX);
+
+      // Stop walk animation upon arrival
+      setTimeout(() => {
+        setDetectiveState('idle');
+        setDetectiveTransition('none');
+      }, duration * 1000);
+    }
+  };
+
   // --- DETECTIVE AUTONOMOUS WANDERING LOOP ---
   useEffect(() => {
     if (gameState.gameStatus !== 'playing') return;
@@ -485,14 +672,14 @@ export default function GameScene({
     const visible = (id: ObjectId) => isVisible(id);
     
     const getX = (spot: string): number => {
-      if (spot === 'bookshelf') return 14;
-      if (spot === 'painting') return 31;
-      if (spot === 'desk') return 59;
-      if (spot === 'fishbowl') return 52;
-      if (spot === 'lamp') return 78;
-      if (spot === 'safe') return 92.5;
-      if (spot === 'trashcan') return 85;
-      if (spot === 'rug') return 47;
+      if (spot === 'bookshelf') return (objects.bookshelf?.x ?? 4) + (objects.bookshelf?.w ?? 20) / 2;
+      if (spot === 'painting') return (objects.painting?.x ?? 25) + (objects.painting?.w ?? 12) / 2;
+      if (spot === 'desk') return (objects.desk?.x ?? 43) + (objects.desk?.w ?? 32) / 2;
+      if (spot === 'fishbowl') return fishbowlLeft + fishbowlWidth / 2;
+      if (spot === 'lamp') return (objects.lamp?.x ?? 74) + (objects.lamp?.w ?? 8) / 2;
+      if (spot === 'safe') return safeLeft + safeWidth / 2;
+      if (spot === 'trashcan') return (objects.trashcan?.x ?? 85) + (objects.trashcan?.w ?? 10) / 2;
+      if (spot === 'rug') return (objects.rug?.x ?? 47) + (objects.rug?.w ?? 30) / 2;
       return 45; // 'center'
     };
 
@@ -893,7 +1080,7 @@ export default function GameScene({
       {/* Dynamic Rain Window, Porthole, or Dressing Mirror */}
       {gameState.roomInfo?.id === 'room_ballerina' ? (
         /* Ballerina dressing room back wall decoration: Lit mirror with light bulbs! */
-        <div className="absolute top-[16%] left-[37%] w-[26%] h-[35%] border-4 border-amber-900 bg-neutral-900 shadow-2xl p-2 flex flex-col justify-center items-center relative">
+        <div className="absolute top-[16%] left-[37%] w-[26%] h-[35%] border-4 border-amber-900 bg-neutral-900 shadow-2xl p-2 flex flex-col justify-center items-center relative z-[2]">
           <div className="absolute inset-1 border border-amber-800" />
           {/* Mirror reflection surface */}
           <div className="w-full h-full bg-neutral-950 flex items-center justify-center relative shadow-inner overflow-hidden border border-neutral-800">
@@ -912,7 +1099,7 @@ export default function GameScene({
         </div>
       ) : (gameState.roomInfo?.id === 'story_chapter_3' || gameState.roomInfo?.id === 'room_captain' || gameState.roomInfo?.id === 'story_chapter_2') ? (
         /* Captain / Airship cabin porthole: circular window with rain and sky view! */
-        <div className="absolute top-[16%] left-[40%] w-[20%] aspect-square border-4 border-yellow-600 bg-neutral-900 rounded-full overflow-hidden shadow-2xl flex items-center justify-center relative">
+        <div className="absolute top-[16%] left-[40%] w-[20%] aspect-square border-4 border-yellow-600 bg-neutral-900 rounded-full overflow-hidden shadow-2xl flex items-center justify-center relative z-[2]">
           <div className="absolute inset-0 bg-neutral-950/40 pointer-events-none z-10" />
           {/* Rivets on bronze frame */}
           <div className="absolute inset-1 border-2 border-dashed border-yellow-700 rounded-full z-10 pointer-events-none" />
@@ -939,7 +1126,7 @@ export default function GameScene({
         </div>
       ) : (gameState.roomInfo?.id === 'room_antique' || gameState.roomInfo?.id === 'room_banker') ? (
         /* Antique/Banker double smaller windows layout */
-        <div className="absolute inset-y-0 inset-x-4 pointer-events-none z-0">
+        <div className="absolute inset-y-0 inset-x-4 pointer-events-none z-[2]">
           {/* Left window */}
           <div className="absolute top-[16%] left-[28%] w-[13%] h-[28%] border-2 border-neutral-700 bg-neutral-900 rounded overflow-hidden shadow-2xl flex relative">
             <div className="absolute inset-0 bg-neutral-950/40 pointer-events-none z-10" />
@@ -978,7 +1165,7 @@ export default function GameScene({
         </div>
       ) : (
         /* Mansion/Default rectangular window */
-        <div className="absolute top-[26%] left-[35%] w-[30%] h-[35%] border-2 border-neutral-700 bg-neutral-900 rounded overflow-hidden shadow-2xl flex relative">
+        <div className="absolute top-[26%] left-[35%] w-[30%] h-[35%] border-2 border-neutral-700 bg-neutral-900 rounded overflow-hidden shadow-2xl flex relative z-[2]">
           <div className="absolute inset-0 bg-neutral-950/40 pointer-events-none z-10" />
           {/* Window grid */}
           <div className="absolute inset-x-0 top-1/2 h-0.5 bg-neutral-800 z-10" />
@@ -1025,20 +1212,11 @@ export default function GameScene({
           left: `${(objects.bookshelf.x ?? 4) + (objects.bookshelf.w ?? 20) * 0.1}%`,
           top: `${(objects.bookshelf.y ?? 16) + (objects.bookshelf.h ?? 70) * 0.2 - 2}%`,
           width: `${(objects.bookshelf.w ?? 20) * 0.75}%`,
-          height: `${(objects.bookshelf.h ?? 70) * 0.75}%`
+          height: `${(objects.bookshelf.h ?? 70) * 0.75}%`,
+          zIndex: objects.bookshelf.zIndex
         }}
       >
         <div className="relative w-full h-full group-hover:scale-[1.01] transition-transform duration-200">
-          <img 
-            src={getBookshelfImg()} 
-            alt={objects.bookshelf.name}
-            className="absolute inset-0 w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)] z-10"
-            referrerPolicy="no-referrer"
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = 'none';
-            }}
-          />
-          
           <div className="relative w-full h-full border-2 border-neutral-750 bg-neutral-900 rounded-md p-1.5 flex flex-col justify-between transition-colors duration-200 group-hover:border-neutral-500 group-hover:bg-neutral-900/90 shadow-2xl">
             {/* Shelf panels */}
             {[1, 2, 3, 4].map((shelf) => (
@@ -1116,7 +1294,8 @@ export default function GameScene({
           left: `${(objects.painting.x ?? 25) + (objects.painting.w ?? 12) * 0.1}%`,
           top: `${(objects.painting.y ?? 15) + (objects.painting.h ?? 12) * 0.1}%`,
           width: `${(objects.painting.w ?? 12) * 0.8}%`,
-          height: `${(objects.painting.w ?? 12) * 0.8 * 1.6}%` // Perfect 1:1 physical aspect ratio on 16:10 screen!
+          height: `${(objects.painting.w ?? 12) * 0.8 * 1.6}%`, // Perfect 1:1 physical aspect ratio on 16:10 screen!
+          zIndex: objects.painting.zIndex
         }}
       >
         <div 
@@ -1170,7 +1349,8 @@ export default function GameScene({
           left: `${(objects.rug.x ?? 28) + (objects.rug.w ?? 38) * 0.1}%`,
           top: `${(objects.rug.y ?? 82) + 2}%`, // Centered on floor line
           width: `${(objects.rug.w ?? 38) * 0.8}%`,
-          height: `${(objects.rug.w ?? 38) * 0.8 * 0.45}%` // Flat 3D perspective floor aspect ratio
+          height: `${(objects.rug.w ?? 38) * 0.8 * 0.45}%`, // Flat 3D perspective floor aspect ratio
+          zIndex: objects.rug.zIndex
         }}
       >
         <div 
@@ -1219,7 +1399,8 @@ export default function GameScene({
           left: `${deskScreenLeft}%`,
           top: `${deskScreenTop}%`,
           width: `${deskScreenWidth}%`,
-          height: `${deskScreenHeight}%`
+          height: `${deskScreenHeight}%`,
+          zIndex: objects.desk.zIndex
         }}
       >
         <div className="relative w-full h-full flex flex-col justify-end group-hover:scale-[1.01] transition-transform duration-200">
@@ -1321,62 +1502,75 @@ export default function GameScene({
       </div>
       )}
 
-      {/* 5. Fishbowl (On Desk Left) */}
+      {/* 5. Fishbowl & its Cabinet Stand */}
       {isVisible('fishbowl') && (
-      <div
-        id="fishbowl-obj"
-        onClick={() => handleObjectClick('fishbowl')}
-        className="absolute group cursor-pointer z-30"
-        style={{
-          left: `${fishbowlLeft}%`,
-          top: `${fishbowlTop}%`,
-          width: `${fishbowlWidth}%`,
-          height: `${fishbowlHeight}%`
-        }}
-      >
-        <div className="relative w-full h-full flex flex-col items-center">
-          {gameState.roomInfo?.id === 'room_ballerina' ? (
-            /* Crystal dressing-room vase with rose */
-            <div className={`w-[70%] h-full border-2 border-pink-400/30 rounded-t-full bg-pink-950/20 flex flex-col justify-between items-center relative transition-all ${objects.fishbowl.tipped ? 'rotate-90 translate-y-3' : ''}`}>
-              <div className="absolute -top-3 text-[10px] animate-bounce">🌷</div>
-              <div className="w-full h-1/2 bg-pink-800/20 absolute bottom-0" />
+        <>
+          {/* Render Stand/Cabinet for Fishbowl */}
+          <div
+            id="fishbowl-stand-obj"
+            className="absolute z-10 flex flex-col justify-end"
+            style={{
+              left: `${fishbowlStandLeft}%`,
+              top: `${fishbowlStandTop}%`,
+              width: `${fishbowlStandWidth}%`,
+              height: `${fishbowlStandHeight}%`,
+              zIndex: objects.safeStand?.zIndex
+            }}
+          >
+            <div className="relative w-full h-full">
+              <img
+                src={getFishbowlStandImg()}
+                alt="Подставка"
+                className="w-full h-full object-contain drop-shadow-md brightness-95"
+                referrerPolicy="no-referrer"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
             </div>
-          ) : gameState.roomInfo?.id === 'story_chapter_3' ? (
-            /* Cocktail coupe martini glass with floating cherry */
-            <div className={`w-full h-full flex flex-col items-center justify-end transition-all ${objects.fishbowl.tipped ? 'rotate-90 translate-y-3' : ''}`}>
-              <div className="w-full h-[60%] border-t-2 border-x-2 border-neutral-500 rounded-b-full bg-neutral-800/40 relative flex items-center justify-center">
-                <span className="text-[10px]">🍸</span>
+          </div>
+
+          {/* Actual Fishbowl */}
+          <div
+            id="fishbowl-obj"
+            onClick={() => handleObjectClick('fishbowl')}
+            className="absolute group cursor-pointer z-30 flex flex-col justify-end"
+            style={{
+              left: `${fishbowlLeft}%`,
+              top: `${fishbowlTop}%`,
+              width: `${fishbowlWidth}%`,
+              height: `${fishbowlHeight}%`,
+              zIndex: objects.fishbowl.zIndex
+            }}
+          >
+            <div className="relative w-full h-full flex items-center justify-center">
+              <img
+                src={getFishbowlImg()}
+                alt={objects.fishbowl.name}
+                className="w-full h-full object-contain"
+                referrerPolicy="no-referrer"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+              
+              {/* Dynamic Fishes rendering inside/on top of the aquarium */}
+              <div
+                className="absolute pointer-events-none"
+                style={
+                  isRoundAquarium
+                    ? { left: '35%', right: '35%', top: '25%', bottom: '38%' }
+                    : { left: '18%', right: '18%', top: '18%', bottom: '18%' }
+                }
+              >
+                {renderFishes()}
               </div>
-              <div className="w-0.5 h-[30%] bg-neutral-500" />
-              <div className="w-6 h-0.5 bg-neutral-500" />
             </div>
-          ) : (
-            /* Classic fishbowl */
-            <div className={`w-full h-full border-2 border-neutral-500 rounded-full bg-neutral-900/60 overflow-hidden flex items-center justify-center relative transition-all duration-300 ${
-              objects.fishbowl.tipped ? 'rotate-90 translate-y-3 translate-x-2 border-neutral-700' : 'group-hover:border-neutral-300'
-            }`}>
-              {/* Water layer */}
-              {!objects.fishbowl.tipped ? (
-                <div className="absolute inset-0 bg-neutral-800/40">
-                  {/* Swim fish emoji */}
-                  <div className="absolute top-2 left-2 text-[10px] animate-bounce">🐠</div>
-                  {/* Shiny key on bottom if still there */}
-                  {objects.fishbowl.heldItemId === 'key_brass' && (
-                    <div className="absolute bottom-1 left-3 w-4 h-2 bg-yellow-200/50 rounded-sm transform rotate-12 border border-yellow-300/40 animate-pulse" />
-                  )}
-                </div>
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-[8px] font-mono text-neutral-500">(Сухо)</span>
-                </div>
-              )}
-            </div>
-          )}
-          <span className="text-center font-sans text-[9px] uppercase tracking-[0.2em] text-white/30 group-hover:text-white/80 mt-1 truncate w-full">
-            {objects.fishbowl.name}
-          </span>
-        </div>
-      </div>
+            <span className="text-center font-sans text-[9px] uppercase tracking-[0.2em] text-white/30 group-hover:text-white/80 mt-1 block truncate w-full">
+              {objects.fishbowl.name}
+            </span>
+          </div>
+        </>
       )}
 
       {/* 6. Floor Lamp (Right Desk) */}
@@ -1384,12 +1578,13 @@ export default function GameScene({
       <div
         id="lamp-obj"
         onClick={() => handleObjectClick('lamp')}
-        className="absolute group cursor-pointer z-[8] flex flex-col justify-end brightness-[0.82] saturate-[85%] transition-all duration-300 hover:brightness-100 hover:saturate-100"
+        className="absolute group cursor-pointer z-[12] flex flex-col justify-end brightness-[0.82] saturate-[85%] transition-all duration-300 hover:brightness-100 hover:saturate-100"
         style={{
-          left: `${(objects.lamp.x ?? 74) + (objects.lamp.w ?? 8) * 0.1}%`,
+          left: `${lampLeft + (objects.lamp.w ?? 8) * 0.1}%`,
           top: `${(objects.lamp.y ?? 45) + (objects.lamp.h ?? 55) * 0.2 - 2}%`,
           width: `${(objects.lamp.w ?? 8) * 0.75}%`,
-          height: `${(objects.lamp.h ?? 55) * 0.75}%`
+          height: `${(objects.lamp.h ?? 55) * 0.75}%`,
+          zIndex: objects.lamp.zIndex
         }}
       >
         <div className="relative w-full h-full flex flex-col justify-between items-center">
@@ -1453,7 +1648,8 @@ export default function GameScene({
           left: `${(objects.trashcan.x ?? 80) + (objects.trashcan.w ?? 10) * 0.1}%`,
           top: `${(objects.trashcan.y ?? 82) + (objects.trashcan.h ?? 16) * 0.2}%`,
           width: `${(objects.trashcan.w ?? 10) * 0.8}%`,
-          height: `${(objects.trashcan.h ?? 16) * 0.8}%`
+          height: `${(objects.trashcan.h ?? 16) * 0.8}%`,
+          zIndex: objects.trashcan.zIndex
         }}
       >
         <div className="relative w-full h-full flex flex-col items-center">
@@ -1505,17 +1701,45 @@ export default function GameScene({
       </div>
       )}
 
+      {/* 7.5. Safe Stand */}
+      {isVisible('safeStand') && (
+      <div
+        id="safe-stand-obj"
+        className="absolute z-0 flex flex-col justify-end"
+        style={{
+          left: `${safeStandLeft}%`,
+          top: `${safeStandTop}%`,
+          width: `${safeStandWidth}%`,
+          height: `${safeStandHeight}%`,
+          zIndex: objects.safeStand?.zIndex
+        }}
+      >
+        <div className="relative w-full h-full">
+          <img
+            src={getSafeStandImg()}
+            alt={objects.safeStand?.name || 'Подставка'}
+            className="w-full h-full object-contain drop-shadow-lg"
+            referrerPolicy="no-referrer"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
+        </div>
+      </div>
+      )}
+ 
       {/* 8. Steel Safe (Right Side Corner) */}
       {isVisible('safe') && (
       <div
         id="safe-obj"
         onClick={() => handleObjectClick('safe')}
-        className="absolute group cursor-pointer z-10 flex flex-col justify-end"
+        className="absolute group cursor-pointer z-0 flex flex-col justify-end"
         style={{
           left: `${safeLeft}%`,
           top: `${safeTop}%`,
           width: `${safeWidth}%`,
-          height: `${safeHeight}%`
+          height: `${safeHeight}%`,
+          zIndex: objects.safe.zIndex
         }}
       >
         <div className="relative w-full h-full transition-all duration-300 hover:scale-105">
@@ -1773,6 +1997,7 @@ export default function GameScene({
         detectiveTransition={detectiveTransition}
         smokeRings={smokeRings}
         detectiveRef={detectiveRef}
+        onClick={handleDetectiveInteraction}
       />
 
       {/* --- CAT MIDNIGHT (Animated sprite) --- */}

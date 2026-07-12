@@ -16,6 +16,7 @@ interface DetectiveCharacterProps {
   detectiveTransition: string;
   smokeRings: SmokeRing[];
   detectiveRef: React.RefObject<HTMLDivElement | null>;
+  onClick: () => void;
 }
 
 export const DetectiveCharacter: React.FC<DetectiveCharacterProps> = ({
@@ -25,6 +26,7 @@ export const DetectiveCharacter: React.FC<DetectiveCharacterProps> = ({
   detectiveTransition,
   smokeRings,
   detectiveRef,
+  onClick,
 }) => {
   const [frame, setFrame] = useState(0);
 
@@ -66,12 +68,13 @@ export const DetectiveCharacter: React.FC<DetectiveCharacterProps> = ({
   return (
     <div
       ref={detectiveRef}
-      className="absolute bottom-3 pointer-events-none z-40 flex flex-col items-center justify-end w-[134px] h-[269px]"
+      className="absolute bottom-3 pointer-events-auto cursor-pointer z-40 flex flex-col items-center justify-end w-[134px] h-[269px]"
       style={{
         left: `${detectiveX}%`,
         transform: `translateX(-50%)`,
         transition: detectiveTransition,
       }}
+      onClick={onClick}
     >
       {/* Hidden preloader container to prevent sprite sheet flash on state switches */}
       <div style={{ display: 'none' }} aria-hidden="true">

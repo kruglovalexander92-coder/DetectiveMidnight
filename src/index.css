@@ -54,3 +54,51 @@
   animation: rain-fall 0.8s linear infinite;
   animation-delay: 0.2s;
 }
+
+/* Fish swimming animations */
+@keyframes swim-slow-anim {
+  0% { transform: translate(0, 0) scaleX(1); }
+  45% { transform: translate(25px, -3px) scaleX(1); }
+  50% { transform: translate(25px, -3px) scaleX(-1); }
+  95% { transform: translate(0, 0) scaleX(-1); }
+  100% { transform: translate(0, 0) scaleX(1); }
+}
+
+@keyframes swim-medium-anim {
+  0% { transform: translate(0, 0) scaleX(-1); }
+  45% { transform: translate(-20px, 4px) scaleX(-1); }
+  50% { transform: translate(-20px, 4px) scaleX(1); }
+  95% { transform: translate(0, 0) scaleX(1); }
+  100% { transform: translate(0, 0) scaleX(-1); }
+}
+
+@keyframes swim-fast-anim {
+  0% { transform: translate(0, 0) scaleX(1); }
+  45% { transform: translate(30px, 6px) scaleX(1); }
+  50% { transform: translate(30px, 6px) scaleX(-1); }
+  95% { transform: translate(0, 0) scaleX(-1); }
+  100% { transform: translate(0, 0) scaleX(1); }
+}
+
+@keyframes fish-twitch-anim {
+  0%, 85%, 91%, 100% { transform: rotate(85deg) scaleY(1); }
+  87% { transform: rotate(105deg) scaleY(0.8) translate(1px, -1px); }
+  89% { transform: rotate(65deg) scaleY(1.2) translate(-1px, 1px); }
+}
+
+.animate-swim-slow {
+  animation: swim-slow-anim 12s ease-in-out infinite;
+}
+
+.animate-swim-medium {
+  animation: swim-medium-anim 8s ease-in-out infinite;
+}
+
+.animate-swim-fast {
+  animation: swim-fast-anim 6s ease-in-out infinite;
+}
+
+.animate-fish-twitch {
+  animation: fish-twitch-anim 4s ease-in-out infinite;
+}
+

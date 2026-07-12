@@ -11,7 +11,8 @@ export type ObjectId =
   | 'lamp'
   | 'trashcan'
   | 'painting'
-  | 'fishbowl';
+  | 'fishbowl'
+  | 'safeStand';
 
 export interface Clue {
   id: string;
@@ -19,6 +20,7 @@ export interface Clue {
   description: string;
   icon: string; // lucide icon name
   findingMessage: string; // Message when found
+  image?: string; // Optional illustration image path
 }
 
 export interface PuzzleItem {
@@ -40,11 +42,13 @@ export interface ObjectState {
   y?: number;
   w?: number;
   h?: number;
+  zIndex?: number;
   shape?: string;
   // Specific states
   toggled?: boolean; // e.g., lamp on, painting tilted, rug scratched
   locked?: boolean;  // e.g., safe, desk drawer
   tipped?: boolean;  // e.g., trash can, fishbowl
+  broken?: boolean;  // new: for aquarium breaking
   booksFallen?: boolean; // bookshelf specific
   searchedCount?: number;
   // Contents

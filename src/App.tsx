@@ -158,7 +158,15 @@ function getLogicalHint(gameState: GameState): string {
 }
 
 export default function App() {
-  const [gameState, setGameState] = useState<GameState>(() => generateNewGame());
+  const [gameState, setGameState] = useState<GameState>(() => {
+    try {
+      return generateNewGame();
+    } catch (e) {
+      console.error("Failed to generate new game, using default:", e);
+      // Fallback
+      return generateNewGame();
+    }
+  });
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isShopOpen, setIsShopOpen] = useState(false);
   const [isLogOpen, setIsLogOpen] = useState(false);
@@ -537,6 +545,17 @@ export default function App() {
         }
       };
     });
+  };
+
+  const handleDetectiveInteraction = () => {
+    setGameState(prev => ({
+      ...prev,
+      activeDialogue: {
+        sender: 'detective',
+        text: 'Брысь, кошак! Мешаешься под ногами.',
+        mood: 'annoyed'
+      }
+    }));
   };
 
   // Main puzzle interaction handler
@@ -1270,7 +1289,11 @@ export default function App() {
         activeJob: null,
         timerActive: false,
         timeLeft: undefined,
-        logs: newLogs
+        logs: newLogs,
+        storyState: prev.storyState ? {
+          ...prev.storyState,
+          mode: 'sandbox'
+        } : undefined
       };
     });
   };
@@ -1729,7 +1752,7 @@ export default function App() {
               </div>
             </div>
             <span className="font-sans text-[8px] text-white/40 uppercase tracking-[0.25em] block mt-1.5 leading-none">
-              {gameState.roomInfo?.caseName || 'КЕЙС №42'} // {gameState.storyState?.mode === 'story' ? `СЮЖЕТ (ГЛАВА ${gameState.storyState?.chapter ?? 1})` : 'ПЕСОЧНИЦА'}
+              {gameState.roomInfo?.caseName || 'КЕЙС №42'} • {gameState.storyState?.mode === 'story' ? `СЮЖЕТ (ГЛАВА ${gameState.storyState?.chapter ?? 1})` : 'ПЕСОЧНИЦА'}
             </span>
           </div>
         </div>
@@ -1882,13 +1905,14 @@ export default function App() {
           )}
         </>
       ) : (
-        <main className="flex-1 w-full max-w-7xl mx-auto p-4 flex flex-col lg:flex-row gap-5 relative z-20 min-h-[580px]">
+        <main className="flex-1 w-full max-w-7xl mx-auto p-4 flex flex-col lg:flex-row gap-5 relative z-20 min-h-[580px] items-start">
         
         {/* Left side: Game Visuals Grid */}
-        <div className="flex-1 flex flex-col gap-3 justify-between">
+        <div className="flex-1 flex flex-col gap-3 justify-start w-full">
           <GameScene 
             gameState={gameState} 
             onObjectInteraction={handleObjectInteraction}
+            onDetectiveInteraction={handleDetectiveInteraction}
             onEnterSafeCode={handleEnterSafeCode}
             onChangeLocation={handleChangeLocation}
           />

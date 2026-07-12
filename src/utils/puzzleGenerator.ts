@@ -11,77 +11,88 @@ export const ALL_CLUES: Clue[] = [
     name: 'Флакон с ядом',
     description: 'Флакон с черепом и надписью «Цианид». Небольшой осадок на дне пахнет горьким миндалем.',
     icon: 'Skull',
-    findingMessage: 'Кот выкатил откуда-то маленький темный флакон. Барт восклицает: «Ого! Яд! Значит, жертву отравили... Или это просто средство от клопов? Надо понюхать... Ой, в глазах темнеет!»'
+    findingMessage: 'Кот выкатил откуда-то маленький темный флакон. Барт восклицает: «Ого! Яд! Значит, жертву отравили... Или это просто средство от клопов? Надо понюхать... Ой, в глазах темнеет!»',
+    image: '/src/img/Caseboard/Caseboard_evidence_01.png'
   },
   {
     id: 'clue_letter',
     name: 'Обрывок записки',
     description: 'Обугленный клочок бумаги со словами «...в полночь у старого причала. Не опаздывай, иначе...»',
     icon: 'FileText',
-    findingMessage: 'Кот достал из щели обгоревший лист. Барт читает: «Тайная встреча! Мой детективный нюх подсказывает, что тут пахнет заговором. Или это просто счет за прачечную?»'
+    findingMessage: 'Кот достал из щели обгоревший лист. Барт читает: «Тайная встреча! Мой детективный нюх подсказывает, что тут пахнет заговором. Или это просто счет за прачечную?»',
+    image: '/src/img/Caseboard/Caseboard_evidence_02.png'
   },
   {
     id: 'clue_watch',
     name: 'Золотые часы',
     description: 'Дорогие карманные часы с треснувшим стеклом, застывшие ровно на 23:14.',
     icon: 'Watch',
-    findingMessage: 'Под грудой хлама обнаружились золотые часы. Барт задумчиво трет подбородок: «Часы остановились на 23:14. Это либо время преступления, либо у владельца просто кончился завод... Ах да, они же золотые!»'
+    findingMessage: 'Под грудой хлама обнаружились золотые часы. Барт задумчиво трет подбородок: «Часы остановились на 23:14. Это либо время преступления, либо у владельца просто кончился завод... Ах да, они же золотые!»',
+    image: '/src/img/Caseboard/Caseboard_evidence_03.png'
   },
   {
     id: 'clue_ledger',
     name: 'Шифрованный блокнот',
     description: 'Записная книжка в кожаном переплете со списками швейцарских счетов и шифром «Цезарь».',
     icon: 'BookOpen',
-    findingMessage: 'Кот выудил из потайного места блокнот. Барт щурится: «Тайные коды и миллионные счета! Наверняка здесь зашифрован заговор мирового масштаба. Или список покупок на неделю...»'
+    findingMessage: 'Кот выудил из потайного места блокнот. Барт щурится: «Тайные коды и миллионные счета! Наверняка здесь зашифрован заговор мирового масштаба. Или список покупок на неделю...»',
+    image: '/src/img/Caseboard/Caseboard_evidence_04.png'
   },
   {
     id: 'clue_handkerchief',
     name: 'Шелковый платок',
     description: 'Батистовый платок с монограммой «В.А.» и следами дорогой помады цвета темной вишни.',
     icon: 'Sparkles',
-    findingMessage: 'Кот вытащил из щели дамский платок. Барт вдыхает аромат: «Пахнет дорогим парфюмом и... опасностью. Хм, монограмма "В.А.". Возможно, это Вильгельм Артурович, или Великий Альфред, или... Василиса Алибабаевна?»'
+    findingMessage: 'Кот вытащил из щели дамский платок. Барт вдыхает аромат: «Пахнет дорогим парфюмом и... опасностью. Хм, монограмма "В.А.". Возможно, это Вильгельм Артурович, или Великий Альфред, или... Василиса Алибабаевна?»',
+    image: '/src/img/Caseboard/Caseboard_evidence_05.png'
   },
   {
     id: 'clue_feather',
     name: 'Черное перо',
     description: 'Крупное черное перо редкой птицы, слегка испачканное машинным маслом.',
     icon: 'Feather',
-    findingMessage: 'Кот играет с черным пером. Барт берет его в руки: «Хм... Воронье перо. Знак тайного общества, или убийца — птица? Нет, птицы не умеют держать револьвер. Хотя надо проверить алиби местного попугая!»'
+    findingMessage: 'Кот играет с черным пером. Барт берет его в руки: «Хм... Воронье перо. Знак тайного общества, или убийца — птица? Нет, птицы не умеют держать револьвер. Хотя надо проверить алиби местного попугая!»',
+    image: '/src/img/Caseboard/Caseboard_evidence_06.png'
   },
   {
     id: 'clue_glasses',
     name: 'Треснувшие очки',
     description: 'Очки в тонкой роговой оправе с одной разбитой линзой.',
     icon: 'Eye',
-    findingMessage: 'Под ковром нашлись треснувшие очки! Барт щурится через разбитое стекло: «Ого, очки в роговой оправе! Убийца явно потерял зрение в пылу борьбы! Либо преступник — близорукий интеллектуал, либо... просто любитель читать в темноте!»'
+    findingMessage: 'Под ковром нашлись треснувшие очки! Барт щурится через разбитое стекло: «Ого, очки в роговой оправе! Убийца явно потерял зрение в пылу борьбы! Либо преступник — близорукий интеллектуал, либо... просто любитель читать в темноте!»',
+    image: '/src/img/Caseboard/Caseboard_evidence_07.png'
   },
   {
     id: 'clue_matchbox',
     name: 'Спичечный коробок',
     description: 'Коробок из элитного джаз-клуба «Синяя Нота» с нацарапанным адресом на обороте.',
     icon: 'Flame',
-    findingMessage: 'Кот Midnight скинул с полки коробок спичек. Барт поднимает его: «Джаз-клуб "Синяя Нота"! И адрес на обороте! Какое злачное место... Придется провести там секретное расследование сегодня ночью. Исключительно ради дела!»'
+    findingMessage: 'Кот Midnight скинул с полки коробок спичек. Барт поднимает его: «Джаз-клуб "Синяя Нота"! И адрес на обороте! Какое злачное место... Придется провести там секретное расследование сегодня ночью. Исключительно ради дела!»',
+    image: '/src/img/Caseboard/Caseboard_evidence_08.png'
   },
   {
     id: 'clue_cufflink',
     name: 'Серебряная запонка',
     description: 'Дорогая запонка в виде змеи с крошечным изумрудным глазом.',
     icon: 'Sparkles',
-    findingMessage: 'Midnight откопал блестящую штучку! Барт восторженно рассматривает её: «Серебряная запонка с изумрудным глазом! Изысканный вкус. Преступник явно принадлежит к высшему обществу! Или просто украл её у кого-то... например, у меня?! Ох нет, мои на месте»'
+    findingMessage: 'Midnight откопал блестящую штучку! Барт восторженно рассматривает её: «Серебряная запонка с изумрудным глазом! Изысканный вкус. Преступник явно принадлежит к высшему обществу! Или просто украл её у кого-то... например, у меня?! Ох нет, мои на месте»',
+    image: '/src/img/Caseboard/Caseboard_evidence_09.png'
   },
   {
     id: 'clue_cigarette',
     name: 'Окурок сигары',
     description: 'Окурок редкой гаванской сигары с золотым фирменным ободком.',
     icon: 'Flame',
-    findingMessage: 'Кот Midnight лапой выкатил окурок из угла. Барт кашляет от запаха: «Премиальная гаванская сигара! Убийца — богач или пижон. Ну или тот, кто любит донашивать чужие окурки. Но мы запишем это как след миллионера!»'
+    findingMessage: 'Кот Midnight лапой выкатил окурок из угла. Барт кашляет от запаха: «Премиальная гаванская сигара! Убийца — богач или пижон. Ну или тот, кто любит донашивать чужие окурки. Но мы запишем это как след миллионера!»',
+    image: '/src/img/Caseboard/Caseboard_evidence_10.png'
   },
   {
     id: 'clue_ticket',
     name: 'Театральный билет',
     description: 'Билет в ложу на оперу «Кармен», датированный сегодняшним числом.',
     icon: 'Ticket',
-    findingMessage: 'В мусорке нашелся билет в оперу! Барт восклицает: «Ложа на Кармен! На сегодняшнее число! Наш подозреваемый — театрал и эстет! Либо он пытался обеспечить себе алиби. Жаль, опера уже началась, а у нас тут труп!»'
+    findingMessage: 'В мусорке нашелся билет в оперу! Барт восклицает: «Ложа на Кармен! На сегодняшнее число! Наш подозреваемый — театрал и эстет! Либо он пытался обеспечить себе алиби. Жаль, опера уже началась, а у нас тут труп!»',
+    image: '/src/img/Caseboard/Caseboard_evidence_11.png'
   }
 ];
 
@@ -102,7 +113,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Бронзовая лампа',
       trashcan: 'Медная корзина',
       painting: 'Старинный натюрморт',
-      fishbowl: 'Пыльный круглый аквариум'
+      fishbowl: 'Пыльный круглый аквариум',
+      safeStand: 'Подставка для сейфа'
     },
     objectDescriptions: {
       bookshelf: 'Высокие полки забиты алхимическими трактатами и старинными картами.',
@@ -112,7 +124,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Старая масляная лампа. Отбрасывает тусклый янтарный свет на стены.',
       trashcan: 'Корзина для ненужных бумаг и старых писем антиквара.',
       painting: 'Потемневшая от времени картина с изображением золотого жука.',
-      fishbowl: 'Заросший водорослями круглый аквариум с мутной водой.'
+      fishbowl: 'Заросший водорослями круглый аквариум с мутной водой.',
+      safeStand: 'Прочная деревянная подставка, на которой установлен сейф.'
     }
   },
   {
@@ -131,7 +144,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Торшер с бахромой',
       trashcan: 'Корзина с розами',
       painting: 'Портрет балерины',
-      fishbowl: 'Хрустальная ваза с лилией'
+      fishbowl: 'Хрустальная ваза с лилией',
+      safeStand: 'Подставка под шкатулку'
     },
     objectDescriptions: {
       bookshelf: 'Сборники Шекспира, балетные либретто и куча старых любовных писем.',
@@ -141,7 +155,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Торшер под розовым шелковым абажуром, дающий мягкий интимный свет.',
       trashcan: 'Корзина, наполненная увядшими розами и разорванными записками.',
       painting: 'Большая картина, изображающая балерину в танце на фоне заката.',
-      fishbowl: 'Большая ваза, наполненная водой с лепестками роз и одинокой рыбкой.'
+      fishbowl: 'Большая ваза, наполненная водой с лепестками роз и одинокой рыбкой.',
+      safeStand: 'Изящная банкетка, на которой стоит музыкальная шкатулка.'
     }
   },
   {
@@ -160,7 +175,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Изумрудная лампа',
       trashcan: 'Металлическое ведро',
       painting: 'Индустриальный пейзаж',
-      fishbowl: 'Офисный аквариум'
+      fishbowl: 'Офисный аквариум',
+      safeStand: 'Металлическая подставка'
     },
     objectDescriptions: {
       bookshelf: 'Тяжелые папки с надписями "Аудит", "Налоги" и закрытыми архивами.',
@@ -170,7 +186,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Знаменитая зеленая настольная лампа банкира. Свет яркий и деловой.',
       trashcan: 'Ведро, забитое скомканными финансовыми графиками и порванными акциями.',
       painting: 'Картина с изображением дымящих фабричных труб и поездов начала века.',
-      fishbowl: 'Высокий современный аквариум со сложным фильтром и неоновыми рыбками.'
+      fishbowl: 'Высокий современный аквариум со сложным фильтром и неоновыми рыбками.',
+      safeStand: 'Массивная стальная подставка под несгораемый шкаф.'
     }
   },
   {
@@ -189,7 +206,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Штормовой керосиновый фонарь',
       trashcan: 'Бочонок из-под пороха',
       painting: 'Морское сражение',
-      fishbowl: 'Морской круглый аквариум'
+      fishbowl: 'Морской круглый аквариум',
+      safeStand: 'Прочная тумба'
     },
     objectDescriptions: {
       bookshelf: 'Навигационные карты, лоции океанов и потрепанные вахтенные журналы.',
@@ -199,7 +217,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Качающийся подвесной фонарь, отбрасывающий длинные тени по каюте.',
       trashcan: 'Старый бочонок, приспособленный под мусор и обрезки снастей.',
       painting: 'Драматический холст, изображающий гибель фрегата в грозу.',
-      fishbowl: 'Маленький аквариум с соленой водой, живым кораллом и морским коньком.'
+      fishbowl: 'Маленький аквариум с соленой водой, живым кораллом и морским коньком.',
+      safeStand: 'Привинченная к полу дубовая тумба для судового сейфа.'
     }
   },
   {
@@ -218,7 +237,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Уличный фонарь',
       trashcan: 'Чугунная урна',
       painting: 'Информационный стенд',
-      fishbowl: 'Ведро с попкорном'
+      fishbowl: 'Ведро с попкорном',
+      safeStand: 'Зеленый ящик'
     },
     objectDescriptions: {
       bookshelf: 'Плотный кустарник дикого плюща и шиповника. За ветвями что-то скрыто.',
@@ -228,7 +248,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Изящный газовый фонарь. Светит тусклым зеленоватым светом.',
       trashcan: 'Массивная парковая урна. Перевернуть ее для кота — плевое дело.',
       painting: 'Деревянный стенд с картой парка, слегка перекошенный и поцарапанный.',
-      fishbowl: 'Оставленное на скамейке картонное ведерко со сладким попкорном.'
+      fishbowl: 'Оставленное на скамейке картонное ведерко со сладким попкорном.',
+      safeStand: 'Небольшая деревянная тумба, вкопанная в землю рядом с дорожкой.'
     }
   },
   {
@@ -247,7 +268,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Прожектор охраны',
       trashcan: 'Мусорный бак',
       painting: 'Рекламная афиша',
-      fishbowl: 'Консервная банка'
+      fishbowl: 'Консервная банка',
+      safeStand: 'Бетонная тумба'
     },
     objectDescriptions: {
       bookshelf: 'Ржавые железные перекладины уходят вверх по мокрой кирпичной стене.',
@@ -257,7 +279,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Яркий галогеновый прожектор за стальной сеткой. Направлен прямо в тупик.',
       trashcan: 'Помятый мусорный бак из оцинковки, полный выброшенных обрезков.',
       painting: 'Облезлая театральная афиша цирка, частично сорванная со стены.',
-      fishbowl: 'Пустая банка из-под сардин, оставленная на деревянном ящике.'
+      fishbowl: 'Пустая банка из-под сардин, оставленная на деревянном ящике.',
+      safeStand: 'Небольшой бетонный блок, выступающий из стены.'
     }
   },
   {
@@ -276,7 +299,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Одинокая лампочка',
       trashcan: 'Ведро с углем',
       painting: 'Решетка вентиляции',
-      fishbowl: 'Банка с краской'
+      fishbowl: 'Банка с краской',
+      safeStand: 'Деревянная полка'
     },
     objectDescriptions: {
       bookshelf: 'Пыльные деревянные стеллажи с заплесневелыми банками маринадов и солений.',
@@ -286,7 +310,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Пыльная лампочка без плафона на длинном шнуре. Тускло мерцает во мраке.',
       trashcan: 'Старое ведро, доверху наполненное черным углем и золой.',
       painting: 'Прикрученная к кирпичной стене вентиляционная решетка, покрытая копотью.',
-      fishbowl: 'Полупустая металлическая банка с засохшей темно-красной краской.'
+      fishbowl: 'Полупустая металлическая банка с засохшей темно-красной краской.',
+      safeStand: 'Простая деревянная полка, прибитая к стене подвала.'
     }
   },
   {
@@ -305,7 +330,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Старый торшер',
       trashcan: 'Ящик с игрушками',
       painting: 'Потускневшее зеркало',
-      fishbowl: 'Фарфоровая ваза'
+      fishbowl: 'Фарфоровая ваза',
+      safeStand: 'Сундук-подставка'
     },
     objectDescriptions: {
       bookshelf: 'Картонные коробки и дорожные сундуки, забитые старыми вещами.',
@@ -315,7 +341,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Старинный торшер с потертым шелковым абажуром и длинной бахромой.',
       trashcan: 'Коробка с поломанными куклами и шестеренками старых часов.',
       painting: 'Огромное зеркало в растрескавшейся золоченой раме, покрытое пылью.',
-      fishbowl: 'Треснувшая китайская ваза с изображением дракона, стоящая на бюро.'
+      fishbowl: 'Треснувшая китайская ваза с изображением дракона, стоящая на бюро.',
+      safeStand: 'Крепкий дорожный сундук, используемый как подставка.'
     }
   },
   {
@@ -334,7 +361,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Медная люстра',
       trashcan: 'Ведро для отходов',
       painting: 'Медная сковорода',
-      fishbowl: 'Кувшин со сливками'
+      fishbowl: 'Кувшин со сливками',
+      safeStand: 'Кухонная тумба'
     },
     objectDescriptions: {
       bookshelf: 'Шкаф со стеклянными дверцами, за которыми красуются ряды фарфоровых тарелок.',
@@ -344,7 +372,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Тяжелая люстра из патинированной меди, висящая над рабочим столом.',
       trashcan: 'Мусорное ведро, полное картофельных очистков и обрывков бумаги.',
       painting: 'Огромная отполированная сковорода, подвешенная на стену на крючок.',
-      fishbowl: 'Глиняный белый кувшин для молока, прикрытый чистым полотенцем.'
+      fishbowl: 'Глиняный белый кувшин для молока, прикрытый чистым полотенцем.',
+      safeStand: 'Массивная кухонная тумба для хранения тяжелой утвари.'
     }
   },
   {
@@ -363,7 +392,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Лампа-переноска',
       trashcan: 'Бочка для масла',
       painting: 'Старый календарь',
-      fishbowl: 'Металлическая масленка'
+      fishbowl: 'Металлическая масленка',
+      safeStand: 'Стеллаж-подставка'
     },
     objectDescriptions: {
       bookshelf: 'Полки забиты старыми карбюраторами, генераторами и ржавыми цепями.',
@@ -373,7 +403,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Переносной светильник в металлической защитной сетке, висящий на крюке.',
       trashcan: 'Двухсотлитровая бочка с остатками смазочных материалов у стены.',
       painting: 'Пожелтевший плакат с изображением спортивного автомобиля тридцатых годов.',
-      fishbowl: 'Тяжелая латунная масленка с длинным узким носиком для точечной смазки.'
+      fishbowl: 'Тяжелая латунная масленка с длинным узким носиком для точечной смазки.',
+      safeStand: 'Усиленный стальной стеллаж для тяжелых грузов.'
     }
   },
   {
@@ -392,7 +423,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Керосиновая лампа',
       trashcan: 'Ящик с опилками',
       painting: 'План эвакуации',
-      fishbowl: 'Жестяная кружка'
+      fishbowl: 'Жестяная кружка',
+      safeStand: 'Паллет-подставка'
     },
     objectDescriptions: {
       bookshelf: 'Стеллаж, ломящийся от немаркированных ящиков, тюков и мешков с пряностями.',
@@ -402,7 +434,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Тусклая керосинка, закопченная у горлышка, дающая дрожащий свет.',
       trashcan: 'Большой деревянный ящик с опилками для упаковки хрупкого груза.',
       painting: 'Чертеж здания склада с указанием пожарных выходов на стене.',
-      fishbowl: 'Грязная жестяная кружка с недопитым черным чаем на краю стола.'
+      fishbowl: 'Грязная жестяная кружка с недопитым черным чаем на краю стола.',
+      safeStand: 'Деревянный паллет, брошенный посередине склада.'
     }
   },
   {
@@ -421,7 +454,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Подвесной светильник',
       trashcan: 'Бак со стружкой',
       painting: 'Схема конвейера',
-      fishbowl: 'Стеклянный манометр'
+      fishbowl: 'Стеклянный манометр',
+      safeStand: 'Металлическая тумба'
     },
     objectDescriptions: {
       bookshelf: 'Полки, забитые рулонами кальки, чертежными тубусами и стандартами деталей.',
@@ -431,7 +465,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Промышленный жестяной плафон над столом, дающий направленный конус света.',
       trashcan: 'Железный контейнер, наполненный острой металлической стружкой и обрезками.',
       painting: 'Сложный чертеж кинематической схемы главного станка на стене.',
-      fishbowl: 'Крупный стеклянный прибор с циферблатом, показывающий остаточное давление.'
+      fishbowl: 'Крупный стеклянный прибор с циферблатом, показывающий остаточное давление.',
+      safeStand: 'Тяжелая металлическая тумба для тяжелых приборов.'
     }
   },
   {
@@ -450,7 +485,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Настольная лампа',
       trashcan: 'Корзина для бумаг',
       painting: 'Доска расследований',
-      fishbowl: 'Чашка с остывшим кофе'
+      fishbowl: 'Чашка с остывшим кофе',
+      safeStand: 'Архивный шкаф'
     },
     objectDescriptions: {
       bookshelf: 'Картонные папки-скоросшиватели с вырезками статей за прошлые годы.',
@@ -460,7 +496,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Классическая лампа с зеленым стеклянным абажуром, дающая уютный свет.',
       trashcan: 'Металлическая корзина, полная скомканных телеграмм и черновиков статей.',
       painting: 'Пробковая доска на стене с фотографиями подозреваемых и красными нитями.',
-      fishbowl: 'Керамическая кружка с недопитым кофе, покрытым тонкой пленкой.'
+      fishbowl: 'Керамическая кружка с недопитым кофе, покрытым тонкой пленкой.',
+      safeStand: 'Массивный металлический шкаф, используемый для хранения архивов.'
     }
   },
   {
@@ -479,7 +516,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Неоновая вывеска',
       trashcan: 'Пивная бочка',
       painting: 'Голова оленя',
-      fishbowl: 'Пивной бокал'
+      fishbowl: 'Пивной бокал',
+      safeStand: 'Барная стойка'
     },
     objectDescriptions: {
       bookshelf: 'Ряды дорогих пыльных бутылок с яркими наклейками за спиной бармена.',
@@ -489,7 +527,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: ' buzzing красная неоновая вывеска "BAR", дающая багровый полумрак.',
       trashcan: 'Пустой дубовый бочонок из-под эля, стоящий у входа.',
       painting: 'Запыленное чучело оленьей головы с ветвистыми рогами на деревянной стене.',
-      fishbowl: 'Тяжелый пивной бокал с остатками темной пенной жидкости.'
+      fishbowl: 'Тяжелый пивной бокал с остатками темной пенной жидкости.',
+      safeStand: 'Массивная деревянная стойка для обслуживания клиентов.'
     }
   },
   {
@@ -508,7 +547,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Керосиновый плафон',
       trashcan: 'Ящик для брака',
       painting: 'Старая витрина',
-      fishbowl: 'Стеклянная чаша'
+      fishbowl: 'Стеклянная чаша',
+      safeStand: 'Витринная тумба'
     },
     objectDescriptions: {
       bookshelf: 'Аккуратные ряды коробок чая, специй и банок с консервированными фруктами.',
@@ -518,7 +558,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Подвесная керосиновая лампа с белым отражателем над прилавком.',
       trashcan: 'Корзина для испорченных овощей и битой тары у заднего входа.',
       painting: 'Деревянная рама со стеклом, на которой вывешены цены на товары.',
-      fishbowl: 'Стеклянная банка с леденцами, стоящая на весах.'
+      fishbowl: 'Стеклянная банка с леденцами, стоящая на весах.',
+      safeStand: 'Небольшая тумба для демонстрации товаров.'
     }
   },
   {
@@ -537,7 +578,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Подсветка картины',
       trashcan: 'Мраморная урна',
       painting: 'Картина Рембрандта',
-      fishbowl: 'Чаша с монетами'
+      fishbowl: 'Чаша с монетами',
+      safeStand: 'Постамент'
     },
     objectDescriptions: {
       bookshelf: 'Запертый стеклянный шкаф с греческими амфорами и древними черепками.',
@@ -547,7 +589,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Направленный латунный прожектор, освещающий центральный экспонат.',
       trashcan: 'Изящный мраморный вазон для мусора у входа в галерею.',
       painting: 'Шедевр эпохи Возрождения в тяжелой позолоченной раме.',
-      fishbowl: 'Стеклянная чаша у кассы, куда туристы бросали мелкие монетки.'
+      fishbowl: 'Стеклянная чаша у кассы, куда туристы бросали мелкие монетки.',
+      safeStand: 'Мраморный постамент для важных экспонатов.'
     }
   },
   {
@@ -566,7 +609,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Хрустальное бра',
       trashcan: 'Плетеная корзина',
       painting: 'Портрет владельца',
-      fishbowl: 'Хрустальный графин'
+      fishbowl: 'Хрустальный графин',
+      safeStand: 'Секретная панель'
     },
     objectDescriptions: {
       bookshelf: 'Роскошный резной шкаф из дуба с томами в кожаных переплетах.',
@@ -576,7 +620,8 @@ export const ROOM_TEMPLATES: RoomInfo[] = [
       lamp: 'Роскошное настенное бра со стеклянными подвесками, мерцающее золотом.',
       trashcan: 'Аккуратная плетеная корзинка для бумаг у камина.',
       painting: 'Гигантский портрет покойного лорда Белфорта, строго взирающего сверху.',
-      fishbowl: 'Хрустальный графин с янтарным хересом на серебряном подносе.'
+      fishbowl: 'Хрустальный графин с янтарным хересом на серебряном подносе.',
+      safeStand: 'Декоративная деревянная панель, закрывающая нишу со стенным сейфом.'
     }
   }
 ];
@@ -599,7 +644,8 @@ export const STORY_TEMPLATES: Record<number, RoomInfo> = {
       lamp: 'Кабинетный торшер',
       trashcan: 'Узорная урна для бумаг',
       painting: 'Фамильный портрет предка',
-      fishbowl: 'Декоративная ваза с карпами'
+      fishbowl: 'Декоративная ваза с карпами',
+      safeStand: 'Дубовая подставка'
     },
     objectDescriptions: {
       bookshelf: 'Книги по генеалогии и истории дворянства Англии.',
@@ -609,7 +655,8 @@ export const STORY_TEMPLATES: Record<number, RoomInfo> = {
       lamp: 'Величественный напольный торшер с золотыми кистями.',
       trashcan: 'Урна с обрывками гербовой бумаги и писем.',
       painting: 'Массивный портрет первого лорда Харингтона. Взгляд предка следит за вами.',
-      fishbowl: 'Аквариум с золотистыми карпами и блестящими ракушками.'
+      fishbowl: 'Аквариум с золотистыми карпами и блестящими ракушками.',
+      safeStand: 'Дубовая подставка, на которой стоит кованый сейф.'
     }
   },
   2: {
@@ -631,7 +678,8 @@ export const STORY_TEMPLATES: Record<number, RoomInfo> = {
       lamp: 'Штормовая керосинка [Внутри склада]',
       trashcan: 'Бочка с тухлой сельдью [На пирсе]',
       painting: 'Старый спасательный круг [На пирсе]',
-      fishbowl: 'Ведро с наживкой [На пирсе]'
+      fishbowl: 'Ведро с наживкой [На пирсе]',
+      safeStand: 'Ящик контрабандистов [Внутри склада]'
     },
     objectDescriptions: {
       bookshelf: 'Деревянный стеллаж, забитый ящиками с контрабандным чаем и табаком.',
@@ -641,7 +689,8 @@ export const STORY_TEMPLATES: Record<number, RoomInfo> = {
       lamp: 'Висящий на цепи закопченный фонарь, раскачивающийся от порывов ветра.',
       trashcan: 'Старая бочка, полная рыбных костей, мусора и мокрых газет.',
       painting: 'Висящий на стене склада облезлый спасательный круг.',
-      fishbowl: 'Жестяное ведро с болотной водой и сонной наживкой для ловли крабов.'
+      fishbowl: 'Жестяное ведро с болотной водой и сонной наживкой для ловли крабов.',
+      safeStand: 'Крепкий ящик, на котором стоит сейф.'
     }
   },
   3: {
@@ -660,7 +709,8 @@ export const STORY_TEMPLATES: Record<number, RoomInfo> = {
       lamp: 'Изящное настенное бра',
       trashcan: 'Хрустальная пепельница на стойке',
       painting: 'Иллюминатор в облаках',
-      fishbowl: 'Бокал со льдом и бренди'
+      fishbowl: 'Бокал со льдом и бренди',
+      safeStand: 'Тумба-стойка'
     },
     objectDescriptions: {
       bookshelf: 'Кожаные чемоданы богатых пассажиров и полка с меню полета.',
@@ -670,7 +720,8 @@ export const STORY_TEMPLATES: Record<number, RoomInfo> = {
       lamp: 'Матовое бра в стиле ар-деко, бросающее мягкий перламутровый свет.',
       trashcan: 'Серебряная напольная пепельница с окурками элитных сигар.',
       painting: 'Круглое окно-иллюминатор, сквозь которое видны сверкающие молнии.',
-      fishbowl: 'Хрустальный бокал с подтаявшим льдом, на дне которого что-то блестит...'
+      fishbowl: 'Хрустальный бокал с подтаявшим льдом, на дне которого что-то блестит...',
+      safeStand: 'Тумба-стойка для сервировки напитков.'
     }
   }
 };
@@ -873,12 +924,53 @@ export function generateProceduralClues(roomInfo: RoomInfo, safeCode: string): C
       findingMessage = `«Сейф с громким щелчком распахивается! На самой верхней полке лежит ${item.name}! Барт Ванс сияет от триумфа: "Есть! Мы нашли главную улику дела — ${item.name}! Все ниточки сходятся к ${suspect}! Дело полностью раскрыто, злоумышленник разоблачен! Время праздновать победу!"»`;
     }
 
+    let image = `/src/img/Caseboard/Caseboard_evidence_01.png`;
+    const lowerName = item.name.toLowerCase();
+    if (lowerName.includes('яда') || lowerName.includes('флакон') || lowerName.includes('бутылк') || lowerName.includes('зель') || lowerName.includes('эфир') || lowerName.includes('ром')) {
+      image = `/src/img/Caseboard/Caseboard_evidence_01.png`;
+    } else if (lowerName.includes('письмо') || lowerName.includes('запис') || lowerName.includes('текст') || lowerName.includes('рецепт') || lowerName.includes('инструкц') || lowerName.includes('наклад')) {
+      image = `/src/img/Caseboard/Caseboard_evidence_02.png`;
+    } else if (lowerName.includes('час') || lowerName.includes('манометр')) {
+      image = `/src/img/Caseboard/Caseboard_evidence_03.png`;
+    } else if (lowerName.includes('блокнот') || lowerName.includes('баланс') || lowerName.includes('дневник') || lowerName.includes('журнал') || lowerName.includes('гроссбух')) {
+      image = `/src/img/Caseboard/Caseboard_evidence_04.png`;
+    } else if (lowerName.includes('платок') || lowerName.includes('трико') || lowerName.includes('перчатк')) {
+      image = `/src/img/Caseboard/Caseboard_evidence_05.png`;
+    } else if (lowerName.includes('перо') || lowerName.includes('трафарет')) {
+      image = `/src/img/Caseboard/Caseboard_evidence_06.png`;
+    } else if (lowerName.includes('очки') || lowerName.includes('труба') || lowerName.includes('лупа') || lowerName.includes('фонарь')) {
+      image = `/src/img/Caseboard/Caseboard_evidence_07.png`;
+    } else if (lowerName.includes('коробок') || lowerName.includes('спич')) {
+      image = `/src/img/Caseboard/Caseboard_evidence_08.png`;
+    } else if (lowerName.includes('запонк') || lowerName.includes('кольцо') || lowerName.includes('амулет') || lowerName.includes('кулон') || lowerName.includes('медаль') || lowerName.includes('дублон') || lowerName.includes('монет') || lowerName.includes('серебр') || lowerName.includes('золот') || lowerName.includes('печать') || lowerName.includes('цеп')) {
+      image = `/src/img/Caseboard/Caseboard_evidence_09.png`;
+    } else if (lowerName.includes('окурок') || lowerName.includes('сигар') || lowerName.includes('шашка') || lowerName.includes('кастет')) {
+      image = `/src/img/Caseboard/Caseboard_evidence_10.png`;
+    } else if (lowerName.includes('билет') || lowerName.includes('чек') || lowerName.includes('вексель') || lowerName.includes('пропуск')) {
+      image = `/src/img/Caseboard/Caseboard_evidence_11.png`;
+    } else if (lowerName.includes('карта') || lowerName.includes('план') || lowerName.includes('схема') || lowerName.includes('чертеж')) {
+      image = `/src/img/Caseboard/Caseboard_evidence_12.png`;
+    } else if (lowerName.includes('ключ') || lowerName.includes('отмыч') || lowerName.includes('пломби')) {
+      image = `/src/img/Caseboard/Caseboard_evidence_13.png`;
+    } else if (lowerName.includes('сапфир') || lowerName.includes('драгоцен') || lowerName.includes('камень') || lowerName.includes('глаз') || lowerName.includes('кристалл') || lowerName.includes('холст')) {
+      image = `/src/img/Caseboard/Caseboard_evidence_14.png`;
+    } else if (lowerName.includes('рыба') || lowerName.includes('сель')) {
+      image = `/src/img/Caseboard/Caseboard_evidence_15.png`;
+    } else if (lowerName.includes('билет на')) {
+      image = `/src/img/Caseboard/Caseboard_evidence_16.png`;
+    } else {
+      const num = (item.name.charCodeAt(0) + idx) % 16 + 1;
+      const strNum = num < 10 ? `0${num}` : `${num}`;
+      image = `/src/img/Caseboard/Caseboard_evidence_${strNum}.png`;
+    }
+
     return {
       id: `procedural_clue_${idx + 1}`,
       name: item.name,
       description: `${item.description} Кажется, это улика против подозреваемого — ${suspect}.`,
       icon: item.icon,
-      findingMessage
+      findingMessage,
+      image
     };
   });
 }
@@ -1198,26 +1290,35 @@ export function generateNewGame(
   if (mode === 'story' && chapter === 1) {
     clue1.name = 'Чертеж вентиляции';
     clue1.description = 'Схема воздуховодов поместья лорда. Один из каналов ведет прямо в хранилище...';
+    clue1.image = '/src/img/Caseboard/Caseboard_evidence_12.png';
     clue2.name = 'Золотая шпилька';
     clue2.description = 'Шпилька для волос с монограммой лорда. Очевидно, ею вскрывали замок стола.';
+    clue2.image = '/src/img/Caseboard/Caseboard_evidence_13.png';
     clue3.name = 'Сапфировый Глаз!';
     clue3.description = 'Огромный, завораживающий драгоценный синий сапфир. Верните его лорду!';
+    clue3.image = '/src/img/Caseboard/Caseboard_evidence_14.png';
     clue3.findingMessage = 'Кот Миднайт выудил из сейфа умопомрачительный синий камень! Барт Ванс вопит от восторга: «Клянусь моей шляпой, это Сапфировый Глаз лорда! Мы раскрыли это дело! Миднайт, ты гений! (Но рапорт все равно пишу я)»';
   } else if (mode === 'story' && chapter === 2) {
     clue1.name = 'Свежая портовая рыба';
     clue1.description = 'Сельдь со следами бензина. Кажется, ею прикармливали сторожевого пса у ворот склада.';
+    clue1.image = '/src/img/Caseboard/Caseboard_evidence_15.png';
     clue2.name = 'Накладная контрабанды';
     clue2.description = 'Документ, подтверждающий доставку партии ящиков на дирижабль «Эклипс» сегодня вечером.';
+    clue2.image = '/src/img/Caseboard/Caseboard_evidence_02.png';
     clue3.name = 'Билет на дирижабль';
     clue3.description = 'Пассажирский билет первого класса на дирижабль «Эклипс», выписанный на вымышленное имя.';
+    clue3.image = '/src/img/Caseboard/Caseboard_evidence_16.png';
     clue3.findingMessage = 'Миднайт достает из сейфа билет первого класса! Барт ликует: «Билет на дирижабль "Эклипс"! Преступник бежит из города по воздуху! Мы должны перехватить его! Скорее на борт!»';
   } else if (mode === 'story' && chapter === 3) {
     clue1.name = 'План взрыва дирижабля';
     clue1.description = 'Секретная записка с планом поджога горючего баллона дирижабля прямо в облаках для заметания следов!';
+    clue1.image = '/src/img/Caseboard/Caseboard_evidence_12.png';
     clue2.name = 'Тайный шифр сообщников';
     clue2.description = 'Блокнот с кодами радиста. Преступник координировал свои действия с подельниками на земле.';
+    clue2.image = '/src/img/Caseboard/Caseboard_evidence_04.png';
     clue3.name = 'Флакон с сонным зельем';
     clue3.description = 'Опустошенный пузырек, использованный для усыпления лорда и охраны.';
+    clue3.image = '/src/img/Caseboard/Caseboard_evidence_01.png';
     clue3.findingMessage = 'Кот сбрасывает флакон со снотворным. Барт кричит: «Вот оно! Главная улика! Капитан, арестуйте вон того господина в шляпе-котелке! Дело о Сапфировом Глазе закрыто!»';
   }
 
@@ -1422,6 +1523,21 @@ export function generateNewGame(
       w: fishbowlW,
       h: fishbowlH,
       shape: 'circle'
+    },
+    safeStand: {
+      id: 'safeStand',
+      name: 'Подставка для сейфа',
+      icon: 'Square',
+      description: 'Массивная деревянная подставка или тумбочка под сейф.',
+      isInteractive: false,
+      stateDescription: 'Устойчиво держит тяжелые предметы.',
+      heldClueId: null,
+      heldItemId: null,
+      x: 58,
+      y: 84,
+      w: 16,
+      h: 18,
+      shape: 'rect'
     }
   };
 
@@ -1576,33 +1692,33 @@ export function generateNewGame(
   if (mode === 'story') {
     if (chapter === 2) {
       timerActive = true;
-      timeLeft = 210; // 3.5 minutes (increased by 30 seconds)
-      timerMax = 210;
+      timeLeft = 240; // 4.0 minutes (increased by another 30 seconds)
+      timerMax = 240;
     } else if (chapter === 3) {
       timerActive = true;
-      timeLeft = 180; // 3 minutes (increased by 30 seconds)
-      timerMax = 180;
+      timeLeft = 210; // 3.5 minutes (increased by another 30 seconds)
+      timerMax = 210;
     }
   } else if (mode === 'sandbox') {
     if (activeJob) {
       if (activeJob.timeLimit) {
         timerActive = true;
-        timeLeft = activeJob.timeLimit + 30; // Increased by 30 seconds
-        timerMax = activeJob.timeLimit + 30;
+        timeLeft = activeJob.timeLimit + 60; // Increased by another 30 seconds (total +60)
+        timerMax = activeJob.timeLimit + 60;
       }
     } else {
       // If reputation is high, there is a chance of ticking clock!
       if (currentReputation >= 60) {
         if (Math.random() < 0.6) {
           timerActive = true;
-          timeLeft = 180; // 3 mins (increased by 30 seconds)
-          timerMax = 180;
+          timeLeft = 210; // 3.5 mins (increased by another 30 seconds)
+          timerMax = 210;
         }
       } else if (currentReputation >= 30) {
         if (Math.random() < 0.35) {
           timerActive = true;
-          timeLeft = 210; // 3.5 mins (increased by 30 seconds)
-          timerMax = 210;
+          timeLeft = 240; // 4.0 mins (increased by another 30 seconds)
+          timerMax = 240;
         }
       }
     }

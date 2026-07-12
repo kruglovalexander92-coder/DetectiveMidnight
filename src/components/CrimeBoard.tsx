@@ -136,10 +136,17 @@ export default function CrimeBoard({
     <div className="flex-1 w-full flex flex-col relative select-none">
       
       {/* CORKBOARD VIEW CONTAINER */}
-      <div className="relative w-full h-[440px] border-[10px] border-[#2c1d11] bg-[#1a110a] shadow-inner overflow-hidden flex flex-col justify-between">
+      <div 
+        style={{ 
+          backgroundImage: "url('/src/img/Caseboard/Caseboard_bg.png')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center'
+        }}
+        className="relative w-full h-[440px] border-[10px] border-[#2c1d11] bg-[#1a110a] shadow-inner overflow-hidden flex flex-col justify-between"
+      >
         {/* Cork pattern overlay */}
-        <div className="absolute inset-0 bg-[radial-gradient(#100a06_1.5px,transparent_1.5px)] [background-size:12px_12px] opacity-40 pointer-events-none" />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#2a1b10]/20 via-transparent to-black/60 pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(#100a06_1.5px,transparent_1.5px)] [background-size:12px_12px] opacity-20 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/80 pointer-events-none" />
 
         {/* Board Title Banner */}
         <div className="absolute top-3 left-4 right-4 flex justify-between items-center border-b border-white/5 pb-2 z-10 pointer-events-none select-none">

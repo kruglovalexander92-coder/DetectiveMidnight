@@ -8,6 +8,7 @@ import { GameState, Job, CaseFolder } from "../types";
 import * as Lucide from "lucide-react";
 import { gameAudio } from "../utils/AudioEngine";
 import { extractCaseTags, evaluateCaseFolder } from "../utils/tagHelper";
+import RoomVisualEditor from "./RoomVisualEditor";
 
 interface WriterModeProps {
   gameState: GameState;
@@ -27,6 +28,7 @@ export default function WriterMode({
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [writerError, setWriterError] = useState<string | null>(null);
   const [isShiftActive, setIsShiftActive] = useState(false);
+  const [showRoomEditor, setShowRoomEditor] = useState(false);
 
   const [rightPanelTab, setRightPanelTab] = useState<'novels' | 'folders'>('novels');
   const [newFolderTitle, setNewFolderTitle] = useState('');
@@ -389,17 +391,32 @@ export default function WriterMode({
           </div>
         </div>
 
-        <button
-          onClick={() => {
-            try {
-              gameAudio.playClick();
-            } catch (e) {}
-            onClose();
-          }}
-          className="h-7.5 px-3 md:h-8 md:px-4 border border-white/15 hover:border-white/40 bg-neutral-950 hover:bg-neutral-900 text-white/70 hover:text-white font-mono text-[8px] md:text-[9px] uppercase tracking-widest transition-all cursor-pointer"
-        >
-          ← Вернуться в Бюро
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              try {
+                gameAudio.playClick();
+              } catch (e) {}
+              setShowRoomEditor(true);
+            }}
+            className="h-7.5 px-3 md:h-8 md:px-4 border border-amber-500/30 hover:border-amber-500/70 bg-amber-950/20 hover:bg-amber-950/40 text-amber-400 hover:text-amber-300 font-mono text-[8px] md:text-[9px] uppercase tracking-widest transition-all cursor-pointer flex items-center gap-1 rounded"
+          >
+            <Lucide.Sliders className="w-3 md:w-3.5 h-3 md:h-3.5" />
+            Визуальный редактор
+          </button>
+
+          <button
+            onClick={() => {
+              try {
+                gameAudio.playClick();
+              } catch (e) {}
+              onClose();
+            }}
+            className="h-7.5 px-3 md:h-8 md:px-4 border border-white/15 hover:border-white/40 bg-neutral-950 hover:bg-neutral-900 text-white/70 hover:text-white font-mono text-[8px] md:text-[9px] uppercase tracking-widest transition-all cursor-pointer rounded"
+          >
+            ← Вернуться в Бюро
+          </button>
+        </div>
       </div>
 
       {/* MAIN CONTAINER */}
@@ -1078,6 +1095,14 @@ export default function WriterMode({
         </div>
 
       </div>
+
+      {showRoomEditor && (
+        <RoomVisualEditor
+          gameState={gameState}
+          setGameState={setGameState}
+          onClose={() => setShowRoomEditor(false)}
+        />
+      )}
     </div>
   );
 }
