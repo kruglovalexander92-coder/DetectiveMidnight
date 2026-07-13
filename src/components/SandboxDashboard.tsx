@@ -8,7 +8,7 @@ import { GameState, Job } from '../types';
 import * as Lucide from 'lucide-react';
 import { gameAudio } from '../utils/AudioEngine';
 import CrimeBoard from './CrimeBoard';
-import SuspectInterrogation from './SuspectInterrogation';
+import NeuroInterrogation from './NeuroInterrogation';
 import { extractCaseTags, evaluateCaseFolder, generateContextualSketchForJob } from '../utils/tagHelper';
 
 interface SandboxDashboardProps {
@@ -724,7 +724,7 @@ export default function SandboxDashboard({
                 );
               })()
             ) : (
-              <SuspectInterrogation 
+              <NeuroInterrogation 
                 gameState={gameState}
                 setGameState={setGameState}
                 initialActiveSketchId={activeInterrogationSketchId}
