@@ -357,8 +357,15 @@ export default function WriterMode({
   const isNovelAvailable = lastNovelDay === undefined || (currentDay - lastNovelDay) >= 3;
   const remainingDays = lastNovelDay !== undefined ? 3 - (currentDay - lastNovelDay) : 0;
 
+  const bgImage = writeType === "single" ? "/src/img/Art/Writer1.png" : "/src/img/Art/Writer2.png";
+
   return (
-    <div className="fixed inset-0 bg-black/95 z-50 flex flex-col p-3 md:p-4 select-none overflow-hidden">
+    <div 
+      className="fixed inset-0 z-50 flex flex-col p-3 md:p-4 select-none overflow-hidden bg-cover bg-center bg-no-repeat transition-all duration-1000"
+      style={{ backgroundImage: `url('${bgImage}')` }}
+    >
+      {/* Dark tint overlay for reading text clearly */}
+      <div className="absolute inset-0 bg-black/45 backdrop-blur-[0.5px] pointer-events-none" />
       {/* HEADER BAR */}
       <div className="flex justify-between items-center border-b border-white/10 pb-2.5 mb-3 shrink-0 flex-wrap gap-2">
         <div className="flex items-center gap-2.5">
@@ -423,7 +430,7 @@ export default function WriterMode({
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5 items-stretch min-h-0 overflow-y-auto lg:overflow-hidden">
         
         {/* LEFT/CENTER: THE ROYAL TYPEWRITER DESK */}
-        <div className="lg:col-span-8 border border-neutral-800 bg-[#0c0c0d] p-3 md:p-4 flex flex-col justify-between relative shadow-inner overflow-hidden min-h-[450px] lg:min-h-0">
+        <div className="lg:col-span-8 border border-white/10 bg-black/80 backdrop-blur-sm p-3 md:p-4 flex flex-col justify-between relative shadow-inner overflow-hidden min-h-[450px] lg:min-h-0">
           {/* Desk leather texture background pattern */}
           <div className="absolute inset-0 bg-[radial-gradient(#141414_1px,transparent_1px)] [background-size:12px_12px] opacity-40 pointer-events-none" />
           
@@ -720,7 +727,7 @@ export default function WriterMode({
         <div className="lg:col-span-4 flex flex-col gap-4 lg:overflow-hidden min-h-0">
           
           {/* ROYALTY CLAIM BOX */}
-          <div className="border border-neutral-800 bg-[#080809] p-3 md:p-4 flex flex-col justify-between relative overflow-hidden shrink-0">
+          <div className="border border-white/10 bg-black/80 backdrop-blur-sm p-3 md:p-4 flex flex-col justify-between relative overflow-hidden shrink-0">
             {/* Top gold line */}
             <div className="absolute top-0 inset-x-0 h-[2px] bg-amber-500/80" />
             <div className="absolute top-0 right-0 w-12 h-12 border-t border-r border-white/5 pointer-events-none" />
@@ -768,7 +775,7 @@ export default function WriterMode({
           </div>
 
           {/* DUAL TAB PANEL: LIST OF PUBLISHED NOVELS & CASE FOLDERS */}
-          <div className="flex-1 border border-neutral-800 bg-[#080809] p-3 md:p-4 flex flex-col relative overflow-hidden min-h-[220px] lg:min-h-0">
+          <div className="flex-1 border border-white/10 bg-black/80 backdrop-blur-sm p-3 md:p-4 flex flex-col relative overflow-hidden min-h-[220px] lg:min-h-0">
             <div className="absolute top-0 right-0 w-12 h-12 border-t border-r border-white/5 pointer-events-none" />
             
             {/* Tab selector headers */}

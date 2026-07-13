@@ -145,13 +145,18 @@ export default function SandboxDashboard({
   };
 
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto p-4 flex flex-col gap-4 relative z-20 animate-fade-in min-h-[580px]">
+    <div 
+      className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 flex flex-col gap-4 relative z-20 animate-fade-in min-h-[580px] bg-cover bg-center bg-no-repeat border border-white/10"
+      style={{ backgroundImage: "url('/src/img/Art/Agency.png')" }}
+    >
+      {/* Dark tint overlay for reading text clearly */}
+      <div className="absolute inset-0 bg-black/45 backdrop-blur-[0.5px] pointer-events-none" />
       
       {/* Top dashboard summary board */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-stretch shrink-0">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-stretch shrink-0 relative z-10">
         
         {/* Day Calendar polaroid card (4 cols) */}
-        <div className="md:col-span-4 border border-white/10 bg-black/60 p-5 flex flex-col justify-between relative overflow-hidden backdrop-blur-sm">
+        <div className="md:col-span-4 border border-white/10 bg-black/80 p-5 flex flex-col justify-between relative overflow-hidden backdrop-blur-md">
           <div className="absolute top-0 right-0 w-16 h-16 border-t border-r border-white/5 pointer-events-none" />
           
           <div>
@@ -187,7 +192,7 @@ export default function SandboxDashboard({
         </div>
 
         {/* Bureau Status Board (8 cols) */}
-        <div className="md:col-span-8 border border-white/10 bg-[#0a0a0a]/80 p-5 flex flex-col justify-between backdrop-blur-sm">
+        <div className="md:col-span-8 border border-white/10 bg-black/80 p-5 flex flex-col justify-between backdrop-blur-md">
           <div>
             <div className="flex justify-between items-start mb-3">
               <div>
@@ -295,7 +300,7 @@ export default function SandboxDashboard({
       </div>
 
       {/* Main Corkboard Section */}
-      <div className="flex-1 border border-amber-950/40 bg-[#120e0b] p-5 text-white text-left shadow-2xl relative overflow-y-auto custom-scrollbar min-h-[250px] flex flex-col gap-6">
+      <div className="flex-1 border border-white/10 bg-black/80 p-5 text-white text-left shadow-2xl relative overflow-y-auto custom-scrollbar min-h-[250px] flex flex-col gap-6 backdrop-blur-md">
         {/* Wood texture background simulation */}
         <div className="absolute inset-0 bg-[radial-gradient(#1a1410_1px,transparent_1px)] [background-size:16px_16px] opacity-25 pointer-events-none" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#100c0a]/40 to-[#080605] pointer-events-none" />

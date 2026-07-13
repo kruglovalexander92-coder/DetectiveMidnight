@@ -47,14 +47,20 @@ export default function IntroScreen({
   };
 
   return (
-    <div className="absolute inset-0 bg-[#070707] flex flex-col justify-between p-6 sm:p-10 select-none z-40 overflow-y-auto custom-scrollbar">
+    <div 
+      className="absolute inset-0 flex flex-col justify-between p-6 sm:p-10 select-none z-40 overflow-y-auto custom-scrollbar bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: "url('/src/img/Art/Main.png')" }}
+    >
+      {/* A dark vignette overlay to make text pop and feel noir */}
+      <div className="absolute inset-0 bg-black/45 backdrop-blur-[0.5px] pointer-events-none" />
+
       {/* Decorative elegant frame overlay with double-border effect */}
       <div className="absolute inset-4 sm:inset-6 border-double border-4 border-white/10 pointer-events-none" />
-      <div className="absolute inset-6 sm:inset-8 border border-white/5 pointer-events-none" />
+      <div className="absolute inset-6 sm:inset-10 border border-white/5 pointer-events-none" />
 
       {/* Header Title with massive elegant display serif typography */}
       <div className="w-full text-center mt-4 z-10">
-        <span className="font-sans text-[10px] uppercase tracking-[0.5em] text-white/40 block mb-2">
+        <span className="font-sans text-[10px] uppercase tracking-[0.5em] text-white/50 block mb-2">
           АТМОСФЕРНЫЙ ДЕТЕКТИВНЫЙ КВЕСТ
         </span>
         <h1 className="font-serif text-4xl sm:text-5xl font-normal tracking-tight text-white flex flex-col leading-none">
@@ -72,7 +78,7 @@ export default function IntroScreen({
         
         {/* Rules detail view */}
         {showRules ? (
-          <div className="w-full border border-white/10 bg-black/80 p-6 sm:p-8 backdrop-blur-md font-sans animate-fade-in relative">
+          <div className="w-full border border-white/10 bg-black/90 p-6 sm:p-8 backdrop-blur-md font-sans animate-fade-in relative">
             <h2 className="font-serif text-lg font-bold italic text-white border-b border-white/10 pb-3 mb-5 tracking-wide flex justify-between items-center">
               <span>Статья оперативных правил</span>
               <span className="font-mono text-[8px] uppercase tracking-widest text-white/40 not-italic">КОДЕКС БЮРО</span>
@@ -116,7 +122,7 @@ export default function IntroScreen({
                 gameAudio.playClick();
                 setShowRules(false);
               }}
-              className="mt-6 w-full h-11 bg-white/5 hover:bg-white/10 text-white hover:text-white text-xs font-sans uppercase tracking-[0.2em] border border-white/10 transition-all rounded-none"
+              className="mt-6 w-full h-11 bg-white/5 hover:bg-white/10 text-white hover:text-white text-xs font-sans uppercase tracking-[0.2em] border border-white/10 transition-all rounded-none cursor-pointer"
             >
               Вернуться назад
             </button>
@@ -133,7 +139,7 @@ export default function IntroScreen({
             <div className="space-y-2">
               <button
                 onClick={handleConfirmNew}
-                className="w-full h-11 bg-red-700 hover:bg-red-600 text-white text-xs font-sans uppercase tracking-[0.15em] transition-all font-bold rounded-none"
+                className="w-full h-11 bg-red-700 hover:bg-red-600 text-white text-xs font-sans uppercase tracking-[0.15em] transition-all font-bold rounded-none cursor-pointer"
               >
                 Да, стереть прогресс и начать заново
               </button>
@@ -142,7 +148,7 @@ export default function IntroScreen({
                   gameAudio.playClick();
                   setShowConfirmNewGame(false);
                 }}
-                className="w-full h-10 border border-white/10 bg-white/5 hover:bg-white/10 text-white/70 text-xs font-sans uppercase tracking-[0.15em] transition-all rounded-none"
+                className="w-full h-10 border border-white/10 bg-white/5 hover:bg-white/10 text-white/70 text-xs font-sans uppercase tracking-[0.15em] transition-all rounded-none cursor-pointer"
               >
                 Отмена
               </button>
@@ -150,13 +156,16 @@ export default function IntroScreen({
           </div>
         ) : (
           /* Main menu options panel */
-          <div className="w-full border border-white/10 bg-black/60 p-6 backdrop-blur-md flex flex-col justify-between items-center text-center relative gap-6">
+          <div className="w-full border border-white/10 bg-black/85 p-6 backdrop-blur-md flex flex-col justify-between items-center text-center relative gap-6 max-w-sm">
             
             {/* Status indicator */}
             <div className="w-full border-b border-white/10 pb-4">
               <span className="font-mono text-[8px] uppercase tracking-widest text-white/40 block mb-2">ГЛАВНЫЙ ОФИС СЫЩИКОВ</span>
               <div className="font-serif text-sm italic text-white/90 leading-tight">Агентство «Ванс и Миднайт»</div>
               <span className="font-sans text-[8px] text-white/40 uppercase tracking-[0.2em] block mt-1">Лондон • Бейкер-стрит, 221-Б</span>
+              <div className="flex justify-center mt-2 text-amber-500/60">
+                <Lucide.Cat className="w-3.5 h-3.5" />
+              </div>
             </div>
 
             {/* Menu Options */}
@@ -166,9 +175,9 @@ export default function IntroScreen({
               {hasSavedGame && (
                 <button 
                   onClick={handleContinue}
-                  className="w-full border-2 border-emerald-500 bg-emerald-950/20 hover:bg-emerald-900/30 text-emerald-300 font-sans p-3.5 transition-all flex flex-col items-center justify-center gap-0.5 shadow-lg group hover:scale-[1.02] active:scale-[0.98] rounded-none cursor-pointer"
+                  className="w-full border border-emerald-500 bg-emerald-950/20 hover:bg-emerald-900/30 text-emerald-300 font-sans p-3.5 transition-all flex flex-col items-center justify-center gap-0.5 shadow-lg group hover:scale-[1.01] active:scale-[0.99] rounded-none cursor-pointer"
                 >
-                  <span className="font-sans text-[11px] font-bold uppercase tracking-[0.2em] flex items-center gap-2 text-white group-hover:text-emerald-300">
+                  <span className="font-sans text-[11px] font-bold uppercase tracking-[0.18em] flex items-center gap-2 text-white group-hover:text-emerald-300">
                     <Lucide.Play className="w-3 h-3 fill-white group-hover:fill-emerald-300" />
                     Продолжить расследование
                   </span>
@@ -181,11 +190,9 @@ export default function IntroScreen({
               {/* START GAME BUTTON */}
               <button 
                 onClick={handleStartNew}
-                className={`w-full h-12 bg-white hover:bg-neutral-200 text-black font-sans text-xs font-bold uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 shadow-2xl hover:scale-[1.02] active:scale-[0.98] rounded-none ${
-                  !hasSavedGame ? 'border-2 border-white' : ''
-                }`}
+                className="w-full h-11 bg-[#ebd9c5] hover:bg-[#ebd9c5]/95 text-black font-sans text-xs font-bold uppercase tracking-[0.18em] transition-all flex items-center justify-center gap-2 shadow-xl hover:scale-[1.01] active:scale-[0.99] rounded-none cursor-pointer"
               >
-                <Lucide.FilePlus className="w-3.5 h-3.5 text-black" />
+                <Lucide.FileText className="w-3.5 h-3.5 text-black" />
                 Начать игру
               </button>
 
@@ -195,7 +202,7 @@ export default function IntroScreen({
                   gameAudio.playClick();
                   setShowRules(true);
                 }}
-                className="w-full h-10 border border-dashed border-white/5 hover:border-white/20 text-white/40 hover:text-white/60 font-mono text-[9px] uppercase tracking-wider transition-all rounded-none"
+                className="w-full h-9 border border-white/10 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/70 font-mono text-[9px] uppercase tracking-wider transition-all rounded-none cursor-pointer"
               >
                 Как играть? [Рапорт]
               </button>
@@ -206,7 +213,7 @@ export default function IntroScreen({
               <span className="font-mono text-[8px] uppercase text-white/30 tracking-wider">ЗВУК В ИГРЕ:</span>
               <button
                 onClick={() => { gameAudio.playClick(); setSoundEnabled(!soundEnabled); }}
-                className="flex items-center gap-1.5 px-3 py-1 border border-white/10 hover:bg-white/5 text-[9px] font-mono uppercase text-white/50 hover:text-white transition-all rounded-none"
+                className="flex items-center gap-1.5 px-3 py-1 border border-white/10 hover:bg-white/5 text-[9px] font-mono uppercase text-white/50 hover:text-white transition-all rounded-none cursor-pointer"
               >
                 {soundEnabled ? (
                   <>

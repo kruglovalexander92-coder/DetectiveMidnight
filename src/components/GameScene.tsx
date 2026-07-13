@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import * as Lucide from 'lucide-react';
 import { ObjectId, ObjectState, GameState } from '../types';
 import { gameAudio } from '../utils/AudioEngine';
 import { DetectiveCharacter } from './DetectiveCharacter';
@@ -25,6 +26,60 @@ export default function GameScene({
 }: GameSceneProps) {
   const { objects, catPosition, catAction, safeCode, foundClueIds } = gameState;
   const [lightning, setLightning] = useState(false);
+
+  // Minimap drag and collapse state
+  const [minimapCollapsed, setMinimapCollapsed] = useState(false);
+  const [minimapOffset, setMinimapOffset] = useState({ x: 0, y: 0 });
+  const [isDraggingMinimap, setIsDraggingMinimap] = useState(false);
+  const dragStartPos = useRef({ x: 0, y: 0 });
+  const dragStartOffset = useRef({ x: 0, y: 0 });
+
+  const handleMinimapMouseDown = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
+    // If clicking buttons inside, do not trigger drag
+    if ((e.target as HTMLElement).closest('button')) {
+      return;
+    }
+    
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
+    setIsDraggingMinimap(true);
+    dragStartPos.current = { x: clientX, y: clientY };
+    dragStartOffset.current = { ...minimapOffset };
+  };
+
+  useEffect(() => {
+    if (!isDraggingMinimap) return;
+
+    const handleMouseMove = (e: MouseEvent | TouchEvent) => {
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
+      const deltaX = clientX - dragStartPos.current.x;
+      const deltaY = clientY - dragStartPos.current.y;
+
+      setMinimapOffset({
+        x: dragStartOffset.current.x + deltaX,
+        y: dragStartOffset.current.y + deltaY,
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsDraggingMinimap(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('touchmove', handleMouseMove, { passive: false });
+    document.addEventListener('touchend', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('touchmove', handleMouseMove);
+      document.removeEventListener('touchend', handleMouseUp);
+    };
+  }, [isDraggingMinimap]);
 
   const getRoomBackground = (roomId: string | undefined, currentLocation: string) => {
     if (!roomId) return null;
@@ -927,7 +982,7 @@ export default function GameScene({
     }
   }, [catAction]);
 
-  // Idle wandering logic
+  // Idle wandering & natural cat behaviors logic
   useEffect(() => {
     const interval = setInterval(() => {
       if (
@@ -937,8 +992,30 @@ export default function GameScene({
         visualAction === 'idle' &&
         !isWandering
       ) {
-        if (Math.random() > 0.4) {
-          const originalX = getCatSpot(gameState.catPosition).x;
+        const rand = Math.random();
+
+        if (rand < 0.15) {
+          // 1. Meow at the player/wall
+          setVisualAction('meowing');
+          if (!gameState.isMuted) {
+            try { gameAudio.playClick(); } catch (e) {}
+          }
+          setTimeout(() => {
+            setVisualAction('idle');
+          }, 1800);
+
+        } else if (rand < 0.35) {
+          // 2. Scratch the floor (mischievous scratching)
+          setVisualAction('scratching');
+          if (!gameState.isMuted) {
+            try { gameAudio.playScratch(); } catch (e) {}
+          }
+          setTimeout(() => {
+            setVisualAction('idle');
+          }, 2200);
+
+        } else if (rand < 0.70) {
+          // 3. Autonomous walking/wandering around the floor
           const direction = Math.random() > 0.5 ? 1 : -1;
           const distance = 5 + Math.random() * 8; 
           const offset = direction * distance;
@@ -950,9 +1027,9 @@ export default function GameScene({
           // Arrive and sit down
           const tW1 = setTimeout(() => {
             setVisualAction('idle');
-          }, 500);
+          }, 600);
 
-          // Walk back after 3 seconds
+          // Walk back after 3.5 seconds
           const tW2 = setTimeout(() => {
             setVisualAction('walking');
             setWanderOffset(0);
@@ -960,14 +1037,14 @@ export default function GameScene({
             const tW3 = setTimeout(() => {
               setIsWandering(false);
               setVisualAction('idle');
-            }, 500);
-          }, 3500);
+            }, 600);
+          }, 4000);
         }
       }
-    }, 12000);
+    }, 9000); // Trigger more frequently for an active, living scene feel!
 
     return () => clearInterval(interval);
-  }, [gameState.gameStatus, gameState.catPosition, gameState.catAction, visualAction, isWandering]);
+  }, [gameState.gameStatus, gameState.catPosition, gameState.catAction, visualAction, isWandering, gameState.isMuted]);
 
   // Random atmospheric lightning flash
   useEffect(() => {
@@ -1829,71 +1906,120 @@ export default function GameScene({
 
       {/* --- INTERACTIVE BLUEPRINT MAP (4-ROOM LAYOUTS) --- */}
       {isFourRoomBuilding && (
-        <div className="absolute top-3 right-3 z-30 bg-slate-950/95 border border-cyan-500/40 p-2 font-mono flex flex-col gap-1.5 shadow-[0_0_15px_rgba(6,182,212,0.2)] rounded w-[140px] animate-fade-in backdrop-blur-md">
-          <span className="text-[7px] text-cyan-400 font-bold uppercase tracking-[0.15em] text-center border-b border-cyan-500/20 pb-1 mb-0.5 block">
-            🗺️ СХЕМА ЗДАНИЯ
-          </span>
-          <div className="flex flex-col gap-1 text-[8px] uppercase tracking-wider text-center">
-            {/* Attic */}
-            <button
-              onClick={() => onChangeLocation?.('attic')}
-              className={`p-1 border rounded transition-all duration-200 ${
-                currentLocation === 'attic'
-                  ? 'bg-cyan-950/80 text-cyan-400 border-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.4)] font-bold'
-                  : 'bg-slate-900/60 text-slate-500 border-slate-800 hover:border-cyan-500/40 hover:text-cyan-400'
-              }`}
-            >
-              <div className="flex items-center justify-center gap-1">
-                {currentLocation === 'attic' && <div className="w-1 h-1 bg-cyan-400 rounded-full animate-ping" />}
-                ▲ ЧЕРДАК
-              </div>
-            </button>
-
-            {/* Study & Hall */}
-            <div className="grid grid-cols-2 gap-1">
+        <div 
+          style={{
+            transform: `translate(${minimapOffset.x}px, ${minimapOffset.y}px)`,
+          }}
+          className={`absolute top-3 right-3 z-30 bg-slate-950/95 border border-cyan-500/40 p-2 font-mono flex flex-col gap-1.5 shadow-[0_0_15px_rgba(6,182,212,0.3)] rounded transition-shadow ${
+            isDraggingMinimap ? 'shadow-[0_0_25px_rgba(6,182,212,0.5)] border-cyan-400' : ''
+          } w-[140px] animate-fade-in backdrop-blur-md select-none`}
+        >
+          {/* Header Bar with dragging and collapse capability */}
+          <div 
+            onMouseDown={handleMinimapMouseDown}
+            onTouchStart={handleMinimapMouseDown}
+            className="flex items-center justify-between border-b border-cyan-500/20 pb-1 mb-0.5 cursor-grab active:cursor-grabbing text-cyan-400"
+            title="Перетащите, чтобы сдвинуть карту"
+          >
+            <span className="text-[7px] font-bold uppercase tracking-[0.15em] flex items-center gap-1">
+              <Lucide.Move className="w-2.5 h-2.5 opacity-50 shrink-0" />
+              🗺️ КАРТА
+            </span>
+            <div className="flex items-center gap-1">
+              {/* Reset offset button if they moved it */}
+              {(minimapOffset.x !== 0 || minimapOffset.y !== 0) && (
+                <button
+                  onClick={() => {
+                    gameAudio.playClick();
+                    setMinimapOffset({ x: 0, y: 0 });
+                  }}
+                  className="p-0.5 hover:bg-cyan-950/50 rounded text-cyan-400/50 hover:text-cyan-300 transition-colors"
+                  title="Сбросить позицию"
+                >
+                  <Lucide.RefreshCw className="w-2.5 h-2.5" />
+                </button>
+              )}
+              {/* Collapse/expand button */}
               <button
-                onClick={() => onChangeLocation?.('hall')}
+                onClick={() => {
+                  gameAudio.playClick();
+                  setMinimapCollapsed(!minimapCollapsed);
+                }}
+                className="p-0.5 hover:bg-cyan-950/50 rounded text-cyan-400/80 hover:text-cyan-300 transition-colors"
+                title={minimapCollapsed ? "Развернуть" : "Свернуть"}
+              >
+                {minimapCollapsed ? (
+                  <Lucide.ChevronDown className="w-2.5 h-2.5" />
+                ) : (
+                  <Lucide.ChevronUp className="w-2.5 h-2.5" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {!minimapCollapsed && (
+            <div className="flex flex-col gap-1 text-[8px] uppercase tracking-wider text-center animate-fade-in">
+              {/* Attic */}
+              <button
+                onClick={() => onChangeLocation?.('attic')}
                 className={`p-1 border rounded transition-all duration-200 ${
-                  currentLocation === 'hall'
+                  currentLocation === 'attic'
                     ? 'bg-cyan-950/80 text-cyan-400 border-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.4)] font-bold'
                     : 'bg-slate-900/60 text-slate-500 border-slate-800 hover:border-cyan-500/40 hover:text-cyan-400'
                 }`}
               >
                 <div className="flex items-center justify-center gap-1">
-                  {currentLocation === 'hall' && <div className="w-1 h-1 bg-cyan-400 rounded-full animate-ping" />}
-                  ▤ ХОЛЛ
+                  {currentLocation === 'attic' && <div className="w-1 h-1 bg-cyan-400 rounded-full animate-ping" />}
+                  ▲ ЧЕРДАК
                 </div>
               </button>
+
+              {/* Study & Hall */}
+              <div className="grid grid-cols-2 gap-1">
+                <button
+                  onClick={() => onChangeLocation?.('hall')}
+                  className={`p-1 border rounded transition-all duration-200 ${
+                    currentLocation === 'hall'
+                      ? 'bg-cyan-950/80 text-cyan-400 border-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.4)] font-bold'
+                      : 'bg-slate-900/60 text-slate-500 border-slate-800 hover:border-cyan-500/40 hover:text-cyan-400'
+                  }`}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    {currentLocation === 'hall' && <div className="w-1 h-1 bg-cyan-400 rounded-full animate-ping" />}
+                    ▤ ХОЛЛ
+                  </div>
+                </button>
+                <button
+                  onClick={() => onChangeLocation?.('study')}
+                  className={`p-1 border rounded transition-all duration-200 ${
+                    currentLocation === 'study'
+                      ? 'bg-cyan-950/80 text-cyan-400 border-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.4)] font-bold'
+                      : 'bg-slate-900/60 text-slate-500 border-slate-800 hover:border-cyan-500/40 hover:text-cyan-400'
+                  }`}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    {currentLocation === 'study' && <div className="w-1 h-1 bg-cyan-400 rounded-full animate-ping" />}
+                    ✍ КАБИНЕТ
+                  </div>
+                </button>
+              </div>
+
+              {/* Basement */}
               <button
-                onClick={() => onChangeLocation?.('study')}
+                onClick={() => onChangeLocation?.('basement')}
                 className={`p-1 border rounded transition-all duration-200 ${
-                  currentLocation === 'study'
+                  currentLocation === 'basement'
                     ? 'bg-cyan-950/80 text-cyan-400 border-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.4)] font-bold'
                     : 'bg-slate-900/60 text-slate-500 border-slate-800 hover:border-cyan-500/40 hover:text-cyan-400'
                 }`}
               >
                 <div className="flex items-center justify-center gap-1">
-                  {currentLocation === 'study' && <div className="w-1 h-1 bg-cyan-400 rounded-full animate-ping" />}
-                  ✍ КАБИНЕТ
+                  {currentLocation === 'basement' && <div className="w-1 h-1 bg-cyan-400 rounded-full animate-ping" />}
+                  ▼ ПОДВАЛ
                 </div>
               </button>
             </div>
-
-            {/* Basement */}
-            <button
-              onClick={() => onChangeLocation?.('basement')}
-              className={`p-1 border rounded transition-all duration-200 ${
-                currentLocation === 'basement'
-                  ? 'bg-cyan-950/80 text-cyan-400 border-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.4)] font-bold'
-                  : 'bg-slate-900/60 text-slate-500 border-slate-800 hover:border-cyan-500/40 hover:text-cyan-400'
-              }`}
-            >
-              <div className="flex items-center justify-center gap-1">
-                {currentLocation === 'basement' && <div className="w-1 h-1 bg-cyan-400 rounded-full animate-ping" />}
-                ▼ ПОДВАЛ
-              </div>
-            </button>
-          </div>
+          )}
         </div>
       )}
 
@@ -2138,16 +2264,51 @@ export default function GameScene({
             {/* Feet */}
             <ellipse cx="40" cy="88" rx="8" ry="4" />
             <ellipse cx="60" cy="88" rx="8" ry="4" />
+            
             {/* Body */}
             <ellipse cx="50" cy="65" rx="20" ry="25" />
+            
+            {/* White chest patch (Белое пятно на груди) */}
+            <path d="M 50 50 Q 43 56 50 68 Q 57 56 50 50 Z" fill="#ffffff" stroke="none" opacity="0.95" />
+            
             {/* Head */}
             <circle cx="50" cy="38" r="16" />
-            {/* Ears */}
+            
+            {/* Ears (Left ear has a notch/cut as specified in design doc) */}
             <polygon points="34,30 30,10 44,25" className="animate-cat-ears" style={{ transformOrigin: '37px 23px' }} />
-            <polygon points="66,30 70,10 56,25" className="animate-cat-ears" style={{ transformOrigin: '63px 23px' }} />
-            {/* Glowing Eyes */}
-            <ellipse cx="44" cy="36" rx="3.5" ry="2" className="fill-white stroke-none animate-cat-blink" style={{ transformOrigin: '44px 36px' }} />
-            <ellipse cx="56" cy="36" rx="3.5" ry="2" className="fill-white stroke-none animate-cat-blink" style={{ transformOrigin: '56px 36px' }} />
+            {/* Left ear with notched cut (Надрез на левом ухе) */}
+            <path 
+              d="M 66 30 L 67 20 L 64 19 L 68 15 L 70 10 L 56 25 Z" 
+              className="animate-cat-ears fill-neutral-950 stroke-neutral-700 stroke-2"
+              style={{ transformOrigin: '63px 23px' }} 
+            />
+            
+            {/* Muzzle and Nose */}
+            <polygon points="48,42 52,42 50,44" fill="#fda4af" stroke="none" />
+            <path d="M 50 44 Q 47 47 44 45 M 50 44 Q 53 47 56 45" fill="none" stroke="#525252" strokeWidth="1" />
+            
+            {/* Long Whiskers (Длинные усы) */}
+            <line x1="36" y1="42" x2="14" y2="40" stroke="#9ca3af" strokeWidth="0.6" opacity="0.75" />
+            <line x1="36" y1="44" x2="12" y2="46" stroke="#9ca3af" strokeWidth="0.6" opacity="0.75" />
+            <line x1="36" y1="46" x2="16" y2="52" stroke="#9ca3af" strokeWidth="0.6" opacity="0.75" />
+            
+            <line x1="64" y1="42" x2="86" y2="40" stroke="#9ca3af" strokeWidth="0.6" opacity="0.75" />
+            <line x1="64" y1="44" x2="88" y2="46" stroke="#9ca3af" strokeWidth="0.6" opacity="0.75" />
+            <line x1="64" y1="46" x2="84" y2="52" stroke="#9ca3af" strokeWidth="0.6" opacity="0.75" />
+            
+            {/* Glowing Eyes reflecting light (Яркие глаза, отражающие свет) */}
+            <g className="animate-cat-blink" style={{ transformOrigin: '50px 36px' }}>
+              {/* Outer yellow iris */}
+              <ellipse cx="44" cy="36" rx="4" ry="2.5" fill="#facc15" stroke="none" />
+              <ellipse cx="56" cy="36" rx="4" ry="2.5" fill="#facc15" stroke="none" />
+              {/* Slit-like pupils */}
+              <line x1="44" y1="34" x2="44" y2="38" stroke="#000000" strokeWidth="1.2" />
+              <line x1="56" y1="34" x2="56" y2="38" stroke="#000000" strokeWidth="1.2" />
+              {/* Inner highlight reflections */}
+              <circle cx="45" cy="35" r="0.8" fill="#ffffff" />
+              <circle cx="57" cy="35" r="0.8" fill="#ffffff" />
+            </g>
+
           </svg>
           
           {/* Visual animation action overlays */}
