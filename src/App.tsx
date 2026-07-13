@@ -171,6 +171,8 @@ export default function App() {
   const [isShopOpen, setIsShopOpen] = useState(false);
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [isTornNoteOpen, setIsTornNoteOpen] = useState(false);
+  const [isDevMenuOpen, setIsDevMenuOpen] = useState(false);
+  const [devClickCount, setDevClickCount] = useState(0);
   
   // Writer and AI Critic States
   const [isWriterOpen, setIsWriterOpen] = useState(false);
@@ -1732,8 +1734,31 @@ export default function App() {
       {/* Atmospheric Header Bar */}
       <header className="w-full border-b border-white/10 bg-black/90 px-5 py-4 flex justify-between items-center z-30">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-none border border-white/15 bg-black flex items-center justify-center">
-            <Lucide.Cat className="w-4 h-4 text-white/70" />
+          <div 
+            onClick={() => {
+              setDevClickCount(prev => {
+                const next = prev + 1;
+                if (next >= 5) {
+                  setIsDevMenuOpen(true);
+                  try { gameAudio.playMeow(); } catch(e){}
+                  setGameState(p => ({
+                    ...p,
+                    logs: [...p.logs, addLog('system', '🔓 РЕЖИМ РАЗРАБОТЧИКА: Чит-меню разблокировано!')],
+                    activeDialogue: {
+                      sender: 'detective',
+                      text: '«Ого, кажется, мы вскрыли секретный протокол Бюро! Режим разработчика успешно активирован.»',
+                      mood: 'shocked'
+                    }
+                  }));
+                  return 0;
+                }
+                return next;
+              });
+            }}
+            className="w-8 h-8 rounded-none border border-white/15 bg-black flex items-center justify-center cursor-pointer hover:border-cyan-500/50 transition-all active:scale-95"
+            title="Секретный протокол Бюро (Кликните 5 раз)"
+          >
+            <Lucide.Cat className="w-4 h-4 text-white/70 hover:text-cyan-400" />
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -2132,6 +2157,278 @@ export default function App() {
               className="mt-6 w-full h-11 bg-white hover:bg-neutral-200 text-black text-xs font-sans font-bold uppercase tracking-[0.2em] rounded-none transition-all"
             >
               Понятно
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* DEVELOPER CHEAT MENU OVERLAY */}
+      {isDevMenuOpen && (
+        <div className="absolute inset-0 bg-black/95 flex items-center justify-center z-50 p-4 backdrop-blur-sm select-none">
+          <div className="w-full max-w-md border border-cyan-500/30 bg-slate-950 p-6 sm:p-8 rounded-none shadow-[0_0_25px_rgba(6,182,212,0.25)] relative font-sans animate-fade-in">
+            {/* Retro grid background */}
+            <div className="absolute inset-0 bg-[radial-gradient(#083344_1px,transparent_1px)] [background-size:16px_16px] opacity-20 pointer-events-none" />
+            
+            <button 
+              onClick={() => {
+                gameAudio.playClick();
+                setIsDevMenuOpen(false);
+              }}
+              className="absolute top-3 right-4 font-mono text-cyan-400/60 hover:text-cyan-300 text-[11px] uppercase tracking-wider"
+            >
+              [Закрыть]
+            </button>
+            
+            <div className="flex items-center gap-2 border-b border-cyan-500/20 pb-2.5 mb-5">
+              <Lucide.SlidersHorizontal className="w-4 h-4 text-cyan-400 animate-pulse" />
+              <h2 className="font-mono text-xs font-bold text-cyan-400 uppercase tracking-widest">
+                ДЕБАГ-ПРОТОКОЛ / ЧИТ-МЕНЮ
+              </h2>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <p className="font-mono text-[10px] text-cyan-500/70 leading-relaxed uppercase">
+                &gt; Внимание: Использование чит-кодов может нарушить игровой баланс и лишить удовольствия от расследования. Активируйте с умом!
+              </p>
+              
+              <div className="grid grid-cols-2 gap-2">
+                {/* Economy Cheats */}
+                <button
+                  onClick={() => {
+                    gameAudio.playClick();
+                    setGameState(prev => ({
+                      ...prev,
+                      economy: {
+                        ...prev.economy,
+                        cash: (prev.economy?.cash ?? 150) + 1000
+                      },
+                      logs: [...prev.logs, addLog('system', '🧪 ЧИТ-КОД: Касса бюро пополнена на +1000$.')]
+                    }));
+                  }}
+                  className="p-2.5 border border-emerald-500/30 hover:border-emerald-400 bg-emerald-950/20 hover:bg-emerald-950/40 text-emerald-400 text-[10px] font-mono text-left uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer"
+                >
+                  <Lucide.DollarSign className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>Касса +1000$</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    gameAudio.playClick();
+                    setGameState(prev => ({
+                      ...prev,
+                      reputation: (prev.reputation ?? 0) + 50,
+                      logs: [...prev.logs, addLog('system', '🧪 ЧИТ-КОД: Репутация бюро повышена на +50★.')]
+                    }));
+                  }}
+                  className="p-2.5 border border-amber-500/30 hover:border-amber-400 bg-amber-950/20 hover:bg-amber-950/40 text-amber-400 text-[10px] font-mono text-left uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer"
+                >
+                  <Lucide.Award className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>Репутация +50★</span>
+                </button>
+
+                {/* Healing and items Cheats */}
+                <button
+                  onClick={() => {
+                    gameAudio.playPurr();
+                    setGameState(prev => ({
+                      ...prev,
+                      isInjured: false,
+                      hasCatnipSenses: true,
+                      logs: [...prev.logs, addLog('system', '🧪 ЧИТ-КОД: Кот полностью здоров, активировано шестое чувство!')]
+                    }));
+                  }}
+                  className="p-2.5 border border-pink-500/30 hover:border-pink-400 bg-pink-950/20 hover:bg-pink-950/40 text-pink-400 text-[10px] font-mono text-left uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer"
+                >
+                  <Lucide.HeartPulse className="w-3.5 h-3.5 text-pink-400 shrink-0" />
+                  <span>Исцелить кота</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    gameAudio.playClick();
+                    setGameState(prev => {
+                      const newInv = [...prev.inventory];
+                      ['key_brass', 'key_door', 'passcard', 'safe_code_note'].forEach(k => {
+                        if (!newInv.includes(k)) newInv.push(k);
+                      });
+                      return {
+                        ...prev,
+                        inventory: newInv,
+                        logs: [...prev.logs, addLog('system', '🧪 ЧИТ-КОД: Все ключи и шифры добавлены в инвентарь.')]
+                      };
+                    });
+                  }}
+                  className="p-2.5 border border-cyan-500/30 hover:border-cyan-400 bg-cyan-950/20 hover:bg-cyan-950/40 text-cyan-400 text-[10px] font-mono text-left uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer"
+                >
+                  <Lucide.Key className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                  <span>Выдать ключи</span>
+                </button>
+              </div>
+
+              <div className="h-[1px] bg-cyan-500/20 my-3" />
+
+              <span className="font-mono text-[9px] uppercase tracking-wider text-cyan-500/60 block mb-1">
+                Операции внутри расследования:
+              </span>
+
+              <div className="grid grid-cols-1 gap-2">
+                <button
+                  disabled={gameState.gameStatus !== 'playing'}
+                  onClick={() => {
+                    gameAudio.playClick();
+                    setGameState(prev => {
+                      const noteIn = prev.inventory.includes('safe_code_note');
+                      const newInventory = [...prev.inventory];
+                      if (!noteIn) newInventory.push('safe_code_note');
+                      return {
+                        ...prev,
+                        inventory: newInventory,
+                        activeDialogue: {
+                          sender: 'detective',
+                          text: `«Чит-код подсказал секретный код от сейфа: [ ${prev.safeCode} ]!»`,
+                          mood: 'shocked'
+                        },
+                        logs: [...prev.logs, addLog('system', `🧪 ЧИТ-КОД: Код от сейфа раскрыт: ${prev.safeCode}`)]
+                      };
+                    });
+                  }}
+                  className="w-full p-2.5 border border-cyan-500/20 hover:border-cyan-400 disabled:opacity-40 disabled:pointer-events-none bg-cyan-950/10 hover:bg-cyan-950/30 text-cyan-300 text-[10px] font-mono text-left uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer"
+                >
+                  <Lucide.Lock className="w-3.5 h-3.5 text-cyan-400 shrink-0 animate-pulse" />
+                  <div>
+                    <div className="font-bold text-left">Раскрыть код от сейфа</div>
+                    <div className="text-[8px] text-cyan-400/50 normal-case font-sans text-left">Текущий код: {gameState.gameStatus === 'playing' ? gameState.safeCode : 'нет активной игры'}</div>
+                  </div>
+                </button>
+
+                <button
+                  disabled={gameState.gameStatus !== 'playing'}
+                  onClick={() => {
+                    gameAudio.playClueFound();
+                    setGameState(prev => {
+                      if (prev.gameStatus !== 'playing') return prev;
+                      const allClueIds = prev.currentClues.map(c => c.id);
+                      const newLogs = [...prev.logs];
+                      newLogs.push(addLog('system', '🧪 ЧИТ-КОД: Быстрое раскрытие улик дела!'));
+                      
+                      const objectsCopy = { ...prev.objects };
+                      Object.keys(objectsCopy).forEach(key => {
+                        const obj = { ...objectsCopy[key as ObjectId] };
+                        if (obj.locked) obj.locked = false;
+                        if (key === 'safe') obj.locked = false;
+                        if (key === 'desk') obj.locked = false;
+                        objectsCopy[key as ObjectId] = obj;
+                      });
+
+                      const isStory = prev.storyState?.mode === 'story';
+                      const ch = prev.storyState?.chapter ?? 1;
+                      const reward = isStory ? (ch === 1 ? 200 : ch === 2 ? 300 : 400) : (prev.activeJob?.reward ?? 150);
+                      const expensesTotal = 110;
+                      const netProfit = reward - expensesTotal;
+                      const updatedCash = (prev.economy?.cash ?? 150) + netProfit;
+                      const updatedReputation = (prev.reputation ?? 0) + (isStory ? 20 : 10);
+
+                      newLogs.push(addLog('system', `ДЕЛО УСПЕШНО РАСКРЫТО! Получен гонорар: +${reward}$. Списаны расходы бюро: -${expensesTotal}$. Чистая прибыль: +${netProfit}$.`));
+
+                      return {
+                        ...prev,
+                        objects: objectsCopy,
+                        foundClueIds: allClueIds,
+                        pendingVictory: true,
+                        economy: {
+                          cash: updatedCash,
+                          recentExpenses: [
+                            { name: 'Чит-код быстрого раскрытия', amount: 0, timestamp: new Date().toLocaleTimeString() },
+                            ...(prev.economy?.recentExpenses || [])
+                          ]
+                        },
+                        reputation: updatedReputation,
+                        logs: newLogs,
+                        activeDialogue: {
+                          sender: 'detective',
+                          text: '«Все тайны разгаданы кошачьим чутьем! Чит-код мгновенного раскрытия применен.»',
+                          mood: 'proud'
+                        }
+                      };
+                    });
+                  }}
+                  className="w-full p-2.5 border border-cyan-500/20 hover:border-cyan-400 disabled:opacity-40 disabled:pointer-events-none bg-cyan-950/10 hover:bg-cyan-950/30 text-cyan-300 text-[10px] font-mono text-left uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer"
+                >
+                  <Lucide.Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                  <div>
+                    <div className="font-bold text-left">Раскрыть дело мгновенно</div>
+                    <div className="text-[8px] text-cyan-400/50 normal-case font-sans text-left">Автоматически собирает все 3 улики и завершает миссию</div>
+                  </div>
+                </button>
+              </div>
+
+              <div className="h-[1px] bg-cyan-500/20 my-3" />
+
+              <span className="font-mono text-[9px] uppercase tracking-wider text-cyan-500/60 block mb-1">
+                Генерация контента:
+              </span>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => {
+                    gameAudio.playClick();
+                    setGameState(prev => {
+                      const customJob: Job = {
+                        id: `legendary_cheat_job_${Date.now()}`,
+                        title: '🕵️ Экстренное дело Интерпола',
+                        caseName: 'Дело Интерпола',
+                        description: 'Синдикат Черной Розы замышляет кражу века в Тауэре. Выследите главного координатора!',
+                        reward: 750,
+                        reputationRequired: 0,
+                        infoCost: 0,
+                        completed: false,
+                        risk: 'high',
+                        roomTemplateId: 'room_museum',
+                        timeLimit: 180
+                      };
+                      return {
+                        ...prev,
+                        availableJobs: [customJob, ...(prev.availableJobs || [])],
+                        logs: [...prev.logs, addLog('system', '🧪 ЧИТ-КОД: Активировано экстренное дело Интерпола!')]
+                      };
+                    });
+                  }}
+                  className="p-2.5 border border-cyan-500/20 hover:border-cyan-400 bg-cyan-950/10 hover:bg-cyan-950/30 text-cyan-300 text-[10px] font-mono text-left uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer"
+                >
+                  <Lucide.Briefcase className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                  <span>Получить дело</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    gameAudio.playClick();
+                    setGameState(prev => {
+                      const nextDay = prev.currentDay ?? 1;
+                      const nextRep = prev.reputation ?? 0;
+                      const newJobs = generateDailyJobs(nextDay, nextRep);
+                      return {
+                        ...prev,
+                        availableJobs: newJobs,
+                        logs: [...prev.logs, addLog('system', '🧪 ЧИТ-КОД: Доступные контракты перегенерированы.')]
+                      };
+                    });
+                  }}
+                  className="p-2.5 border border-cyan-500/20 hover:border-cyan-400 bg-cyan-950/10 hover:bg-cyan-950/30 text-cyan-300 text-[10px] font-mono text-left uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer"
+                >
+                  <Lucide.RefreshCw className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                  <span>Обновить сводки</span>
+                </button>
+              </div>
+            </div>
+            
+            <button 
+              onClick={() => {
+                gameAudio.playClick();
+                setIsDevMenuOpen(false);
+              }}
+              className="mt-6 w-full h-11 bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-mono font-bold uppercase tracking-[0.2em] rounded-none transition-all shadow-[0_0_10px_rgba(6,182,212,0.3)] cursor-pointer"
+            >
+              Вернуться к расследованию
             </button>
           </div>
         </div>
