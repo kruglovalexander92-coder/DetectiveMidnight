@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { GameState } from '../types';
 import * as Lucide from 'lucide-react';
 import { gameAudio } from '../utils/AudioEngine';
@@ -72,6 +72,88 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
+const FEATURE_KEYWORDS: Record<string, Record<string, RegExp[]>> = {
+  hair: {
+    bald: [/лыс[^\s,.!?:;—–\-«»()]*/gi, /лысин[^\s,.!?:;—–\-«»()]*/gi],
+    short: [/коротк[^\s,.!?:;—–\-«»()]*/gi, /стрижк[^\s,.!?:;—–\-«»()]*/gi],
+    curly: [/кудр[^\s,.!?:;—–\-«»()]*/gi, /завит[^\s,.!?:;—–\-«»()]*/gi],
+    tophat: [/цилиндр[^\s,.!?:;—–\-«»()]*/gi, /шляп[^\s,.!?:;—–\-«»()]*/gi, /котелок[^\s,.!?:;—–\-«»()]*/gi, /котелк[^\s,.!?:;—–\-«»()]*/gi],
+  },
+  eyes: {
+    glasses: [/очк[^\s,.!?:;—–\-«»()]*/gi, /стекл[^\s,.!?:;—–\-«»()]*/gi, /оправ[^\s,.!?:;—–\-«»()]*/gi],
+    angry: [/зл[^\s,.!?:;—–\-«»()]+/gi, /сердит[^\s,.!?:;—–\-«»()]*/gi, /нахмур[^\s,.!?:;—–\-«»()]*/gi, /гневн[^\s,.!?:;—–\-«»()]*/gi],
+    normal: [/обычн[^\s,.!?:;—–\-«»()]*/gi, /нормальн[^\s,.!?:;—–\-«»()]*/gi],
+    monocle: [/монокл[^\s,.!?:;—–\-«»()]*/gi],
+  },
+  mustache: {
+    none: [/чист[^\s,.!?:;—–\-«»()]*/gi, /гладк[^\s,.!?:;—–\-«»()]*/gi, /без усов/gi, /без растительност[^\s,.!?:;—–\-«»()]*/gi],
+    gentleman: [/ус[^\s,.!?:;—–\-«»()]+/gi, /аккуратн[^\s,.!?:;—–\-«»()]*/gi],
+    beard: [/бород[^\s,.!?:;—–\-«»()]*/gi],
+    pirate: [/пиратск[^\s,.!?:;—–\-«»()]*/gi, /длинн[^\s,.!?:;—–\-«»()]+/gi, /растрепанн[^\s,.!?:;—–\-«»()]*/gi],
+  },
+  skin: {
+    pale: [/бледн[^\s,.!?:;—–\-«»()]*/gi, /бел[^\s,.!?:;—–\-«»()]+\s+как/gi],
+    tanned: [/загорел[^\s,.!?:;—–\-«»()]*/gi, /бронзов[^\s,.!?:;—–\-«»()]*/gi, /смугл[^\s,.!?:;—–\-«»()]*/gi],
+    fair: [/светл[^\s,.!?:;—–\-«»()]*/gi, /румян[^\s,.!?:;—–\-«»()]*/gi],
+  },
+};
+
+function highlightKeywords(
+  text: string,
+  featureCategory: string,
+  featureValue: string
+): React.ReactNode {
+  if (!text || !featureCategory || !featureValue) return text;
+
+  const patterns = FEATURE_KEYWORDS[featureCategory]?.[featureValue];
+  if (!patterns || patterns.length === 0) return text;
+
+  const matches: Array<{ start: number; end: number }> = [];
+
+  for (const pattern of patterns) {
+    const regex = new RegExp(pattern.source, pattern.flags);
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      matches.push({ start: match.index, end: match.index + match[0].length });
+    }
+  }
+
+  if (matches.length === 0) return text;
+
+  matches.sort((a, b) => a.start - b.start);
+
+  const merged: Array<{ start: number; end: number }> = [];
+  for (const m of matches) {
+    if (merged.length === 0 || merged[merged.length - 1].end < m.start) {
+      merged.push(m);
+    } else {
+      merged[merged.length - 1].end = Math.max(merged[merged.length - 1].end, m.end);
+    }
+  }
+
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+
+  for (let i = 0; i < merged.length; i++) {
+    const { start, end } = merged[i];
+    if (start > lastIndex) {
+      parts.push(text.slice(lastIndex, start));
+    }
+    parts.push(
+      <span key={i} className="uppercase font-bold text-amber-300">
+        {text.slice(start, end)}
+      </span>
+    );
+    lastIndex = end;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  return parts;
+}
+
 export default function NeuroInterrogation({
   gameState,
   setGameState,
@@ -115,6 +197,18 @@ export default function NeuroInterrogation({
   const [lastDelta, setLastDelta] = useState<number | null>(null);
   const [lastReason, setLastReason] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sketchOutcomes, setSketchOutcomes] = useState<Record<string, Outcome>>({});
+
+  const historyScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (historyScrollRef.current) {
+      historyScrollRef.current.scrollTo({ 
+        top: historyScrollRef.current.scrollHeight, 
+        behavior: 'smooth' 
+      });
+    }
+  }, [history.length]);
 
   const TURN_CAP = 15;
 
@@ -189,12 +283,8 @@ export default function NeuroInterrogation({
     const currentSketch = sketches.find(s => s.id === activeSketchId);
     if (!currentSketch) return;
 
-    if (finalOutcome === 'win') {
+    if (finalOutcome === 'win' || finalOutcome === 'composite_match') {
       setGameState(prev => {
-        let currentCash = prev.economy?.cash ?? 150;
-        let currentRep = prev.reputation ?? 0;
-        const logs = [...prev.logs];
-
         const updatedSketches = (prev.sketches ?? []).map(s => {
           if (s.id === activeSketchId) {
             return {
@@ -215,108 +305,12 @@ export default function NeuroInterrogation({
           return s;
         });
 
-        if (activeSketchId === 'sketch_1') {
-          currentCash += 50;
-          currentRep += 10;
-          logs.push({
-            id: `log_sketch_reward_1_${Date.now()}`,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            sender: 'system',
-            text: `Фоторобот «Шляпника» завершен! Получено 50$ и +10★ репутации за раскрытие сообщника!`
-          });
-        } else if (activeSketchId === 'sketch_2') {
-          currentCash += 70;
-          currentRep += 15;
-          logs.push({
-            id: `log_sketch_reward_2_${Date.now()}`,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            sender: 'system',
-            text: `Фоторобот «Якоря» завершен! Получено 70$ и +15★ репутации. Стоимость улик в делах снижена!`
-          });
-        } else {
-          currentCash += 150;
-          currentRep += 25;
-          logs.push({
-            id: `log_sketch_reward_3_${Date.now()}`,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            sender: 'system',
-            text: `Фоторобот Барона Сен-Клера завершен! Выплачена госпремия 150$ и орден почета Скотленд-Ярда (+25★)!`
-          });
-        }
-
         return {
           ...prev,
-          reputation: currentRep,
-          economy: {
-            ...(prev.economy ?? { cash: 150, leadPrice: 40 }),
-            cash: currentCash
-          },
           sketches: updatedSketches,
-          logs
         };
       });
-      try { gameAudio.playMeow(); } catch (e) {}
-    } else if (finalOutcome === 'composite_match') {
-      setGameState(prev => {
-        let currentCash = prev.economy?.cash ?? 150;
-        const logs = [...prev.logs];
-
-        const updatedSketches = (prev.sketches ?? []).map(s => {
-          if (s.id === activeSketchId) {
-            return {
-              ...s,
-              targetHair: finalNpc.photoFeatures.hair,
-              targetEyes: finalNpc.photoFeatures.eyes,
-              targetMustache: finalNpc.photoFeatures.mustache,
-              targetSkin: finalNpc.photoFeatures.skin,
-              currentHair: finalPlayerComposite.hair,
-              currentEyes: finalPlayerComposite.eyes,
-              currentMustache: finalPlayerComposite.mustache,
-              currentSkin: finalPlayerComposite.skin,
-              completed: true,
-              accuracy: 100,
-              rewardClaimed: true,
-            };
-          }
-          return s;
-        });
-
-        if (activeSketchId === 'sketch_1') {
-          currentCash += 25;
-          logs.push({
-            id: `log_sketch_partial_1_${Date.now()}`,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            sender: 'system',
-            text: `Фоторобот «Шляпника» составлен! Получено 25$. Свидетель не раскрыл всех деталей...`
-          });
-        } else if (activeSketchId === 'sketch_2') {
-          currentCash += 35;
-          logs.push({
-            id: `log_sketch_partial_2_${Date.now()}`,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            sender: 'system',
-            text: `Фоторобот «Якоря» составлен! Получено 35$. Свидетель не раскрыл всех деталей...`
-          });
-        } else {
-          currentCash += 75;
-          logs.push({
-            id: `log_sketch_partial_3_${Date.now()}`,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            sender: 'system',
-            text: `Фоторобот Барона Сен-Клера составлен! Получено 75$. Свидетель не раскрыл всех деталей...`
-          });
-        }
-
-        return {
-          ...prev,
-          economy: {
-            ...(prev.economy ?? { cash: 150, leadPrice: 40 }),
-            cash: currentCash
-          },
-          sketches: updatedSketches,
-          logs
-        };
-      });
+      setSketchOutcomes(prev => ({ ...prev, [activeSketchId]: finalOutcome }));
       try { gameAudio.playMeow(); } catch (e) {}
     }
   }, [activeSketchId, sketches, setGameState]);
@@ -492,8 +486,91 @@ export default function NeuroInterrogation({
   const claimReward = () => {
     playClick();
     if (!currentSketch.completed || currentSketch.rewardClaimed) return;
+    const sketchOutcome = sketchOutcomes[activeSketchId];
+
+    setGameState(prev => {
+      let currentCash = prev.economy?.cash ?? 150;
+      let currentRep = prev.reputation ?? 0;
+      const logs = [...prev.logs];
+
+      if (sketchOutcome === 'win') {
+        if (activeSketchId === 'sketch_1') {
+          currentCash += 50;
+          currentRep += 10;
+          logs.push({
+            id: `log_sketch_reward_1_${Date.now()}`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            sender: 'system',
+            text: `Фоторобот «Шляпника» завершен! Получено 50$ и +10★ репутации за раскрытие сообщника!`
+          });
+        } else if (activeSketchId === 'sketch_2') {
+          currentCash += 70;
+          currentRep += 15;
+          logs.push({
+            id: `log_sketch_reward_2_${Date.now()}`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            sender: 'system',
+            text: `Фоторобот «Якоря» завершен! Получено 70$ и +15★ репутации. Стоимость улик в делах снижена!`
+          });
+        } else {
+          currentCash += 150;
+          currentRep += 25;
+          logs.push({
+            id: `log_sketch_reward_3_${Date.now()}`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            sender: 'system',
+            text: `Фоторобот Барона Сен-Клера завершен! Выплачена госпремия 150$ и орден почета Скотленд-Ярда (+25★)!`
+          });
+        }
+      } else if (sketchOutcome === 'composite_match') {
+        if (activeSketchId === 'sketch_1') {
+          currentCash += 25;
+          logs.push({
+            id: `log_sketch_partial_1_${Date.now()}`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            sender: 'system',
+            text: `Фоторобот «Шляпника» составлен! Получено 25$. Свидетель не раскрыл всех деталей...`
+          });
+        } else if (activeSketchId === 'sketch_2') {
+          currentCash += 35;
+          logs.push({
+            id: `log_sketch_partial_2_${Date.now()}`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            sender: 'system',
+            text: `Фоторобот «Якоря» составлен! Получено 35$. Свидетель не раскрыл всех деталей...`
+          });
+        } else {
+          currentCash += 75;
+          logs.push({
+            id: `log_sketch_partial_3_${Date.now()}`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            sender: 'system',
+            text: `Фоторобот Барона Сен-Клера составлен! Получено 75$. Свидетель не раскрыл всех деталей...`
+          });
+        }
+      }
+
+      const updatedSketches = (prev.sketches ?? []).map(s => {
+        if (s.id === activeSketchId) {
+          return { ...s, rewardClaimed: true };
+        }
+        return s;
+      });
+
+      return {
+        ...prev,
+        reputation: currentRep,
+        economy: {
+          ...(prev.economy ?? { cash: 150, leadPrice: 40 }),
+          cash: currentCash
+        },
+        sketches: updatedSketches,
+        logs
+      };
+    });
+
     setMessage({
-      text: `Награда за поимку сообщника успешно начислена на счет вашего бюро!`,
+      text: `Награда за поимку сообщника успешно начислена на счет вашего бюро! Преступный синдикат несет тяжелые потери!`,
       type: 'success'
     });
   };
@@ -581,8 +658,14 @@ export default function NeuroInterrogation({
                   disabled={loading}
                   className="w-full max-w-xs h-10 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-sans text-[10px] font-bold uppercase tracking-[0.15em] transition-all flex items-center justify-center gap-2 cursor-pointer shadow"
                 >
-                  <Lucide.Play className="w-4 h-4" />
-                  {loading ? 'Генерация...' : 'Начать допрос'}
+                  {loading ? (
+                    <Lucide.Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Lucide.Play className="w-4 h-4" />
+                  )}
+                  {loading ? (
+                    <>Генерация<span className="loading-dots"><span className="loading-dot">.</span><span className="loading-dot">.</span><span className="loading-dot">.</span></span></>
+                  ) : 'Начать допрос'}
                 </button>
                 {error && (
                   <div className="border border-red-500/20 bg-red-950/15 p-3 text-red-200 font-serif text-[10px]">
@@ -640,15 +723,25 @@ export default function NeuroInterrogation({
                   <span className="font-mono text-[7px] text-white/30 uppercase tracking-widest block mb-1.5">
                     ПРОТОКОЛ ДИАЛОГА:
                   </span>
-                  <div className="bg-black/30 border border-white/5 p-2 space-y-1.5 max-h-64 overflow-y-auto custom-scrollbar">
-                    {history.map((h, idx) => (
-                      <div key={idx} className={`text-[10.5px] leading-relaxed ${h.role === 'npc' ? 'text-amber-100/80' : 'text-white/60'}`}>
-                        <span className={`font-mono text-[8px] mr-1 ${h.role === 'npc' ? 'text-amber-500/70' : 'text-emerald-400/70'}`}>
-                          [{h.role === 'npc' ? npc?.name : 'Ты'}]:
+                  <div className="relative">
+                    <div ref={historyScrollRef} className="bg-black/30 border border-white/5 p-2 space-y-1.5 max-h-64 overflow-y-auto custom-scrollbar">
+                      {history.map((h, idx) => (
+                        <div key={idx} className={`text-[10.5px] leading-relaxed ${h.role === 'npc' ? 'text-amber-100/80' : 'text-white/60'}`}>
+                          <span className={`font-mono text-[8px] mr-1 ${h.role === 'npc' ? 'text-amber-500/70' : 'text-emerald-400/70'}`}>
+                            [{h.role === 'npc' ? npc?.name : 'Ты'}]:
+                          </span>
+                          <span className="font-serif italic">{h.text}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {loading && (
+                      <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center">
+                        <Lucide.Loader2 className="w-5 h-5 text-amber-500/50 animate-spin" />
+                        <span className="font-mono text-[8px] text-white/30 mt-1">
+                          Генерация ответа<span className="loading-dots"><span className="loading-dot">.</span><span className="loading-dot">.</span><span className="loading-dot">.</span></span>
                         </span>
-                        <span className="font-serif italic">{h.text}</span>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
 
@@ -674,7 +767,9 @@ export default function NeuroInterrogation({
                       {caseQuestions.filter(q => q.answered).map((q) => (
                         <div key={q.id} className="text-[10px] leading-relaxed">
                           <span className="font-mono text-[8px] text-purple-400/70 block">{q.text}:</span>
-                          <span className="font-serif italic text-purple-100/80">{q.answer}</span>
+                          <span className="font-serif italic text-purple-100/80">
+                            {highlightKeywords(q.answer, q.id, npc?.photoFeatures?.[q.id as keyof PhotoCompositeFeatures] || '')}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -896,7 +991,7 @@ export default function NeuroInterrogation({
                         <div className="text-center py-4">
                           <Lucide.Loader2 className="w-5 h-5 text-amber-500/50 animate-spin mx-auto" />
                           <span className="font-mono text-[8px] text-white/30 block mt-1">
-                            Генерация вариантов...
+                            Генерация вариантов<span className="loading-dots"><span className="loading-dot">.</span><span className="loading-dot">.</span><span className="loading-dot">.</span></span>
                           </span>
                         </div>
                       ) : (
@@ -1007,10 +1102,18 @@ export default function NeuroInterrogation({
 
           <div className="mt-3">
             {currentSketch.completed ? (
-              <div className="w-full h-8 border border-dashed border-emerald-500/20 bg-emerald-950/10 text-emerald-300 font-serif text-[10.5px] flex items-center justify-center gap-1">
-                <Lucide.CheckCircle2 className="w-3.5 h-3.5" />
-                {currentSketch.rewardClaimed ? 'Награда получена' : 'Личность идентифицирована'}
-              </div>
+              <button
+                disabled={currentSketch.rewardClaimed}
+                onClick={claimReward}
+                className={`w-full h-8 font-sans text-[9px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  currentSketch.rewardClaimed
+                    ? 'border border-white/5 bg-black/40 text-white/20 cursor-not-allowed'
+                    : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow'
+                }`}
+              >
+                <Lucide.Gift className="w-3.5 h-3.5" />
+                {currentSketch.rewardClaimed ? 'Награда получена' : 'Забрать награду'}
+              </button>
             ) : (
               <div className="w-full h-8 border border-white/5 bg-black/40 text-white/25 text-[8.5px] uppercase font-mono tracking-widest flex items-center justify-center gap-1">
                 <Lucide.Lock className="w-3 h-3" /> Требуется 100% точности
