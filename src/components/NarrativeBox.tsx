@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { gameAudio } from '../utils/AudioEngine';
 
 interface NarrativeBoxProps {
@@ -17,67 +17,79 @@ interface NarrativeBoxProps {
 }
 
 export default function NarrativeBox({ dialogue, onNext, pendingVictory }: NarrativeBoxProps) {
-  const [displayedText, setDisplayedText] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
+  const [displayedBartText, setDisplayedBartText] = useState('');
+  const [displayedCatText, setDisplayedCatText] = useState('');
+  const [isBartTyping, setIsBartTyping] = useState(false);
+  const [isCatTyping, setIsCatTyping] = useState(false);
+  const [activeSide, setActiveSide] = useState<'bart' | 'cat' | 'none'>('none');
+
+  const bartScrollRef = useRef<HTMLDivElement>(null);
+  const catScrollRef = useRef<HTMLDivElement>(null);
+
+  // Smooth scroll to the bottom when text is typed or changed
+  useEffect(() => {
+    if (bartScrollRef.current) {
+      bartScrollRef.current.scrollTo({
+        top: bartScrollRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+    }
+  }, [displayedBartText]);
 
   useEffect(() => {
-    if (!dialogue) {
-      setDisplayedText('');
-      return;
+    if (catScrollRef.current) {
+      catScrollRef.current.scrollTo({
+        top: catScrollRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+    }
+  }, [displayedCatText]);
+
+  // Helper functions for automatic reactions
+  const getCatReactionForBart = (bartText: string, bartMood: string): string => {
+    const t = bartText.toLowerCase();
+    if (t.includes('мяту') || t.includes('мята') || t.includes('лапку') || t.includes('хромает')) {
+      return `🌿 (=^-ω-^=) 🌿\n«МЯЯЯТУ! СРОЧНО ДАЙ ТРАВУ!»\n*зрачки расширены до предела*`;
+    }
+    if (t.includes('разбил') || t.includes('штраф') || t.includes('имущество') || t.includes('погром') || t.includes('грохот')) {
+      return `(=^･_･^=) *спешно умывается*\n«Это не я! Ваза сама упала под силой гравитации...»`;
+    }
+    if (t.includes('сейф') || t.includes('код') || t.includes('комбинац') || t.includes('шифр') || t.includes('нашел')) {
+      return `(=✧ω✧=) *глаза горят от азарта*\n«Очередной успех кошачьего гения! А теперь... где мой лосось?»`;
+    }
+    if (t.includes('рыбка') || t.includes('аквариум')) {
+      return `(=^･ω･^=) *гипнотизирует лужу*\n«Рыбка! Хватай её, Барт! Она уплывает в щель!»`;
+    }
+    if (t.includes('драгоценные') || t.includes('конспекты') || t.includes('книги')) {
+      return `(=\`ｪ\`=) *лениво потягивается*\n«Бумага отлично шуршит под когтями. Рекомендую.»`;
     }
 
-    const fullText = dialogue.text;
-    setDisplayedText('');
-    setIsTyping(true);
-
-    let index = 0;
-    let timeoutId: any;
-
-    const typeCharacter = () => {
-      if (index >= fullText.length) {
-        setIsTyping(false);
-        return;
-      }
-
-      index++;
-      setDisplayedText(fullText.slice(0, index));
-
-      // Play soft typewriter sound for letters (but don't saturate audio threads)
-      if (index % 3 === 0 && dialogue.sender !== 'system') {
-        try {
-          gameAudio.playClick();
-        } catch (e) {}
-      }
-
-      // Calculate dynamic delay for dramatic pauses
-      const char = fullText[index - 1];
-      let delay = 25; // base delay in ms
-
-      if (char === '.' || char === '!' || char === '?' || char === '…') {
-        delay = 450; // Dramatic end-of-sentence pause
-      } else if (char === ',' || char === ';' || char === ':' || char === '—') {
-        delay = 180; // Clause/phrase pause
-      } else if (char === ' ') {
-        delay = 40; // Natural word spacing gap
-      }
-
-      timeoutId = setTimeout(typeCharacter, delay);
-    };
-
-    timeoutId = setTimeout(typeCharacter, 25);
-
-    return () => clearTimeout(timeoutId);
-  }, [dialogue]);
-
-  if (!dialogue) return null;
-
-  const handleSkipOrNext = () => {
-    if (isTyping) {
-      setDisplayedText(dialogue.text);
-      setIsTyping(false);
-    } else if (onNext) {
-      onNext();
+    // Fallback based on mood
+    if (bartMood === 'shocked' || bartMood === 'surprise') {
+      return `( 🙀 ) *шерсть дыбом*\n«Ого! Что это там зашуршало?!»`;
     }
+    if (bartMood === 'thoughtful') {
+      return `(=^·_·^=) *смотрит на стену*\n«Я вижу призраков... Или это просто пылинка?»`;
+    }
+    if (bartMood === 'silly' || bartMood === 'sarcasm') {
+      return `( 🙄 ) *красноречиво вздыхает*\n«Барт, твои теории вызывают у меня зевоту.»`;
+    }
+    if (bartMood === 'proud') {
+      return `(=^-ω-^=) *довольное мурчание*\n«Конечно, без меня ты бы до сих пор искал лупу.»`;
+    }
+
+    return `(=^·_·^=) *мяукает*\n«Мяу. Продолжай наблюдение.»`;
+  };
+
+  const getBartReactionForCat = (catText: string, catMood: string): string => {
+    const t = catText.toLowerCase();
+    if (t.includes('крадется') || t.includes('направляется')) {
+      return `«Тише, Миднайт... Ступай мягко. Кошачьи лапы — наше секретное оружие.»`;
+    }
+    if (t.includes('мяу') || t.includes('мурч')) {
+      return `«Я слышу тебя, напарник. Этот звук означает, что мы близки к разгадке!»`;
+    }
+    return `«Внимательно наблюдаю за тобой. Не упусти ни одной важной детали, Миднайт.»`;
   };
 
   const getCatEmojiInfo = (
@@ -256,25 +268,191 @@ export default function NarrativeBox({ dialogue, onNext, pendingVictory }: Narra
     };
   };
 
-  const getSenderName = () => {
-    if (dialogue.sender === 'detective') return 'Детектив Барт Ванс';
-    if (dialogue.sender === 'cat') return 'Кот Миднайт (вы)';
-    return 'Расследование';
+  useEffect(() => {
+    if (!dialogue) {
+      setDisplayedBartText('');
+      setDisplayedCatText('');
+      setIsBartTyping(false);
+      setIsCatTyping(false);
+      setActiveSide('none');
+      return;
+    }
+
+    const fullText = dialogue.text;
+    const sender = dialogue.sender;
+    const mood = dialogue.mood || 'serious';
+
+    let timeoutId: any;
+
+    if (sender === 'detective') {
+      // 1. Bart starts speaking, Cat waits
+      setActiveSide('bart');
+      setDisplayedBartText('');
+      setDisplayedCatText('...');
+      setIsBartTyping(true);
+      setIsCatTyping(false);
+
+      let idx = 0;
+      const typeBart = () => {
+        if (idx >= fullText.length) {
+          setIsBartTyping(false);
+          // Wait random (1.0 to 3.0 sec) pause, then Cat reacts!
+          const randomDelay = 1000 + Math.random() * 2000;
+          timeoutId = setTimeout(() => {
+            setActiveSide('cat');
+            setIsCatTyping(true);
+            const catReaction = getCatReactionForBart(fullText, mood);
+            try { gameAudio.playCatMeow(); } catch (e) {}
+            let catIdx = 0;
+            const typeCat = () => {
+              if (catIdx >= catReaction.length) {
+                setIsCatTyping(false);
+                return;
+              }
+              catIdx++;
+              setDisplayedCatText(catReaction.slice(0, catIdx));
+              if (catIdx % 3 === 0) {
+                try { gameAudio.playCatTypeSound(); } catch(e){}
+              }
+              timeoutId = setTimeout(typeCat, 15);
+            };
+            typeCat();
+          }, randomDelay);
+          return;
+        }
+
+        idx++;
+        setDisplayedBartText(fullText.slice(0, idx));
+        if (idx % 3 === 0) {
+          try { gameAudio.playClick(); } catch(e){}
+        }
+
+        // Dynamic typing speed
+        const char = fullText[idx - 1];
+        let delay = 20;
+        if (char === '.' || char === '!' || char === '?' || char === '…') delay = 400;
+        else if (char === ',' || char === ';' || char === ':') delay = 150;
+        else if (char === ' ') delay = 35;
+
+        timeoutId = setTimeout(typeBart, delay);
+      };
+
+      timeoutId = setTimeout(typeBart, 25);
+
+    } else if (sender === 'cat') {
+      // 1. Cat acts/meows, Bart listens
+      setActiveSide('cat');
+      setDisplayedCatText('');
+      setDisplayedBartText('...');
+      setIsCatTyping(true);
+      setIsBartTyping(false);
+      try { gameAudio.playCatMeow(); } catch (e) {}
+
+      let idx = 0;
+      const typeCat = () => {
+        if (idx >= fullText.length) {
+          setIsCatTyping(false);
+          // Wait random (1.0 to 3.0 sec) pause, then Bart reacts!
+          const randomDelay = 1000 + Math.random() * 2000;
+          timeoutId = setTimeout(() => {
+            setActiveSide('bart');
+            setIsBartTyping(true);
+            const bartReaction = getBartReactionForCat(fullText, mood);
+            let bartIdx = 0;
+            const typeBart = () => {
+              if (bartIdx >= bartReaction.length) {
+                setIsBartTyping(false);
+                return;
+              }
+              bartIdx++;
+              setDisplayedBartText(bartReaction.slice(0, bartIdx));
+              if (bartIdx % 3 === 0) {
+                try { gameAudio.playClick(); } catch(e){}
+              }
+              timeoutId = setTimeout(typeBart, 15);
+            };
+            typeBart();
+          }, randomDelay);
+          return;
+        }
+
+        idx++;
+        setDisplayedCatText(fullText.slice(0, idx));
+        if (idx % 3 === 0) {
+          try { gameAudio.playCatTypeSound(); } catch(e){}
+        }
+
+        // Dynamic typing speed
+        const char = fullText[idx - 1];
+        let delay = 20;
+        if (char === '.' || char === '!' || char === '?' || char === '…') delay = 400;
+        else if (char === ',' || char === ';' || char === ':') delay = 150;
+        else if (char === ' ') delay = 35;
+
+        timeoutId = setTimeout(typeCat, delay);
+      };
+
+      timeoutId = setTimeout(typeCat, 25);
+
+    } else {
+      // system
+      setActiveSide('none');
+      setDisplayedBartText('');
+      setDisplayedCatText('');
+      setIsBartTyping(true);
+      setIsCatTyping(false);
+
+      let idx = 0;
+      const typeSystem = () => {
+        if (idx >= fullText.length) {
+          setIsBartTyping(false);
+          return;
+        }
+        idx++;
+        setDisplayedBartText(fullText.slice(0, idx));
+        setDisplayedCatText('*усиленно прислушивается*');
+        if (idx % 3 === 0) {
+          try { gameAudio.playClick(); } catch(e){}
+        }
+        timeoutId = setTimeout(typeSystem, 20);
+      };
+      timeoutId = setTimeout(typeSystem, 25);
+    }
+
+    return () => clearTimeout(timeoutId);
+  }, [dialogue]);
+
+  if (!dialogue) return null;
+
+  const handleSkipOrNext = () => {
+    if (isBartTyping || isCatTyping) {
+      // Skip typing to final text instantly
+      const fullText = dialogue.text;
+      const mood = dialogue.mood || 'serious';
+      if (dialogue.sender === 'detective') {
+        setDisplayedBartText(fullText);
+        setDisplayedCatText(getCatReactionForBart(fullText, mood));
+      } else if (dialogue.sender === 'cat') {
+        setDisplayedCatText(fullText);
+        setDisplayedBartText(getBartReactionForCat(fullText, mood));
+      } else {
+        setDisplayedBartText(fullText);
+        setDisplayedCatText('*усиленно прислушивается*');
+      }
+      setIsBartTyping(false);
+      setIsCatTyping(false);
+    } else if (onNext) {
+      onNext();
+    }
   };
 
   const getMoodLabel = () => {
-    if (dialogue.sender === 'detective') {
-      const mood = dialogue.mood || 'serious';
-      if (mood === 'silly') return '[глупое недоумение]';
-      if (mood === 'shocked') return '[драматический шок]';
-      if (mood === 'thoughtful') return '[глубокие думы]';
-      if (mood === 'proud') return '[самоуверенная гордость]';
-      return '[очень серьезно]';
-    }
-    if (dialogue.sender === 'cat') {
-      return '[наглое кошачье величие]';
-    }
-    return '';
+    const mood = dialogue.mood || 'serious';
+    if (mood === 'silly') return '[глупое недоумение]';
+    if (mood === 'shocked') return '[драматический шок]';
+    if (mood === 'thoughtful') return '[глубокие думы]';
+    if (mood === 'proud') return '[самоуверенная гордость]';
+    return '[очень серьезно]';
   };
 
   const emojiInfo = getCatEmojiInfo(dialogue.sender, dialogue.text, dialogue.mood);
@@ -283,117 +461,192 @@ export default function NarrativeBox({ dialogue, onNext, pendingVictory }: Narra
   return (
     <div 
       onClick={handleSkipOrNext}
-      className="w-full border border-white/10 bg-[#0c0c0c]/90 rounded-none p-5 cursor-pointer hover:border-white/20 transition-all duration-200 select-none relative shadow-2xl backdrop-blur-sm"
+      className="w-full flex flex-col gap-4 select-none cursor-pointer"
     >
-      {/* Decorative vertical accent bar */}
-      <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-white/40" />
-
-      <div className="flex flex-col sm:flex-row gap-5 items-stretch pl-2 w-full">
-        {/* Double Avatars section */}
-        <div className="flex flex-row sm:flex-col gap-3 justify-center sm:justify-start items-center shrink-0 mb-3 sm:mb-0">
-          {/* Bart Vance Avatar */}
-          <div className={`relative w-16 h-16 border rounded-none p-0.5 bg-[#0a0a0a]/80 transition-all duration-300 ${
-            dialogue.sender === 'detective' 
-              ? 'border-amber-500/60 shadow-[0_0_12px_rgba(245,158,11,0.2)] scale-105 z-10' 
-              : 'border-white/5 opacity-40 scale-95 hover:opacity-80'
-          }`}>
-            <div className="w-full h-full bg-[#050505] flex flex-col items-center justify-center relative overflow-hidden">
-              <svg viewBox="0 0 100 100" className="w-10 h-10 text-white/10 fill-current absolute z-0">
-                <path d="M50,12 C32,12 28,25 28,25 L72,25 C72,25 68,12 50,12 Z M20,25 C18,25 18,28 20,28 L80,28 C82,28 82,25 80,25 Z M32,32 C32,32 35,50 50,50 C65,50 68,32 68,32 L60,82 L40,82 Z" />
-              </svg>
-              <img 
-                src={bartEmojiInfo.path} 
-                alt="Б. Ванс" 
-                referrerPolicy="no-referrer" 
-                className="w-full h-full object-cover relative z-10 transition-all duration-300"
-              />
-              {dialogue.sender === 'detective' && (
-                <div className="absolute inset-0 bg-gradient-to-t from-amber-500/10 to-transparent pointer-events-none z-20" />
-              )}
-            </div>
-            <div className="absolute -bottom-2 left-0 right-0 text-center z-30">
-              <span className={`text-[7.5px] font-mono font-bold bg-neutral-900 border px-1 py-0.5 uppercase tracking-wider block truncate transition-all duration-300 ${
-                dialogue.sender === 'detective'
-                  ? 'border-amber-500/40 text-amber-400 animate-pulse'
-                  : 'border-white/10 text-stone-400'
-              }`}>
-                {dialogue.sender === 'detective' ? bartEmojiInfo.label : 'Б. Ванс'}
-              </span>
-            </div>
-          </div>
-
-          {/* VS Divider or link line */}
-          <div className="hidden sm:block w-[1px] h-3 bg-white/10" />
-
-          {/* Midnight Avatar */}
-          <div className={`relative w-16 h-16 border rounded-none p-0.5 bg-[#0a0a0a]/80 transition-all duration-300 ${
-            dialogue.sender === 'cat' 
-              ? 'border-emerald-500/60 shadow-[0_0_12px_rgba(16,185,129,0.2)] scale-105 z-10' 
-              : 'border-white/10 opacity-80 scale-95 hover:opacity-100 hover:border-white/20'
-          }`}>
-            <div className="w-full h-full bg-[#050505] flex flex-col items-center justify-center relative overflow-hidden">
-              <img 
-                src={emojiInfo.path} 
-                alt={emojiInfo.label} 
-                referrerPolicy="no-referrer" 
-                className="w-full h-full object-cover transition-all duration-300"
-              />
-              {dialogue.sender === 'cat' && (
-                <div className="absolute inset-0 bg-gradient-to-t from-emerald-500/10 to-transparent pointer-events-none" />
-              )}
-            </div>
-            <div className="absolute -bottom-2 left-0 right-0 text-center">
-              <span className="text-[7.5px] font-mono font-bold bg-neutral-900 border border-emerald-500/30 px-1 py-0.5 text-emerald-400 uppercase tracking-wider block truncate animate-pulse">
-                {emojiInfo.label}
-              </span>
-            </div>
-          </div>
+      {/* System message banner spans across the top if system is speaking */}
+      {dialogue.sender === 'system' && (
+        <div className="w-full border border-amber-500/20 bg-amber-950/15 p-2 flex items-center gap-3 shadow-md">
+          <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+          <span className="font-mono text-[9px] uppercase tracking-widest text-amber-500/80 font-bold">Рапорт:</span>
+          <p className="font-serif text-[12px] text-stone-300 italic flex-1 truncate">{displayedBartText}</p>
         </div>
+      )}
 
-        {/* Text Container */}
-        <div className="flex-1 min-w-0 flex flex-col justify-between pl-0 sm:pl-3">
+      {/* Two columns layout side-by-side on md+, stacked on mobile */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full items-stretch">
+        
+        {/* LEFT COLUMN: BART VANCE */}
+        <div 
+          onClick={(e) => {
+            if (isBartTyping || isCatTyping) {
+              // If typing, let the outer container handle it to skip typing
+              return;
+            }
+            if (activeSide !== 'bart') {
+              e.stopPropagation();
+              setActiveSide('bart');
+              try { gameAudio.playClick(); } catch(err){}
+            }
+          }}
+          className={`border bg-[#0c0c0c]/90 p-4 relative flex flex-col justify-between transition-all duration-300 cursor-pointer ${
+            activeSide === 'bart' && dialogue.sender !== 'system'
+              ? 'border-amber-500/60 shadow-[0_0_15px_rgba(245,158,11,0.12)] bg-[#110e0a]/95'
+              : 'border-white/5 opacity-70 hover:opacity-90'
+          }`}
+        >
+          {/* Active side indicator bar */}
+          {activeSide === 'bart' && dialogue.sender !== 'system' && (
+            <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-amber-500" />
+          )}
+
           <div>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-2">
-              <span className="font-sans text-[11px] font-bold text-white uppercase tracking-[0.2em]">
-                {getSenderName()}
+            {/* Header */}
+            <div className="flex justify-between items-center border-b border-white/5 pb-2 mb-3">
+              <span className="font-sans text-[11px] font-bold text-stone-200 uppercase tracking-[0.18em]">
+                Детектив Барт Ванс
               </span>
-              <span className="font-serif text-[10px] text-white/40 italic">
-                {getMoodLabel()}
-              </span>
-              {/* Cat's silent inner translation */}
-              <span className="font-serif text-[10px] text-emerald-400/80 italic ml-auto sm:ml-0">
-                — {emojiInfo.subText}
+              <span className="font-serif text-[10px] text-amber-400/80 italic">
+                {activeSide === 'bart' && dialogue.sender !== 'system' ? getMoodLabel() : '[слушает]'}
               </span>
             </div>
-            
-            <p className="font-serif text-[15px] text-white/95 leading-relaxed min-h-12 italic">
-              {displayedText}
-              {isTyping && <span className="inline-block w-1.5 h-3.5 bg-white/80 ml-1 animate-pulse" />}
-            </p>
+
+            {/* Content box */}
+            <div className="flex gap-4 items-start">
+              {/* Large Avatar */}
+              <div className={`relative w-20 h-20 md:w-24 md:h-24 shrink-0 border p-0.5 bg-black transition-all duration-300 ${
+                activeSide === 'bart' && dialogue.sender !== 'system'
+                  ? 'border-amber-500/60 scale-105'
+                  : 'border-white/5 opacity-50'
+              }`}>
+                <img 
+                  src={bartEmojiInfo.path} 
+                  alt="Б. Ванс" 
+                  referrerPolicy="no-referrer" 
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute -bottom-2.5 left-0 right-0 text-center z-10">
+                  <span className={`text-[7px] font-mono font-bold bg-neutral-900 border px-1 py-0.5 uppercase tracking-wider block truncate ${
+                    activeSide === 'bart' && dialogue.sender !== 'system' ? 'border-amber-500/40 text-amber-400' : 'border-white/10 text-stone-400'
+                  }`}>
+                    {bartEmojiInfo.label}
+                  </span>
+                </div>
+              </div>
+
+              {/* Speech bubble text */}
+              <div className="flex-1 min-w-0 bg-black/40 border border-amber-950/40 p-2.5 rounded-sm min-h-[95px] flex flex-col justify-between">
+                <div ref={bartScrollRef} className="max-h-[72px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-amber-950/40">
+                  <p className="font-serif text-[13px] text-stone-200 leading-relaxed italic whitespace-pre-line">
+                    {dialogue.sender === 'system' ? '...' : displayedBartText}
+                    {isBartTyping && <span className="inline-block w-1.5 h-3.5 bg-white/80 ml-1 animate-pulse" />}
+                  </p>
+                </div>
+                <div className="text-[8px] font-mono text-stone-500 mt-1 block italic select-none">
+                  — Б. Ванс, детектив
+                </div>
+              </div>
+            </div>
           </div>
         </div>
+
+        {/* RIGHT COLUMN: CAT MIDNIGHT */}
+        <div 
+          onClick={(e) => {
+            if (isBartTyping || isCatTyping) {
+              // If typing, let the outer container handle it to skip typing
+              return;
+            }
+            if (activeSide !== 'cat') {
+              e.stopPropagation();
+              setActiveSide('cat');
+              try { gameAudio.playClick(); } catch(err){}
+            }
+          }}
+          className={`border bg-[#0c0c0c]/90 p-4 relative flex flex-col justify-between transition-all duration-300 cursor-pointer ${
+            activeSide === 'cat' && dialogue.sender !== 'system'
+              ? 'border-emerald-500/60 shadow-[0_0_15px_rgba(16,185,129,0.12)] bg-[#0a110d]/95'
+              : 'border-white/5 opacity-70 hover:opacity-90'
+          }`}
+        >
+          {/* Active side indicator bar */}
+          {activeSide === 'cat' && dialogue.sender !== 'system' && (
+            <div className="absolute right-0 top-0 bottom-0 w-[4px] bg-emerald-500" />
+          )}
+
+          <div>
+            {/* Header */}
+            <div className="flex justify-between items-center border-b border-white/5 pb-2 mb-3">
+              <span className="font-sans text-[11px] font-bold text-emerald-400 uppercase tracking-[0.18em]">
+                Кот Миднайт <span className="text-[9px] text-white/40 normal-case">(вы)</span>
+              </span>
+              <span className="font-serif text-[10px] text-emerald-400/80 italic">
+                — {emojiInfo.label}
+              </span>
+            </div>
+
+            {/* Content box */}
+            <div className="flex gap-4 items-start">
+              {/* Speech bubble text / Monospace reaction container */}
+              <div className="flex-1 min-w-0 bg-black/40 border border-emerald-950/40 p-2.5 rounded-sm min-h-[95px] flex flex-col justify-between">
+                <div ref={catScrollRef} className="max-h-[72px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-emerald-950/40">
+                  <p className="font-mono text-[11px] text-emerald-400/90 leading-normal whitespace-pre-line">
+                    {dialogue.sender === 'system' ? '*усиленно прислушивается*' : displayedCatText}
+                    {isCatTyping && <span className="inline-block w-1.5 h-3 bg-emerald-400/80 ml-1 animate-pulse" />}
+                  </p>
+                </div>
+                <div className="text-[8px] font-sans text-stone-500 mt-1 block italic select-none">
+                  {emojiInfo.subText}
+                </div>
+              </div>
+
+              {/* Large Avatar */}
+              <div className={`relative w-20 h-20 md:w-24 md:h-24 shrink-0 border p-0.5 bg-black transition-all duration-300 ${
+                activeSide === 'cat' && dialogue.sender !== 'system'
+                  ? 'border-emerald-500/60 scale-105'
+                  : 'border-white/5 opacity-50'
+              }`}>
+                <img 
+                  src={emojiInfo.path} 
+                  alt="Миднайт" 
+                  referrerPolicy="no-referrer" 
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute -bottom-2.5 left-0 right-0 text-center z-10">
+                  <span className={`text-[7px] font-mono font-bold bg-neutral-900 border px-1 py-0.5 uppercase tracking-wider block truncate ${
+                    activeSide === 'cat' && dialogue.sender !== 'system' ? 'border-emerald-500/40 text-emerald-400' : 'border-white/10 text-stone-400'
+                  }`}>
+                    {emojiInfo.label}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       {/* Action Indicator or Finish Button */}
-      {isTyping ? (
-        <div className="absolute bottom-2 right-4 font-mono text-[8px] text-white/30 tracking-[0.15em] uppercase">
-          [ Кликни для пропуска ]
-        </div>
-      ) : pendingVictory ? (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            if (onNext) onNext();
-          }}
-          className="absolute bottom-1.5 right-4 px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/40 border border-amber-500/40 text-[9px] text-amber-400 font-sans font-bold uppercase tracking-widest animate-pulse transition-all rounded-none"
-        >
-          Завершить расследование
-        </button>
-      ) : (
-        <div className="absolute bottom-2 right-4 font-mono text-[8px] text-white/30 tracking-[0.15em] uppercase">
-          [ Далее // Нажми на текст ]
-        </div>
-      )}
+      <div className="flex justify-end items-center mt-1 pr-1">
+        {isBartTyping || isCatTyping ? (
+          <div className="font-mono text-[8px] text-white/30 tracking-[0.15em] uppercase animate-pulse">
+            [ Кликни для пропуска диалога ]
+          </div>
+        ) : pendingVictory ? (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onNext) onNext();
+            }}
+            className="px-4 py-1.5 bg-amber-500/20 hover:bg-amber-500/40 border border-amber-500/40 text-[9.5px] text-amber-400 font-sans font-bold uppercase tracking-widest animate-pulse transition-all rounded-none"
+          >
+            Завершить расследование
+          </button>
+        ) : (
+          <div className="font-mono text-[8px] text-white/30 tracking-[0.15em] uppercase">
+            [ Далее // Нажми на текст ]
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -17,6 +17,70 @@ interface GameSceneProps {
   onChangeLocation?: (location: 'pier' | 'warehouse' | 'hall' | 'study' | 'attic' | 'basement') => void;
 }
 
+interface RoomWindowProps {
+  src: string;
+  left: string;
+  top: string;
+  width: string;
+  height: string;
+  lightning: boolean;
+  rainDelay?: boolean;
+  rainFast?: boolean;
+  isRound?: boolean;
+}
+
+const RoomWindow: React.FC<RoomWindowProps> = ({
+  src,
+  left,
+  top,
+  width,
+  height,
+  lightning,
+  rainDelay,
+  rainFast,
+  isRound = false
+}) => {
+  return (
+    <div 
+      className={`absolute select-none pointer-events-none z-[1] shadow-2xl flex ${isRound ? 'rounded-full aspect-square' : 'rounded-md'}`}
+      style={{
+        left,
+        top,
+        width,
+        height: isRound ? undefined : height,
+      }}
+    >
+      {/* The window background behind frame */}
+      <div className={`absolute inset-0 bg-neutral-950/20 bg-gradient-to-b from-neutral-800/10 to-neutral-950/60 pointer-events-none ${isRound ? 'rounded-full' : 'rounded-md'}`} />
+
+      {/* The window image frame, rendered as base layer (e.g. z-10) */}
+      <img 
+        src={src} 
+        alt="Window Frame" 
+        className="absolute inset-0 w-full h-full object-fill pointer-events-none z-10"
+        referrerPolicy="no-referrer"
+      />
+      
+      {/* Weather/Rain overlay, on top of window frame (z-20) but with a 5% shrink (i.e. inset: 5%) */}
+      <div 
+        className={`absolute pointer-events-none overflow-hidden z-20 ${isRound ? 'rounded-full' : 'rounded-sm'}`}
+        style={{
+          top: '5%',
+          left: '5%',
+          right: '5%',
+          bottom: '5%',
+        }}
+      >
+        {/* Sky/light backing inside the shrunk frame */}
+        <div className="absolute inset-0 bg-neutral-950/20 pointer-events-none z-10" />
+
+        {/* Lightning flash overlay inside the shrunk frame (semi-transparent) */}
+        <div className={`absolute inset-0 bg-white/40 z-30 pointer-events-none transition-opacity duration-100 ${lightning ? 'opacity-100' : 'opacity-0'}`} />
+      </div>
+    </div>
+  );
+};
+
 export default function GameScene({
   gameState,
   onObjectInteraction,
@@ -440,28 +504,63 @@ export default function GameScene({
   const getBookshelfImg = () => {
     const roomId = gameState.roomInfo?.id || '';
     const idLower = roomId.toLowerCase();
+    const isFallen = !!objects.bookshelf?.booksFallen;
 
-    // Cabin / Antique / Attic / Basement
-    if (idLower.includes('cabin') || idLower.includes('antique') || idLower.includes('attic') || idLower.includes('basement') || idLower.includes('chapter_1') || idLower.includes('chapter_3')) {
-      if (idLower.includes('attic') || idLower.includes('basement')) {
-        return '/src/img/Cabin_Shelf02.png';
-      }
-      return '/src/img/Cabin_Shelf01.png';
-    }
-
-    // Grocery / Shop
-    if (idLower.includes('shop') || idLower.includes('grocery') || idLower.includes('bar')) {
-      if (idLower.includes('bar')) {
-        return '/src/img/Grocery_Shelf02.png';
-      }
-      return '/src/img/Grocery_Shelf01.png';
-    }
-
-    // Office / Banker / Mansion / Museum / Default
     if (idLower.includes('mansion') || idLower.includes('museum')) {
-      return '/src/img/Office_Shelf02.png';
+      return isFallen ? '/src/img/cabinets/Mansion_cabinet_open.png' : '/src/img/cabinets/Mansion_cabinet.png';
     }
-    return '/src/img/Office_Shelf01.png';
+    if (idLower.includes('basement') || idLower.includes('garage') || idLower.includes('warehouse') || idLower.includes('alleyway') || idLower.includes('park') || idLower.includes('industr')) {
+      return isFallen ? '/src/img/cabinets/Industrial_cabinet_open.png' : '/src/img/cabinets/Industrial_cabinet.png';
+    }
+
+    let numStr = '08';
+    if (idLower.includes('antique')) {
+      numStr = '01';
+    } else if (idLower.includes('banker')) {
+      numStr = '02';
+    } else if (idLower.includes('captain') || idLower.includes('chapter_2')) {
+      numStr = '03';
+    } else if (idLower.includes('attic')) {
+      numStr = '04';
+    } else if (idLower.includes('kitchen')) {
+      numStr = '05';
+    } else if (idLower.includes('workshop')) {
+      numStr = '06';
+    } else if (idLower.includes('office')) {
+      numStr = '07';
+    } else if (idLower.includes('ballerina') || idLower.includes('dress')) {
+      numStr = '05';
+    } else {
+      numStr = '08';
+    }
+
+    const stateStr = isFallen ? 'open' : 'closed';
+    return `/src/img/cabinets/cabinet_${numStr}_${stateStr}.png`;
+  };
+
+  const getGarbageImg = () => {
+    const roomId = gameState.roomInfo?.id || '';
+    const idLower = roomId.toLowerCase();
+    const tipped = !!objects.trashcan?.tipped;
+    const stateStr = tipped ? 'empty' : 'full';
+    
+    let styleNum = '01';
+    if (idLower.includes('ballerina') || idLower.includes('mansion') || idLower.includes('museum')) {
+      styleNum = '05';
+    } else if (idLower.includes('captain') || idLower.includes('bar')) {
+      styleNum = '02';
+    } else if (idLower.includes('banker') || idLower.includes('office') || idLower.includes('antique')) {
+      styleNum = '03';
+    } else if (idLower.includes('alleyway') || idLower.includes('park') || idLower.includes('shop')) {
+      styleNum = '07';
+    } else if (idLower.includes('basement') || idLower.includes('garage') || idLower.includes('warehouse')) {
+      styleNum = '04';
+    } else if (idLower.includes('kitchen')) {
+      styleNum = '06';
+    } else {
+      styleNum = '01';
+    }
+    return `/src/img/garbage/garbage_${styleNum}_${stateStr}.png`;
   };
 
   const renderRugSVG = (roomId: string, isToggled: boolean) => {
@@ -578,6 +677,24 @@ export default function GameScene({
   }
 
   // Dynamic Coordinates for cat placements (percentages from left and top of container)
+  const getBookshelfGeometry = () => {
+    const w = objects.bookshelf?.w ?? 20;
+    const h = objects.bookshelf?.h ?? 70;
+    const x = objects.bookshelf?.x ?? 4;
+
+    const scaleW = 2.4 * 0.95; // reduced by 5%
+    const scaleH = 1.25 * 0.95; // reduced by 5%
+
+    const width = w * scaleW;
+    const height = h * scaleH;
+
+    // Floor is at exactly 84% vertical height
+    const top = 84.0 - height;
+    const left = Math.max(-2, x - w * 0.45);
+
+    return { left, top, width, height };
+  };
+
   const getCatSpot = (spot: string) => {
     if (spot === 'center') return { x: 45, y: 84, height: 'h-16' };
     const obj = objects[spot as ObjectId];
@@ -595,9 +712,8 @@ export default function GameScene({
     let height = 'h-14';
     
     if (spot === 'bookshelf') {
-      // Pushed up by 2% for depth, scaled to 0.75
-      const topNew = (obj.y ?? 16) + (obj.h ?? 70) * 0.2 - 2;
-      y = topNew + (12.8 * 0.75);
+      const geom = getBookshelfGeometry();
+      y = geom.top + 3.0; // cat sits beautifully on the very top of the bookshelf
     } else if (spot === 'desk') {
       const topNew = (obj.y ?? 58) + (obj.h ?? 32) * 0.2;
       y = topNew + 9.6;
@@ -1138,140 +1254,212 @@ export default function GameScene({
     return () => clearInterval(interval);
   }, [gameState.gameStatus]);
 
+  const renderWindows = () => {
+    const roomId = gameState.roomInfo?.id || '';
+    const idLower = roomId.toLowerCase();
+    
+    // Determine the theme
+    let theme: 'dressingr' | 'grocery' | 'industrial' | 'office' | 'cabin' = 'cabin';
+    if (roomId === 'room_ballerina' || idLower.includes('ballerina') || idLower.includes('dress')) {
+      theme = 'dressingr';
+    } else if (roomId === 'room_shop' || idLower.includes('grocer') || idLower.includes('shop') || idLower.includes('kitchen')) {
+      theme = 'grocery';
+    } else if (
+      roomId === 'room_basement' || 
+      roomId === 'room_alleyway' || 
+      roomId === 'story_chapter_3' || 
+      idLower.includes('industr') || 
+      idLower.includes('ware') || 
+      idLower.includes('pier') || 
+      idLower.includes('garage') || 
+      idLower.includes('workshop')
+    ) {
+      theme = 'industrial';
+    } else if (
+      roomId === 'room_banker' || 
+      roomId === 'room_mansion' || 
+      roomId === 'room_museum' || 
+      roomId === 'room_office' || 
+      idLower.includes('office') || 
+      idLower.includes('bank') || 
+      idLower.includes('mansion') || 
+      idLower.includes('museum')
+    ) {
+      theme = 'office';
+    }
+
+    switch (theme) {
+      case 'dressingr':
+        return (
+          <>
+            {/* Mirror in the center */}
+            <div className="absolute top-[16%] left-[37%] w-[26%] h-[35%] border-4 border-amber-900 bg-neutral-900 shadow-2xl p-2 flex flex-col justify-center items-center relative z-[2]">
+              <div className="absolute inset-1 border border-amber-800" />
+              <div className="w-full h-full bg-neutral-950 flex items-center justify-center relative shadow-inner overflow-hidden border border-neutral-800">
+                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent rotate-12 pointer-events-none" />
+                <span className="font-serif text-[10px] text-neutral-600 tracking-wider">ГРИМЕРНОЕ ЗЕРКАЛО</span>
+              </div>
+              {[
+                'top-1 left-1', 'top-1 left-1/2 -translate-x-1/2', 'top-1 right-1',
+                'bottom-1 left-1', 'bottom-1 left-1/2 -translate-x-1/2', 'bottom-1 right-1',
+                'top-1/2 -translate-y-1/2 left-1', 'top-1/2 -translate-y-1/2 right-1'
+              ].map((pos, index) => (
+                <div key={index} className={`absolute ${pos} w-2 h-2 rounded-full bg-yellow-100 border border-yellow-200 shadow-[0_0_8px_#fef08a] animate-pulse`} />
+              ))}
+            </div>
+            
+            {/* Dressing room windows on left and right - identical and symmetric */}
+            <RoomWindow 
+              src="/src/img/windows/Dressingr__window_01.png"
+              left="20%"
+              top="16%"
+              width="18%"
+              height="35%"
+              lightning={lightning}
+            />
+            <RoomWindow 
+              src="/src/img/windows/Dressingr__window_01.png"
+              left="62%"
+              top="16%"
+              width="18%"
+              height="35%"
+              lightning={lightning}
+              rainDelay
+            />
+          </>
+        );
+
+      case 'grocery':
+        return (
+          <>
+            {/* 3 Grocery windows - identical and symmetric */}
+            <RoomWindow 
+              src="/src/img/windows/Grocery__window_01.png"
+              left="15%"
+              top="16%"
+              width="18%"
+              height="35%"
+              lightning={lightning}
+            />
+            <RoomWindow 
+              src="/src/img/windows/Grocery__window_01.png"
+              left="41%"
+              top="16%"
+              width="18%"
+              height="35%"
+              lightning={lightning}
+              rainDelay
+            />
+            <RoomWindow 
+              src="/src/img/windows/Grocery__window_01.png"
+              left="67%"
+              top="16%"
+              width="18%"
+              height="35%"
+              lightning={lightning}
+              rainFast
+            />
+          </>
+        );
+
+      case 'industrial':
+        return (
+          <>
+            {/* Industrial windows - identical and symmetric */}
+            <RoomWindow 
+              src="/src/img/windows/Industrial__window_01.png"
+              left="18%"
+              top="16%"
+              width="20%"
+              height="35%"
+              lightning={lightning}
+            />
+            <RoomWindow 
+              src="/src/img/windows/Industrial__window_01.png"
+              left="62%"
+              top="16%"
+              width="20%"
+              height="35%"
+              lightning={lightning}
+              rainDelay
+            />
+          </>
+        );
+
+      case 'office':
+        return (
+          <>
+            {/* Office windows - identical and symmetric */}
+            <RoomWindow 
+              src="/src/img/windows/Office__window_01.png"
+              left="20%"
+              top="16%"
+              width="18%"
+              height="35%"
+              lightning={lightning}
+            />
+            <RoomWindow 
+              src="/src/img/windows/Office__window_01.png"
+              left="62%"
+              top="16%"
+              width="18%"
+              height="35%"
+              lightning={lightning}
+              rainDelay
+            />
+          </>
+        );
+
+      case 'cabin':
+      default:
+        return (
+          <>
+            {/* Cabin windows - identical and symmetric */}
+            <RoomWindow 
+              src="/src/img/windows/Cabin__window_01.png"
+              left="20%"
+              top="16%"
+              width="18%"
+              height="35%"
+              lightning={lightning}
+              isRound={true}
+            />
+            <RoomWindow 
+              src="/src/img/windows/Cabin__window_01.png"
+              left="62%"
+              top="16%"
+              width="18%"
+              height="35%"
+              lightning={lightning}
+              rainDelay
+              isRound={true}
+            />
+          </>
+        );
+    }
+  };
+
   const borderAccentClass = gameState.roomInfo?.accentBorder || 'border-white/10';
   const backgroundUrl = getRoomBackground(gameState.roomInfo?.id, currentLocation);
 
   return (
     <div 
       ref={containerRef}
-      className={`relative w-full max-h-[420px] aspect-[16/10] mx-auto border-4 ${borderAccentClass} rounded-none overflow-hidden select-none transition-all duration-300`}
+      className={`relative w-full max-h-[520px] aspect-[16/10] mx-auto border-4 ${borderAccentClass} rounded-none overflow-hidden select-none transition-all duration-300`}
       style={{ 
         boxShadow: 'inset 0 0 120px rgba(0,0,0,0.98)',
-        backgroundColor: lightning ? '#e5e5e5' : '#050505',
+        backgroundColor: '#050505',
         backgroundImage: backgroundUrl ? `linear-gradient(to bottom, rgba(0,0,0,0.35), rgba(0,0,0,0.7)), url(${backgroundUrl})` : 'none',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat'
       }}
     >
-      {/* Dynamic Rain Window, Porthole, or Dressing Mirror */}
-      {gameState.roomInfo?.id === 'room_ballerina' ? (
-        /* Ballerina dressing room back wall decoration: Lit mirror with light bulbs! */
-        <div className="absolute top-[16%] left-[37%] w-[26%] h-[35%] border-4 border-amber-900 bg-neutral-900 shadow-2xl p-2 flex flex-col justify-center items-center relative z-[2]">
-          <div className="absolute inset-1 border border-amber-800" />
-          {/* Mirror reflection surface */}
-          <div className="w-full h-full bg-neutral-950 flex items-center justify-center relative shadow-inner overflow-hidden border border-neutral-800">
-            {/* Mirror glare */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent rotate-12 pointer-events-none" />
-            <span className="font-serif text-[10px] text-neutral-600 tracking-wider">ГРИМЕРНОЕ ЗЕРКАЛО</span>
-          </div>
-          {/* Glowing lightbulbs around the frame */}
-          {[
-            'top-1 left-1', 'top-1 left-1/2 -translate-x-1/2', 'top-1 right-1',
-            'bottom-1 left-1', 'bottom-1 left-1/2 -translate-x-1/2', 'bottom-1 right-1',
-            'top-1/2 -translate-y-1/2 left-1', 'top-1/2 -translate-y-1/2 right-1'
-          ].map((pos, index) => (
-            <div key={index} className={`absolute ${pos} w-2 h-2 rounded-full bg-yellow-100 border border-yellow-200 shadow-[0_0_8px_#fef08a] animate-pulse`} />
-          ))}
-        </div>
-      ) : (gameState.roomInfo?.id === 'story_chapter_3' || gameState.roomInfo?.id === 'room_captain' || gameState.roomInfo?.id === 'story_chapter_2') ? (
-        /* Captain / Airship cabin porthole: circular window with rain and sky view! */
-        <div className="absolute top-[16%] left-[40%] w-[20%] aspect-square border-4 border-yellow-600 bg-neutral-900 rounded-full overflow-hidden shadow-2xl flex items-center justify-center relative z-[2]">
-          <div className="absolute inset-0 bg-neutral-950/40 pointer-events-none z-10" />
-          {/* Rivets on bronze frame */}
-          <div className="absolute inset-1 border-2 border-dashed border-yellow-700 rounded-full z-10 pointer-events-none" />
-          {/* Sky with clouds & rain */}
-          <div className="w-full h-full relative bg-neutral-950 overflow-hidden">
-            {/* Soft sky light */}
-            <div className="absolute inset-0 bg-gradient-to-b from-blue-950/20 to-neutral-950" />
-            {/* Porthole grid cross */}
-            <div className="absolute inset-x-0 top-1/2 h-0.5 bg-neutral-800 opacity-40 z-10" />
-            <div className="absolute inset-y-0 left-1/2 w-0.5 bg-neutral-800 opacity-40 z-10" />
-            
-            {/* Sliding rain overlay */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-30">
-              <div className="absolute inset-0 flex justify-around">
-                <div className="w-[1px] h-[150%] bg-white animate-rain" />
-                <div className="w-[1.2px] h-[150%] bg-white animate-rain-delayed" />
-                <div className="w-[1px] h-[150%] bg-white animate-rain-fast" />
-              </div>
-            </div>
-            
-            {/* Lightning flash overlay */}
-            <div className={`absolute inset-0 bg-white/70 z-20 pointer-events-none transition-opacity duration-100 ${lightning ? 'opacity-100' : 'opacity-0'}`} />
-          </div>
-        </div>
-      ) : (gameState.roomInfo?.id === 'room_antique' || gameState.roomInfo?.id === 'room_banker') ? (
-        /* Antique/Banker double smaller windows layout */
-        <div className="absolute inset-y-0 inset-x-4 pointer-events-none z-[2]">
-          {/* Left window */}
-          <div className="absolute top-[16%] left-[28%] w-[13%] h-[28%] border-2 border-neutral-700 bg-neutral-900 rounded overflow-hidden shadow-2xl flex relative">
-            <div className="absolute inset-0 bg-neutral-950/40 pointer-events-none z-10" />
-            <div className="absolute inset-x-0 top-1/2 h-0.5 bg-neutral-800 z-10" />
-            <div className="absolute inset-y-0 left-1/2 w-0.5 bg-neutral-800 z-10" />
-            
-            <div className="w-full h-full relative opacity-40 overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-b from-neutral-800/10 to-neutral-950/80" />
-              <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-40">
-                <div className="absolute inset-0 flex justify-around">
-                  <div className="w-[1px] h-[150%] bg-white animate-rain" />
-                  <div className="w-[1px] h-[150%] bg-white animate-rain-fast" />
-                </div>
-              </div>
-            </div>
-            <div className={`absolute inset-0 bg-white/90 z-20 pointer-events-none transition-opacity duration-100 ${lightning ? 'opacity-100' : 'opacity-0'}`} />
-          </div>
+      {/* Semi-transparent lightning flash overlay for the entire room */}
+      <div className={`absolute inset-0 bg-white/20 z-40 pointer-events-none transition-opacity duration-100 ${lightning ? 'opacity-100' : 'opacity-0'}`} />
 
-          {/* Right window */}
-          <div className="absolute top-[16%] left-[59%] w-[13%] h-[28%] border-2 border-neutral-700 bg-neutral-900 rounded overflow-hidden shadow-2xl flex relative">
-            <div className="absolute inset-0 bg-neutral-950/40 pointer-events-none z-10" />
-            <div className="absolute inset-x-0 top-1/2 h-0.5 bg-neutral-800 z-10" />
-            <div className="absolute inset-y-0 left-1/2 w-0.5 bg-neutral-800 z-10" />
-            
-            <div className="w-full h-full relative opacity-40 overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-b from-neutral-800/10 to-neutral-950/80" />
-              <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-40">
-                <div className="absolute inset-0 flex justify-around">
-                  <div className="w-[1px] h-[150%] bg-white animate-rain-delayed" />
-                  <div className="w-[1px] h-[150%] bg-white animate-rain-fast" />
-                </div>
-              </div>
-            </div>
-            <div className={`absolute inset-0 bg-white/90 z-20 pointer-events-none transition-opacity duration-100 ${lightning ? 'opacity-100' : 'opacity-0'}`} />
-          </div>
-        </div>
-      ) : (
-        /* Mansion/Default rectangular window */
-        <div className="absolute top-[26%] left-[35%] w-[30%] h-[35%] border-2 border-neutral-700 bg-neutral-900 rounded overflow-hidden shadow-2xl flex relative z-[2]">
-          <div className="absolute inset-0 bg-neutral-950/40 pointer-events-none z-10" />
-          {/* Window grid */}
-          <div className="absolute inset-x-0 top-1/2 h-0.5 bg-neutral-800 z-10" />
-          <div className="absolute inset-y-0 left-1/2 w-0.5 bg-neutral-800 z-10" />
-          {/* Rain behind glass */}
-          <div className="w-full h-full relative opacity-40 overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-b from-neutral-800/10 to-neutral-950/80" />
-            {/* Distant dark skyline silhouettes */}
-            <div className="absolute bottom-0 inset-x-0 flex items-end justify-around gap-1 opacity-20">
-              <div className="w-8 h-20 bg-neutral-900 border-t border-neutral-700" />
-              <div className="w-12 h-28 bg-neutral-900 border-t border-neutral-700" />
-              <div className="w-10 h-16 bg-neutral-900 border-t border-neutral-700" />
-              <div className="w-16 h-24 bg-neutral-900 border-t border-neutral-700" />
-            </div>
-            
-            {/* Sliding rain lines */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-40">
-              <div className="absolute inset-0 flex justify-around">
-                <div className="w-[1px] h-[150%] bg-white animate-rain" />
-                <div className="w-[1px] h-[150%] bg-white animate-rain-delayed" />
-                <div className="w-[1px] h-[150%] bg-white animate-rain-fast" />
-              </div>
-            </div>
-          </div>
-          
-          {/* Lightning flash overlay */}
-          <div className={`absolute inset-0 bg-white/95 z-20 pointer-events-none transition-opacity duration-100 ${lightning ? 'opacity-100' : 'opacity-0'}`} />
-        </div>
-      )}
+      {/* Dynamic Rain Window, Porthole, or Dressing Mirror */}
+      {renderWindows()}
 
       {/* Lighting effect - Vignette shadow overlays */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-neutral-950/80 pointer-events-none z-0" />
@@ -1284,76 +1472,25 @@ export default function GameScene({
       <div 
         id="bookshelf-obj"
         onClick={() => handleObjectClick('bookshelf')}
-        className="absolute group cursor-pointer z-10 flex flex-col justify-end brightness-[0.82] saturate-[90%] contrast-[95%] transition-all duration-300 hover:brightness-100 hover:saturate-100 hover:contrast-100"
+        className="absolute group cursor-pointer brightness-[0.9] saturate-[95%] contrast-[100%] transition-all duration-300 hover:brightness-110 hover:scale-[1.01]"
         style={{
-          left: `${(objects.bookshelf.x ?? 4) + (objects.bookshelf.w ?? 20) * 0.1}%`,
-          top: `${(objects.bookshelf.y ?? 16) + (objects.bookshelf.h ?? 70) * 0.2 - 2}%`,
-          width: `${(objects.bookshelf.w ?? 20) * 0.75}%`,
-          height: `${(objects.bookshelf.h ?? 70) * 0.75}%`,
-          zIndex: objects.bookshelf.zIndex
+          left: `${getBookshelfGeometry().left}%`,
+          top: `${getBookshelfGeometry().top}%`,
+          width: `${getBookshelfGeometry().width}%`,
+          height: `${getBookshelfGeometry().height}%`,
+          zIndex: objects.bookshelf.zIndex !== undefined ? Math.min(objects.bookshelf.zIndex, 2) : 2
         }}
       >
-        <div className="relative w-full h-full group-hover:scale-[1.01] transition-transform duration-200">
-          <div className="relative w-full h-full border-2 border-neutral-750 bg-neutral-900 rounded-md p-1.5 flex flex-col justify-between transition-colors duration-200 group-hover:border-neutral-500 group-hover:bg-neutral-900/90 shadow-2xl">
-            {/* Shelf panels */}
-            {[1, 2, 3, 4].map((shelf) => (
-              <div key={shelf} className="w-full h-[22%] border-b border-neutral-800 flex items-end justify-around px-1 relative">
-                {gameState.roomInfo?.id === 'room_ballerina' ? (
-                  /* Ballerina shelves containing slippers and flowers */
-                  shelf === 1 ? (
-                    <div className="text-[12px] animate-bounce">🩰</div>
-                  ) : shelf === 2 ? (
-                    <div className="text-[11px]">💄🌸</div>
-                  ) : shelf === 3 ? (
-                    <div className="text-[12px] opacity-80">🎀</div>
-                  ) : (
-                    <div className="w-full h-1 bg-pink-900/40 rounded-sm" />
-                  )
-                ) : (
-                  /* Standard bookshelf content */
-                  shelf === 1 && (
-                    <>
-                      <div className="w-4 h-12 bg-neutral-700 border border-neutral-500 rounded-sm" />
-                      <div className="w-3.5 h-10 bg-neutral-800 border border-neutral-600 rounded-sm" />
-                      <div className="w-4.5 h-11 bg-neutral-700 border border-neutral-500 rounded-sm transform rotate-6 origin-bottom" />
-                    </>
-                  )
-                )}
-                {gameState.roomInfo?.id !== 'room_ballerina' && shelf === 2 && (
-                  <>
-                    {!objects.bookshelf.booksFallen ? (
-                      <div className="flex gap-0.5 items-end justify-center w-full">
-                        <div className="w-3 h-9 bg-neutral-800 border border-neutral-600 rounded-sm" />
-                        <div className="w-3.5 h-11 bg-neutral-700 border border-neutral-500 rounded-sm" />
-                        <div className="w-3.5 h-10 bg-neutral-800 border border-neutral-600 rounded-sm transform -rotate-12 origin-bottom" />
-                        <div className="w-4 h-11 bg-neutral-600 border border-neutral-500 rounded-sm" />
-                      </div>
-                    ) : (
-                      <div className="w-full text-center text-[10px] font-mono text-neutral-500 italic pb-1">
-                        (Разбросано)
-                      </div>
-                    )}
-                  </>
-                )}
-                {gameState.roomInfo?.id !== 'room_ballerina' && shelf === 3 && (
-                  <div className="flex gap-1 items-end w-full pl-2">
-                    <div className="w-4 h-10 bg-neutral-800 border border-neutral-600 rounded-sm" />
-                    <div className="w-4 h-11 bg-neutral-700 border border-neutral-500 rounded-sm" />
-                    <div className="w-4 h-9 bg-neutral-600 border border-neutral-400 rounded-sm" />
-                  </div>
-                )}
-                {gameState.roomInfo?.id !== 'room_ballerina' && shelf === 4 && (
-                  <div className="flex gap-0.5 items-end justify-around w-full">
-                    <div className="w-5 h-8 bg-neutral-700 border border-neutral-600 rounded-sm" />
-                    <div className="w-4 h-10 bg-neutral-800 border border-neutral-600 rounded-sm" />
-                    <div className="w-4 h-9 bg-neutral-600 border border-neutral-500 rounded-sm" />
-                  </div>
-                )}
-              </div>
-            ))}
-            {/* Interactive Hover Glow */}
-            <div className="absolute inset-0 border border-transparent group-hover:border-white/20 rounded-md pointer-events-none" />
-          </div>
+        <div className="relative w-full h-full flex items-end justify-center">
+          <img
+            src={getBookshelfImg()}
+            alt={objects.bookshelf.name}
+            className="w-full h-full object-contain object-bottom drop-shadow-[0_4px_8px_rgba(0,0,0,0.6)]"
+            referrerPolicy="no-referrer"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
         </div>
         <span className="text-center font-sans text-[9px] uppercase tracking-[0.2em] text-white/30 group-hover:text-white/80 transition-colors duration-200 mt-1 block truncate">
           {objects.bookshelf.name}
@@ -1511,29 +1648,6 @@ export default function GameScene({
               🔒 заперто
             </div>
           )}
-
-          {/* Desk Surface items */}
-          <div className="absolute -top-5 inset-x-2 h-6 flex justify-between items-end pointer-events-none px-3 z-10">
-            {gameState.roomInfo?.id === 'room_ballerina' ? (
-              <>
-                <div className="text-[12px]">💄</div>
-                <div className="text-[12px] transform rotate-12">🪞</div>
-              </>
-            ) : (
-              <>
-                {/* Ink bottle */}
-                <div className="w-3.5 h-4 bg-neutral-950 border border-neutral-700 rounded-sm flex items-start justify-center">
-                  <div className="w-1 h-1 bg-neutral-700 rounded-full -mt-0.5" />
-                </div>
-                
-                {/* Papers pile */}
-                <div className="relative w-8 h-2.5">
-                  <div className="absolute bottom-0 right-0 w-6 h-0.5 bg-neutral-200 border border-neutral-400 transform rotate-1" />
-                  <div className="absolute bottom-0.5 right-0.5 w-6 h-0.5 bg-neutral-100 border border-neutral-300 transform -rotate-2" />
-                </div>
-              </>
-            )}
-          </div>
 
           {gameState.roomInfo?.id === 'room_ballerina' || gameState.roomInfo?.id === 'room_antique' ? (
             /* Chest of Drawers / Dresser (Комод) */
@@ -1722,55 +1836,29 @@ export default function GameScene({
         onClick={() => handleObjectClick('trashcan')}
         className="absolute group cursor-pointer z-15"
         style={{
-          left: `${(objects.trashcan.x ?? 80) + (objects.trashcan.w ?? 10) * 0.1}%`,
-          top: `${(objects.trashcan.y ?? 82) + (objects.trashcan.h ?? 16) * 0.2}%`,
-          width: `${(objects.trashcan.w ?? 10) * 0.8}%`,
-          height: `${(objects.trashcan.h ?? 16) * 0.8}%`,
+          left: `${(objects.trashcan.x ?? 80) - (objects.trashcan.w ?? 10) * 0.3}%`,
+          top: `${(objects.trashcan.y ?? 82) - (objects.trashcan.h ?? 16) * 0.6}%`,
+          width: `${(objects.trashcan.w ?? 10) * 1.6}%`,
+          height: `${(objects.trashcan.h ?? 16) * 1.6}%`,
           zIndex: objects.trashcan.zIndex
         }}
       >
         <div className="relative w-full h-full flex flex-col items-center">
           <div 
-            className={`w-[80%] h-[90%] border-2 border-neutral-600 bg-neutral-900 transition-all duration-500 rounded-b relative ${
-              objects.trashcan.tipped ? 'rotate-90 translate-y-3 translate-x-4 border-neutral-500' : 'group-hover:border-neutral-400'
+            className={`w-[85%] h-[85%] transition-all duration-500 relative flex items-center justify-center ${
+              objects.trashcan.tipped ? 'rotate-90 translate-y-3 translate-x-4' : 'group-hover:scale-105 group-hover:brightness-110'
             }`}
-            style={{
-              clipPath: 'polygon(0% 0%, 100% 0%, 85% 100%, 15% 100%)'
-            }}
           >
-            {gameState.roomInfo?.id === 'room_ballerina' ? (
-              /* Rose petals overflowing */
-              <div className="absolute inset-0 flex flex-col justify-start items-center">
-                <div className="text-[10px] -mt-1">🌸🌹</div>
-              </div>
-            ) : gameState.roomInfo?.id === 'room_captain' ? (
-              /* Wood texture bands */
-              <div className="absolute inset-x-0 inset-y-1 flex justify-around opacity-40">
-                <div className="w-0.5 h-full bg-neutral-700" />
-                <div className="w-0.5 h-full bg-neutral-700" />
-              </div>
-            ) : (
-              /* Trash mesh lines */
-              <div className="absolute inset-0 flex justify-between px-2 opacity-30">
-                <div className="w-0.5 h-full bg-neutral-600" />
-                <div className="w-0.5 h-full bg-neutral-600" />
-                <div className="w-0.5 h-full bg-neutral-600" />
-              </div>
-            )}
-            {/* Paper balls sticking out */}
-            {!objects.trashcan.tipped && gameState.roomInfo?.id !== 'room_ballerina' && (
-              <div className="absolute -top-1 inset-x-1 h-2 flex justify-around">
-                <div className="w-2.5 h-2.5 bg-neutral-400 rounded-full" />
-                <div className="w-2.5 h-2.5 bg-neutral-500 rounded-full" />
-              </div>
-            )}
+            <img
+              src={getGarbageImg()}
+              alt={objects.trashcan.name}
+              className="w-full h-full object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.6)]"
+              referrerPolicy="no-referrer"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
           </div>
-          {objects.trashcan.tipped && (
-            <div className="absolute -left-2 top-2 flex gap-0.5 pointer-events-none">
-              <div className="w-2 h-2 bg-neutral-400 rounded-full rotate-12" />
-              <div className="w-3 h-2 bg-neutral-500 transform rotate-45" />
-            </div>
-          )}
           <span className="text-center font-sans text-[9px] uppercase tracking-[0.2em] text-white/30 group-hover:text-white/80 mt-1 block truncate w-full">
             {objects.trashcan.name}
           </span>

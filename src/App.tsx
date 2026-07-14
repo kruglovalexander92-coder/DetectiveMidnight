@@ -699,10 +699,11 @@ export default function App() {
     // 2. Perform action after walking transition completed
     setTimeout(() => {
       setGameState(prev => {
-        const getItemDetail = (itemId: string) => {
-          return (prev.customItems && prev.customItems[itemId]) || (DUMMY_ITEMS as any)[itemId];
-        };
-        const objectsCopy = { ...prev.objects };
+        try {
+          const getItemDetail = (itemId: string) => {
+            return (prev.customItems && prev.customItems[itemId]) || (DUMMY_ITEMS as any)[itemId];
+          };
+          const objectsCopy = { ...prev.objects };
         const obj = { ...objectsCopy[id] };
         let newAction: GameState['catAction'] = 'idle';
         let dialogueText = '';
@@ -953,9 +954,9 @@ export default function App() {
                 newFoundClues.push(obj.heldClueId);
                 const clue = prev.currentClues.find(c => c.id === obj.heldClueId);
                 dialogueText = clue 
-                  ? `«Замок поддался! Открываю ящик... О боже, да тут ${clue.name}! ${clue.description}»`
+                  ? `«Замок открыт! Ну, как я и предполагал, в ящике припрятана улика — ${clue.name}! Мой дедуктивный метод безупречен. ${clue.description}»`
                   : 'Найдена улика в столе!';
-                dialogueMood = 'shocked';
+                dialogueMood = 'proud';
                 if (!prev.isMuted) gameAudio.playClueFound();
               }
 
@@ -1058,8 +1059,8 @@ export default function App() {
           ];
           newLogs.push(addLog('system', `⚠️ ШТРАФ! Из бюджета бюро списано -${fineAmount}$ за испорченное имущество.`));
           if (!gotInjured) {
-            dialogueText = `«Шмяк! Бабах! О боже, Миднайт, ты разбил казенное имущество! Хозяин выставил нам счет на ${fineAmount}$. Придется платить из бюджета бюро...»`;
-            dialogueMood = 'serious';
+            dialogueText = `«Шмяк! Бабах! Миднайт, ну как же так? Мой гениальный план был совершенен, но твоя кошачья грация подкачала! Ты разбил имущество на ${fineAmount}$. Платим из бюджета...»`;
+            dialogueMood = 'silly';
             dialogueSender = 'detective';
           }
         }
@@ -1134,6 +1135,13 @@ export default function App() {
             mood: dialogueMood
           }
         };
+        } catch (e) {
+          console.error("Error in object interaction state calculation, recovering catAction:", e);
+          return {
+            ...prev,
+            catAction: 'idle'
+          };
+        }
       });
     }, climbDelay);
   };
@@ -1765,16 +1773,6 @@ export default function App() {
               <h1 className="font-serif text-sm sm:text-base font-bold tracking-wide italic leading-none">
                 Noir Detective Cat
               </h1>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <div className="px-2 py-0.5 border border-emerald-500/30 bg-emerald-950/20 rounded-none text-[8px] font-mono text-emerald-400 font-bold uppercase tracking-widest leading-none">
-                  Бюджет бюро: {gameState.economy?.cash ?? 150}$
-                </div>
-                {gameState.reputation !== undefined && (
-                  <div className="px-2 py-0.5 border border-amber-500/30 bg-amber-950/20 rounded-none text-[8px] font-mono text-amber-400 font-bold uppercase tracking-widest leading-none">
-                    ★ {gameState.reputation} ({getReputationRank(gameState.reputation)})
-                  </div>
-                )}
-              </div>
             </div>
             <span className="font-sans text-[8px] text-white/40 uppercase tracking-[0.25em] block mt-1.5 leading-none">
               {gameState.roomInfo?.caseName || 'КЕЙС №42'} • {gameState.storyState?.mode === 'story' ? `СЮЖЕТ (ГЛАВА ${gameState.storyState?.chapter ?? 1})` : 'ПЕСОЧНИЦА'}
@@ -1878,14 +1876,45 @@ export default function App() {
           </button>
 
            {gameState.gameStatus === 'playing' && (
-            <button 
-              onClick={handleAbortMission}
-              className="px-3 h-8 rounded-none border border-amber-500/30 hover:border-amber-500 bg-amber-950/20 text-[9px] font-sans uppercase tracking-[0.15em] flex items-center gap-1.5 text-amber-400 hover:bg-amber-950/40 transition-all shadow-md"
-              title="Прервать текущее расследование и вернуться в детективное агентство"
-            >
-              <Lucide.Home className="w-3.5 h-3.5 text-amber-500" />
-              В Агентство
-            </button>
+            <>
+              <button 
+                onClick={handleAbortMission}
+                className="px-3 h-8 rounded-none border border-amber-500/30 hover:border-amber-500 bg-amber-950/20 text-[9px] font-sans uppercase tracking-[0.15em] flex items-center gap-1.5 text-amber-400 hover:bg-amber-950/40 transition-all shadow-md"
+                title="Прервать текущее расследование и вернуться в детективное агентство"
+              >
+                <Lucide.Home className="w-3.5 h-3.5 text-amber-500" />
+                В Агентство
+              </button>
+
+              <button 
+                onClick={() => {
+                  gameAudio.playClick();
+                  setIsShopOpen(true);
+                  setIsLogOpen(false);
+                }}
+                className="px-3 h-8 rounded-none border border-amber-500/30 hover:border-amber-500 bg-amber-950/20 text-[9px] font-sans uppercase tracking-[0.15em] flex items-center gap-1.5 text-amber-400 hover:bg-amber-950/40 transition-all shadow-md relative"
+                title="Открыть Кошачью лавку"
+              >
+                <Lucide.Store className="w-3.5 h-3.5 text-amber-500" />
+                Лавка
+                {gameState.isInjured && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-600 rounded-full border border-black animate-ping" />
+                )}
+              </button>
+
+              <button 
+                onClick={() => {
+                  gameAudio.playClick();
+                  setIsLogOpen(true);
+                  setIsShopOpen(false);
+                }}
+                className="px-3 h-8 rounded-none border border-white/10 hover:border-white/30 bg-black text-[9px] font-sans uppercase tracking-[0.15em] flex items-center gap-1.5 text-white/50 hover:text-white transition-all shadow"
+                title="Открыть Протокол Осмотра"
+              >
+                <Lucide.FileText className="w-3.5 h-3.5 text-white/40" />
+                Логи ({gameState.logs.length})
+              </button>
+            </>
           )}
 
           <button 
@@ -1929,7 +1958,7 @@ export default function App() {
             />
           )}
         </>
-      ) : (
+      ) : (gameState.gameStatus === 'playing' || gameState.gameStatus === 'won' || gameState.gameStatus === 'lost') ? (
         <main className="flex-1 w-full max-w-7xl mx-auto p-4 flex flex-col lg:flex-row gap-5 relative z-20 min-h-[580px] items-start">
         
         {/* Left side: Game Visuals Grid */}
@@ -1963,7 +1992,7 @@ export default function App() {
         </div>
 
         {/* Right side: Case files, logs, clues */}
-        <div className="w-full lg:w-[380px] flex flex-col gap-3 shrink-0">
+        <div className="w-full lg:w-[320px] flex flex-col gap-3 shrink-0">
           {/* Tracker holds case cards & items */}
           <ClueTracker 
             currentClues={gameState.currentClues}
@@ -1974,39 +2003,10 @@ export default function App() {
             activeTornNote={gameState.activeTornNote}
             onOpenTornNote={() => setIsTornNoteOpen(true)}
           />
-
-          {/* Collapsible Panel Triggers (Shop and Logs) */}
-          <div className="grid grid-cols-2 gap-3.5 mt-1 select-none shrink-0">
-            <button 
-              onClick={() => {
-                gameAudio.playClick();
-                setIsShopOpen(true);
-                setIsLogOpen(false);
-              }}
-              className="py-3 border border-amber-500/30 hover:border-amber-500/60 bg-amber-950/10 hover:bg-amber-950/25 text-amber-400 font-sans text-[10px] font-bold uppercase tracking-[0.18em] transition-all flex items-center justify-center gap-2 relative shadow-lg hover:scale-[1.02] cursor-pointer"
-              title="Открыть Кошачью лавку"
-            >
-              <Lucide.Store className="w-4 h-4 text-amber-500 animate-pulse" />
-              <span>Лавка подворотни</span>
-              {gameState.isInjured && (
-                <span className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-red-600 rounded-full border border-black animate-ping" />
-              )}
-            </button>
-            <button 
-              onClick={() => {
-                gameAudio.playClick();
-                setIsLogOpen(true);
-                setIsShopOpen(false);
-              }}
-              className="py-3 border border-white/10 hover:border-white/20 bg-black/60 text-white/80 hover:text-white hover:bg-black/90 font-sans text-[10px] font-bold uppercase tracking-[0.18em] transition-all flex items-center justify-center gap-2 relative shadow-lg hover:scale-[1.02] cursor-pointer"
-              title="Открыть Протокол Осмотра"
-            >
-              <Lucide.FileText className="w-4 h-4 text-white/50" />
-              <span>Логи ({gameState.logs.length})</span>
-            </button>
-          </div>
         </div>
       </main>
+      ) : (
+        <div className="flex-1 w-full" />
       )}
 
       {/* DRAWER BACKDROP */}

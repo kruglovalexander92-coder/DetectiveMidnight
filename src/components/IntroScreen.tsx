@@ -156,7 +156,7 @@ export default function IntroScreen({
           </div>
         ) : (
           /* Main menu options panel */
-          <div className="w-full border border-white/10 bg-black/85 p-6 backdrop-blur-md flex flex-col justify-between items-center text-center relative gap-6 max-w-sm">
+          <div className="w-full border border-white/10 bg-black/80 p-6 backdrop-blur-md flex flex-col justify-between items-center text-center relative gap-6 max-w-[365px]">
             
             {/* Status indicator */}
             <div className="w-full border-b border-white/10 pb-4">
@@ -175,7 +175,7 @@ export default function IntroScreen({
               {hasSavedGame && (
                 <button 
                   onClick={handleContinue}
-                  className="w-full border border-emerald-500 bg-emerald-950/20 hover:bg-emerald-900/30 text-emerald-300 font-sans p-3.5 transition-all flex flex-col items-center justify-center gap-0.5 shadow-lg group hover:scale-[1.01] active:scale-[0.99] rounded-none cursor-pointer"
+                  className="w-[95%] mx-auto border border-emerald-500 bg-emerald-950/20 hover:bg-emerald-900/30 text-emerald-300 font-sans p-3.5 transition-all flex flex-col items-center justify-center gap-0.5 shadow-lg group hover:scale-[1.01] active:scale-[0.99] rounded-none cursor-pointer"
                 >
                   <span className="font-sans text-[11px] font-bold uppercase tracking-[0.18em] flex items-center gap-2 text-white group-hover:text-emerald-300">
                     <Lucide.Play className="w-3 h-3 fill-white group-hover:fill-emerald-300" />
@@ -190,7 +190,7 @@ export default function IntroScreen({
               {/* START GAME BUTTON */}
               <button 
                 onClick={handleStartNew}
-                className="w-full h-11 bg-[#ebd9c5] hover:bg-[#ebd9c5]/95 text-black font-sans text-xs font-bold uppercase tracking-[0.18em] transition-all flex items-center justify-center gap-2 shadow-xl hover:scale-[1.01] active:scale-[0.99] rounded-none cursor-pointer"
+                className="w-[95%] mx-auto h-11 bg-[#ebd9c5] hover:bg-[#ebd9c5]/95 text-black font-sans text-xs font-bold uppercase tracking-[0.18em] transition-all flex items-center justify-center gap-2 shadow-xl hover:scale-[1.01] active:scale-[0.99] rounded-none cursor-pointer"
               >
                 <Lucide.FileText className="w-3.5 h-3.5 text-black" />
                 Начать игру
@@ -202,7 +202,7 @@ export default function IntroScreen({
                   gameAudio.playClick();
                   setShowRules(true);
                 }}
-                className="w-full h-9 border border-white/10 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/70 font-mono text-[9px] uppercase tracking-wider transition-all rounded-none cursor-pointer"
+                className="w-[95%] mx-auto h-9 border border-white/10 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/70 font-mono text-[9px] uppercase tracking-wider transition-all rounded-none cursor-pointer"
               >
                 Как играть? [Рапорт]
               </button>

@@ -164,6 +164,7 @@ export interface GameState {
     timestamp: string;
   }[];
   caseFolders?: CaseFolder[];
+  notifiedChapters?: string[];
 }
 
 export interface CaseFolder {

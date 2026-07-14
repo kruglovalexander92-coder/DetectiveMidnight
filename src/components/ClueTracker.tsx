@@ -56,7 +56,7 @@ export default function ClueTracker({
           </span>
         </h3>
 
-        <div className="max-h-[290px] overflow-y-auto custom-scrollbar pr-1">
+        <div className="w-full">
           <div className="grid grid-cols-3 gap-3">
             {currentClues.map((clue, idx) => {
               const isFound = foundClueIds.includes(clue.id);
@@ -112,11 +112,7 @@ export default function ClueTracker({
                         </p>
                       </div>
 
-                      <div className="border-t border-white/10 pt-1 text-center mt-1">
-                        <span className="text-[8px] font-mono text-white/40 uppercase tracking-[0.15em] animate-pulse">
-                          Изучить
-                        </span>
-                      </div>
+                      {/* Removed "Изучить" footer to make card more compact */}
                     </>
                   ) : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center p-2 text-center select-none">
@@ -192,11 +188,13 @@ export default function ClueTracker({
                   </p>
                 </div>
 
-                <div className="border-t border-white/10 pt-1 text-center mt-1">
-                  <span className="text-[8px] font-mono text-amber-400/80 uppercase tracking-[0.15em] animate-pulse">
-                    {activeTornNote.completed ? 'Изучить' : '🧩 Собрать'}
-                  </span>
-                </div>
+                {!activeTornNote.completed && (
+                  <div className="border-t border-white/10 pt-1 text-center mt-1">
+                    <span className="text-[8px] font-mono text-amber-400/80 uppercase tracking-[0.15em] animate-pulse">
+                      🧩 Собрать
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </div>

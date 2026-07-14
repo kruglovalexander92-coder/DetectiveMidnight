@@ -5,6 +5,169 @@
 
 import { Clue, ObjectId, ObjectState, GameState, GameLog, RoomInfo, StoryState, EconomyState, PuzzleItem, Job, SuspectSketch } from '../types';
 
+export function getClueImagePath(clueName: string, fallbackNum: number = 1): string {
+  const lower = clueName.toLowerCase();
+
+  // Primary: Match the new high-quality clue images added by the user
+  if (lower.includes('пиво') || lower.includes('бутылка') || lower.includes('стакан') || lower.includes('бокал') || lower.includes('пивн') || lower.includes('beer') || lower.includes('алкоголь')) {
+    return '/src/img/clues/clue_beer.png';
+  }
+  if (lower.includes('пуговиц') || lower.includes('пуговка') || lower.includes('button')) {
+    return '/src/img/clues/clue_button.png';
+  }
+  if (lower.includes('платок') || lower.includes('перчатк') || lower.includes('ткань') || lower.includes('лоскут') || lower.includes('тряпк') || lower.includes('ветошь') || lower.includes('handkerchief') || lower.includes('cloth') || lower.includes('шелковый')) {
+    return '/src/img/clues/clue_cloth.png';
+  }
+  if (lower.includes('лом') || lower.includes('гвоздодер') || lower.includes('фомка') || lower.includes('crowbar') || lower.includes('рычаг')) {
+    return '/src/img/clues/clue_crowbar.png';
+  }
+  if (lower.includes('палец') || lower.includes('отпечат') || lower.includes('finger') || lower.includes('дактило')) {
+    return '/src/img/clues/clue_finger.png';
+  }
+  if (lower.includes('мука') || lower.includes('муки') || lower.includes('flour') || lower.includes('тесто')) {
+    return '/src/img/clues/clue_flour.png';
+  }
+  if (lower.includes('волос') || lower.includes('шерст') || lower.includes('hair') || lower.includes('мех')) {
+    return '/src/img/clues/clue_hair.png';
+  }
+  if (lower.includes('болт') || lower.includes('гайка') || lower.includes('деталь') || lower.includes('винт') || lower.includes('крепеж') || lower.includes('железка') || lower.includes('hardware') || lower.includes('шестерен')) {
+    return '/src/img/clues/clue_hardware.png';
+  }
+  if (lower.includes('духи') || lower.includes('парфюм') || lower.includes('perfume') || lower.includes('одеколон') || lower.includes('аромат')) {
+    return '/src/img/clues/clue_perfume.png';
+  }
+  if (lower.includes('пассатижи') || lower.includes('плоскогубцы') || lower.includes('клещи') || lower.includes('pliers') || lower.includes('щипцы')) {
+    return '/src/img/clues/clue_pliers.png';
+  }
+  if (lower.includes('крысиный яд') || lower.includes('ratpoison')) {
+    return '/src/img/clues/clue_ratpoison.png';
+  }
+  if (lower.includes('яда') || lower.includes('мышьяк') || lower.includes('цианид') || lower.includes('сомнифер') || lower.includes('эфир') || lower.includes('токсин') || lower.includes('гербицид') || lower.includes('яд') || lower.includes('poison')) {
+    return '/src/img/clues/clue_poison.png';
+  }
+  if (lower.includes('порошок') || lower.includes('пудра') || lower.includes('powder') || lower.includes('сода') || lower.includes('крахмал')) {
+    return '/src/img/clues/clue_powder.png';
+  }
+  if (lower.includes('печатка') || lower.includes('перстень-печатка') || lower.includes('signetring')) {
+    return '/src/img/clues/clue_signetring.png';
+  }
+  if (lower.includes('кольцо') || lower.includes('перстень') || lower.includes('ring')) {
+    return '/src/img/clues/clue_ring.png';
+  }
+  if (lower.includes('сапфир') || lower.includes('изумруд') || lower.includes('рубин') || lower.includes('алмаз') || lower.includes('бриллиант') || lower.includes('драгоценность') || lower.includes('кристалл') || lower.includes('запонка') || lower.includes('камни') || lower.includes('камень') || lower.includes('sapphire')) {
+    return '/src/img/clues/clue_sapphire.png';
+  }
+  if (lower.includes('очки') || lower.includes('оправе') || lower.includes('glasses')) {
+    return '/src/img/clues/clue_glasses.png';
+  }
+  if (lower.includes('часы') || lower.includes('карманные часы') || lower.includes('золотые часы') || lower.includes('часового')) {
+    return '/src/img/clues/clue_watch.png';
+  }
+  if (lower.includes('коробок') || lower.includes('спич') || lower.includes('matchbox') || lower.includes('сигар') || lower.includes('окурок') || lower.includes('сигарет')) {
+    return '/src/img/clues/clue_matchbox.png';
+  }
+  if (lower.includes('ключ') || lower.includes('отмыч') || lower.includes('связка') || lower.includes('keys')) {
+    return '/src/img/clues/clue_keys.png';
+  }
+  if (lower.includes('блокнот') || lower.includes('дневник') || lower.includes('журнал') || lower.includes('гроссбух') || lower.includes('записи') || lower.includes('книжк') || lower.includes('тетрад') || lower.includes('фолиант')) {
+    return '/src/img/clues/clue_shipslog.png';
+  }
+  if (lower.includes('завещание') || lower.includes('завещ') || lower.includes('сгоревший') || lower.includes('will')) {
+    return '/src/img/clues/clue_burnedwilll.png';
+  }
+  if (lower.includes('вексель') || lower.includes('чек') || lower.includes('расписк') || lower.includes('накладная') || lower.includes('счет') || lower.includes('банкнот') || lower.includes('деньги') || lower.includes('купюр') || lower.includes('доллар') || lower.includes('бюджет')) {
+    return '/src/img/clues/clue_banknotes.png';
+  }
+  if (lower.includes('рисунок') || lower.includes('фото') || lower.includes('портрет') || lower.includes('снимок') || lower.includes('картина') || lower.includes('изображение')) {
+    return '/src/img/clues/clue_oldphoto.png';
+  }
+  if (lower.includes('веревка') || lower.includes('канат') || lower.includes('петля') || lower.includes('ремень') || lower.includes('цепь') || lower.includes('rope')) {
+    return '/src/img/clues/clue_rope.png';
+  }
+  if (lower.includes('ракушка') || lower.includes('гильза') || lower.includes('раковина') || lower.includes('shell')) {
+    return '/src/img/clues/clue_shell.png';
+  }
+  if (lower.includes('стекло') || lower.includes('осколок') || lower.includes('пузырек') || lower.includes('флакон') || lower.includes('glass')) {
+    return '/src/img/clues/clue_poison.png';
+  }
+
+  // Fallback: Check older paths if they exist, or use procedural fallbacks
+  if (lower.includes('билет') || lower.includes('театральный билет')) {
+    return '/src/img/evids/EVID_TICKET.png';
+  }
+  if (lower.includes('телеграмм')) {
+    return '/src/img/evids/EVID_TELEGRAM.png';
+  }
+  if (lower.includes('рецепт') || lower.includes('страница') || lower.includes('вырванная') || lower.includes('лист') || lower.includes('страницы')) {
+    return '/src/img/evids/EVID_NOTEBOOKPAGE.png';
+  }
+  if (lower.includes('карт') || lower.includes('схем') || lower.includes('план раскоп') || lower.includes('портовых складов')) {
+    return '/src/img/evids/EVID_MAP.png';
+  }
+  if (lower.includes('чертеж') || lower.includes('проект') || lower.includes('схема секретного') || lower.includes('план сигнализации') || lower.includes('схема водопровода')) {
+    return '/src/img/evids/EVID_BLUEPRINT.png';
+  }
+  if (lower.includes('пропуск') || lower.includes('паспорт') || lower.includes('личность')) {
+    return '/src/img/evids/EVID_PASSWORD.png';
+  }
+  if (lower.includes('печать') || lower.includes('штамп')) {
+    return '/src/img/evids/EVID_STAMPED.png';
+  }
+  if (lower.includes('кастет') || lower.includes('оружие') || lower.includes('нож') || lower.includes('тесак') || lower.includes('скальпель')) {
+    return '/src/img/evids/EVID_WEAPON.png';
+  }
+  if (lower.includes('волос') || lower.includes('шерст') || lower.includes('перо') || lower.includes('нити') || lower.includes('волокн')) {
+    return '/src/img/evids/EVID_FIBERS.png';
+  }
+  if (lower.includes('отпечат') || lower.includes('пальц')) {
+    return '/src/img/evids/EVID_FINGERPRINTS.png';
+  }
+  if (lower.includes('фонар')) {
+    return '/src/img/evids/EVID_FLASHLIGHT.png';
+  }
+  if (lower.includes('подзорн') || lower.includes('бинокл') || lower.includes('лупа') || lower.includes('труба')) {
+    return '/src/img/evids/EVID_BINOCULARS.png';
+  }
+  if (lower.includes('лент') || lower.includes('запись') || lower.includes('аудио') || lower.includes('диктофон')) {
+    return '/src/img/evids/EVID_AUDIO.png';
+  }
+  if (lower.includes('афиш') || lower.includes('плакат') || lower.includes('постер')) {
+    return '/src/img/evids/EVID_POSTER.png';
+  }
+  if (lower.includes('пепел') || lower.includes('зола') || lower.includes('дым')) {
+    return '/src/img/evids/EVID_ASH.png';
+  }
+  if (lower.includes('крош') || lower.includes('хлеб') || lower.includes('еда')) {
+    return '/src/img/evids/EVID_CRUMBS.png';
+  }
+  if (lower.includes('песок') || lower.includes('грязь') || lower.includes('глина') || lower.includes('земля')) {
+    return '/src/img/evids/EVID_SAND.png';
+  }
+  if (lower.includes('свеч') || lower.includes('воск') || lower.includes('сургуч')) {
+    return '/src/img/evids/EVID_CANDLE.png';
+  }
+  if (lower.includes('масло') || lower.includes('нефть') || lower.includes('смазк')) {
+    return '/src/img/evids/EVID_OIL.png';
+  }
+  if (lower.includes('краск') || lower.includes('пятно')) {
+    return '/src/img/evids/EVID_PAINT.png';
+  }
+  if (lower.includes('рыб') || lower.includes('селед') || lower.includes('игрушк')) {
+    return '/src/img/evids/EVID_TOY.png';
+  }
+  if (lower.includes('орхидея') || lower.includes('лилия') || lower.includes('цветок') || lower.includes('растени') || lower.includes('гербар')) {
+    return '/src/img/evids/EVID_PLANTS.png';
+  }
+  if (lower.includes('капли') || lower.includes('кров')) {
+    return '/src/img/evids/EVID_BLOOD.png';
+  }
+
+  // Fallback to beautiful default procedural backgrounds
+  const num = (fallbackNum % 16) + 1;
+  const strNum = num < 10 ? `0${num}` : `${num}`;
+  return `/src/img/Caseboard/Caseboard_evidence_${strNum}.png`;
+}
+
 export const ALL_CLUES: Clue[] = [
   {
     id: 'clue_poison',
@@ -12,7 +175,7 @@ export const ALL_CLUES: Clue[] = [
     description: 'Флакон с черепом и надписью «Цианид». Небольшой осадок на дне пахнет горьким миндалем.',
     icon: 'Skull',
     findingMessage: 'Кот выкатил откуда-то маленький темный флакон. Барт восклицает: «Ого! Яд! Значит, жертву отравили... Или это просто средство от клопов? Надо понюхать... Ой, в глазах темнеет!»',
-    image: '/src/img/Caseboard/Caseboard_evidence_01.png'
+    image: '/src/img/clues/clue_poison.png'
   },
   {
     id: 'clue_letter',
@@ -20,7 +183,7 @@ export const ALL_CLUES: Clue[] = [
     description: 'Обугленный клочок бумаги со словами «...в полночь у старого причала. Не опаздывай, иначе...»',
     icon: 'FileText',
     findingMessage: 'Кот достал из щели обгоревший лист. Барт читает: «Тайная встреча! Мой детективный нюх подсказывает, что тут пахнет заговором. Или это просто счет за прачечную?»',
-    image: '/src/img/Caseboard/Caseboard_evidence_02.png'
+    image: '/src/img/clues/clue_burnedwilll.png'
   },
   {
     id: 'clue_watch',
@@ -28,7 +191,7 @@ export const ALL_CLUES: Clue[] = [
     description: 'Дорогие карманные часы с треснувшим стеклом, застывшие ровно на 23:14.',
     icon: 'Watch',
     findingMessage: 'Под грудой хлама обнаружились золотые часы. Барт задумчиво трет подбородок: «Часы остановились на 23:14. Это либо время преступления, либо у владельца просто кончился завод... Ах да, они же золотые!»',
-    image: '/src/img/Caseboard/Caseboard_evidence_03.png'
+    image: '/src/img/clues/clue_watch.png'
   },
   {
     id: 'clue_ledger',
@@ -36,7 +199,7 @@ export const ALL_CLUES: Clue[] = [
     description: 'Записная книжка в кожаном переплете со списками швейцарских счетов и шифром «Цезарь».',
     icon: 'BookOpen',
     findingMessage: 'Кот выудил из потайного места блокнот. Барт щурится: «Тайные коды и миллионные счета! Наверняка здесь зашифрован заговор мирового масштаба. Или список покупок на неделю...»',
-    image: '/src/img/Caseboard/Caseboard_evidence_04.png'
+    image: '/src/img/clues/clue_shipslog.png'
   },
   {
     id: 'clue_handkerchief',
@@ -44,7 +207,7 @@ export const ALL_CLUES: Clue[] = [
     description: 'Батистовый платок с монограммой «В.А.» и следами дорогой помады цвета темной вишни.',
     icon: 'Sparkles',
     findingMessage: 'Кот вытащил из щели дамский платок. Барт вдыхает аромат: «Пахнет дорогим парфюмом и... опасностью. Хм, монограмма "В.А.". Возможно, это Вильгельм Артурович, или Великий Альфред, или... Василиса Алибабаевна?»',
-    image: '/src/img/Caseboard/Caseboard_evidence_05.png'
+    image: '/src/img/clues/clue_cloth.png'
   },
   {
     id: 'clue_feather',
@@ -52,7 +215,7 @@ export const ALL_CLUES: Clue[] = [
     description: 'Крупное черное перо редкой птицы, слегка испачканное машинным маслом.',
     icon: 'Feather',
     findingMessage: 'Кот играет с черным пером. Барт берет его в руки: «Хм... Воронье перо. Знак тайного общества, или убийца — птица? Нет, птицы не умеют держать револьвер. Хотя надо проверить алиби местного попугая!»',
-    image: '/src/img/Caseboard/Caseboard_evidence_06.png'
+    image: '/src/img/clues/clue_hair.png'
   },
   {
     id: 'clue_glasses',
@@ -60,7 +223,7 @@ export const ALL_CLUES: Clue[] = [
     description: 'Очки в тонкой роговой оправе с одной разбитой линзой.',
     icon: 'Eye',
     findingMessage: 'Под ковром нашлись треснувшие очки! Барт щурится через разбитое стекло: «Ого, очки в роговой оправе! Убийца явно потерял зрение в пылу борьбы! Либо преступник — близорукий интеллектуал, либо... просто любитель читать в темноте!»',
-    image: '/src/img/Caseboard/Caseboard_evidence_07.png'
+    image: '/src/img/clues/clue_glasses.png'
   },
   {
     id: 'clue_matchbox',
@@ -68,7 +231,7 @@ export const ALL_CLUES: Clue[] = [
     description: 'Коробок из элитного джаз-клуба «Синяя Нота» с нацарапанным адресом на обороте.',
     icon: 'Flame',
     findingMessage: 'Кот Midnight скинул с полки коробок спичек. Барт поднимает его: «Джаз-клуб "Синяя Нота"! И адрес на обороте! Какое злачное место... Придется провести там секретное расследование сегодня ночью. Исключительно ради дела!»',
-    image: '/src/img/Caseboard/Caseboard_evidence_08.png'
+    image: '/src/img/clues/clue_matchbox.png'
   },
   {
     id: 'clue_cufflink',
@@ -76,7 +239,7 @@ export const ALL_CLUES: Clue[] = [
     description: 'Дорогая запонка в виде змеи с крошечным изумрудным глазом.',
     icon: 'Sparkles',
     findingMessage: 'Midnight откопал блестящую штучку! Барт восторженно рассматривает её: «Серебряная запонка с изумрудным глазом! Изысканный вкус. Преступник явно принадлежит к высшему обществу! Или просто украл её у кого-то... например, у меня?! Ох нет, мои на месте»',
-    image: '/src/img/Caseboard/Caseboard_evidence_09.png'
+    image: '/src/img/clues/clue_sapphire.png'
   },
   {
     id: 'clue_cigarette',
@@ -84,7 +247,7 @@ export const ALL_CLUES: Clue[] = [
     description: 'Окурок редкой гаванской сигары с золотым фирменным ободком.',
     icon: 'Flame',
     findingMessage: 'Кот Midnight лапой выкатил окурок из угла. Барт кашляет от запаха: «Премиальная гаванская сигара! Убийца — богач или пижон. Ну или тот, кто любит донашивать чужие окурки. Но мы запишем это как след миллионера!»',
-    image: '/src/img/Caseboard/Caseboard_evidence_10.png'
+    image: '/src/img/clues/clue_matchbox.png'
   },
   {
     id: 'clue_ticket',
@@ -92,7 +255,7 @@ export const ALL_CLUES: Clue[] = [
     description: 'Билет в ложу на оперу «Кармен», датированный сегодняшним числом.',
     icon: 'Ticket',
     findingMessage: 'В мусорке нашелся билет в оперу! Барт восклицает: «Ложа на Кармен! На сегодняшнее число! Наш подозреваемый — театрал и эстет! Либо он пытался обеспечить себе алиби. Жаль, опера уже началась, а у нас тут труп!»',
-    image: '/src/img/Caseboard/Caseboard_evidence_11.png'
+    image: '/src/img/evids/EVID_TICKET.png'
   }
 ];
 
@@ -917,52 +1080,14 @@ export function generateProceduralClues(roomInfo: RoomInfo, safeCode: string): C
     let findingMessage = '';
     
     if (idx === 0) {
-      findingMessage = `«Ура! Кот Миднайт вытащил из укрытия ${item.name}! Барт Ванс воодушевленно вглядывается в находку: "Невероятно! Это же ${item.name}! Мои подозрения подтверждаются: этот предмет указывает прямо на ${suspect}! Нам нужно копать глубже!"»`;
+      findingMessage = `«Ура! Кот Миднайт вытащил из укрытия ${item.name}! Барт Ванс самодовольно ухмыляется: "Ну, как я и предполагал! ${item.name} — неопровержимая улика. Мои подозрения подтверждаются: этот предмет указывает прямо на ${suspect}! Наш дуэт непобедим!"»`;
     } else if (idx === 1) {
-      findingMessage = `«Замок поддался! Открываем ящик стола... О боже, да тут ${item.name}! Барт Ванс шепчет: "Поразительно! ${item.name}! Изумительная улика. Похоже, у ${suspect} были серьезные мотивы скрыть это... Отличная работа, Миднайт!"»`;
+      findingMessage = `«Замок открыт! Открываем ящик стола... Ну, как я и предполагал, тут припрятан ${item.name}! Мой детективный гений снова торжествует: этот предмет указывает, что у ${suspect} были серьезные мотивы... Отличная работа, Миднайт!»`;
     } else {
-      findingMessage = `«Сейф с громким щелчком распахивается! На самой верхней полке лежит ${item.name}! Барт Ванс сияет от триумфа: "Есть! Мы нашли главную улику дела — ${item.name}! Все ниточки сходятся к ${suspect}! Дело полностью раскрыто, злоумышленник разоблачен! Время праздновать победу!"»`;
+      findingMessage = `«Сейф распахивается! На верхней полке лежит ${item.name}! Барт Ванс сияет от триумфа: "Есть! Как я и предсказывал, главная улика — ${item.name}! Все ниточки сошлись к ${suspect}! Дело полностью раскрыто кошачьим гением и моим руководством!"»`;
     }
 
-    let image = `/src/img/Caseboard/Caseboard_evidence_01.png`;
-    const lowerName = item.name.toLowerCase();
-    if (lowerName.includes('яда') || lowerName.includes('флакон') || lowerName.includes('бутылк') || lowerName.includes('зель') || lowerName.includes('эфир') || lowerName.includes('ром')) {
-      image = `/src/img/Caseboard/Caseboard_evidence_01.png`;
-    } else if (lowerName.includes('письмо') || lowerName.includes('запис') || lowerName.includes('текст') || lowerName.includes('рецепт') || lowerName.includes('инструкц') || lowerName.includes('наклад')) {
-      image = `/src/img/Caseboard/Caseboard_evidence_02.png`;
-    } else if (lowerName.includes('час') || lowerName.includes('манометр')) {
-      image = `/src/img/Caseboard/Caseboard_evidence_03.png`;
-    } else if (lowerName.includes('блокнот') || lowerName.includes('баланс') || lowerName.includes('дневник') || lowerName.includes('журнал') || lowerName.includes('гроссбух')) {
-      image = `/src/img/Caseboard/Caseboard_evidence_04.png`;
-    } else if (lowerName.includes('платок') || lowerName.includes('трико') || lowerName.includes('перчатк')) {
-      image = `/src/img/Caseboard/Caseboard_evidence_05.png`;
-    } else if (lowerName.includes('перо') || lowerName.includes('трафарет')) {
-      image = `/src/img/Caseboard/Caseboard_evidence_06.png`;
-    } else if (lowerName.includes('очки') || lowerName.includes('труба') || lowerName.includes('лупа') || lowerName.includes('фонарь')) {
-      image = `/src/img/Caseboard/Caseboard_evidence_07.png`;
-    } else if (lowerName.includes('коробок') || lowerName.includes('спич')) {
-      image = `/src/img/Caseboard/Caseboard_evidence_08.png`;
-    } else if (lowerName.includes('запонк') || lowerName.includes('кольцо') || lowerName.includes('амулет') || lowerName.includes('кулон') || lowerName.includes('медаль') || lowerName.includes('дублон') || lowerName.includes('монет') || lowerName.includes('серебр') || lowerName.includes('золот') || lowerName.includes('печать') || lowerName.includes('цеп')) {
-      image = `/src/img/Caseboard/Caseboard_evidence_09.png`;
-    } else if (lowerName.includes('окурок') || lowerName.includes('сигар') || lowerName.includes('шашка') || lowerName.includes('кастет')) {
-      image = `/src/img/Caseboard/Caseboard_evidence_10.png`;
-    } else if (lowerName.includes('билет') || lowerName.includes('чек') || lowerName.includes('вексель') || lowerName.includes('пропуск')) {
-      image = `/src/img/Caseboard/Caseboard_evidence_11.png`;
-    } else if (lowerName.includes('карта') || lowerName.includes('план') || lowerName.includes('схема') || lowerName.includes('чертеж')) {
-      image = `/src/img/Caseboard/Caseboard_evidence_12.png`;
-    } else if (lowerName.includes('ключ') || lowerName.includes('отмыч') || lowerName.includes('пломби')) {
-      image = `/src/img/Caseboard/Caseboard_evidence_13.png`;
-    } else if (lowerName.includes('сапфир') || lowerName.includes('драгоцен') || lowerName.includes('камень') || lowerName.includes('глаз') || lowerName.includes('кристалл') || lowerName.includes('холст')) {
-      image = `/src/img/Caseboard/Caseboard_evidence_14.png`;
-    } else if (lowerName.includes('рыба') || lowerName.includes('сель')) {
-      image = `/src/img/Caseboard/Caseboard_evidence_15.png`;
-    } else if (lowerName.includes('билет на')) {
-      image = `/src/img/Caseboard/Caseboard_evidence_16.png`;
-    } else {
-      const num = (item.name.charCodeAt(0) + idx) % 16 + 1;
-      const strNum = num < 10 ? `0${num}` : `${num}`;
-      image = `/src/img/Caseboard/Caseboard_evidence_${strNum}.png`;
-    }
+    const image = getClueImagePath(item.name, idx);
 
     return {
       id: `procedural_clue_${idx + 1}`,
@@ -1217,7 +1342,7 @@ export function generateDailyJobs(day: number, currentReputation: number): Job[]
       id: `job_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 4)}`,
       title: randomTitle,
       caseName: `Дело №${caseNum}: «${randomTitle}»`,
-      description: `«${randomDesc} На кону репутация нашего бюро!»`,
+      description: `«${randomDesc}»`,
       reward,
       reputationRequired,
       infoCost,

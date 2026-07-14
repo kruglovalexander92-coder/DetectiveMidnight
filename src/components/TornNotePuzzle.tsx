@@ -115,7 +115,7 @@ export default function TornNotePuzzle({
         if (updatedNote.clueIdToUnlock && !newFoundClues.includes(updatedNote.clueIdToUnlock)) {
           newFoundClues.push(updatedNote.clueIdToUnlock);
           const clue = prev.currentClues.find(c => c.id === updatedNote.clueIdToUnlock);
-          newDialogueText += clue ? `\n\nО боже, да это же важная улика: "${clue.name}"! ${clue.findingMessage}` : '';
+          newDialogueText += clue ? `\n\nНу, как я и предполагал! Перед нами важная улика — "${clue.name}"! ${clue.findingMessage}` : '';
           logsPush('system', `Найдена улика: ${clue?.name || 'Секретный документ'}`);
         }
 
