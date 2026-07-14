@@ -357,15 +357,43 @@ export default function WriterMode({
   const isNovelAvailable = lastNovelDay === undefined || (currentDay - lastNovelDay) >= 3;
   const remainingDays = lastNovelDay !== undefined ? 3 - (currentDay - lastNovelDay) : 0;
 
-  const bgImage = writeType === "single" ? "/src/img/Art/Writer1.png" : "/src/img/Art/Writer2.png";
+  const bgImage = "/src/img/Art/Writer1.png";
+
+  const isSquareImg = bgImage.includes("Writer1.png") || bgImage.includes("Writer_nite2.png");
+  const coords = isSquareImg
+    ? {
+        paper: {
+          top: "24%",
+          left: "27%",
+          width: "56%",
+          height: "34%",
+        },
+        keyboard: {
+          top: "70%",
+          left: "20%",
+          width: "61%",
+          height: "21.5%",
+        }
+      }
+    : {
+        paper: {
+          top: "22%",
+          left: "32%",
+          width: "46%",
+          height: "35%",
+        },
+        keyboard: {
+          top: "70%",
+          left: "20%",
+          width: "61%",
+          height: "21.5%",
+        }
+      };
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex flex-col p-3 md:p-4 select-none overflow-hidden bg-cover bg-center bg-no-repeat transition-all duration-1000"
-      style={{ backgroundImage: `url('${bgImage}')` }}
+      className="fixed inset-0 z-50 flex flex-col p-3 md:p-4 select-none overflow-hidden bg-[#070709] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-neutral-900 via-stone-950 to-[#020203] transition-all duration-1000"
     >
-      {/* Dark tint overlay for reading text clearly */}
-      <div className="absolute inset-0 bg-black/45 backdrop-blur-[0.5px] pointer-events-none" />
       {/* HEADER BAR */}
       <div className="flex justify-between items-center border-b border-white/10 pb-2.5 mb-3 shrink-0 flex-wrap gap-2">
         <div className="flex items-center gap-2.5">
@@ -428,295 +456,297 @@ export default function WriterMode({
 
       {/* MAIN CONTAINER */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5 items-stretch min-h-0 overflow-y-auto lg:overflow-hidden">
-        
+
         {/* LEFT/CENTER: THE ROYAL TYPEWRITER DESK */}
-        <div className="lg:col-span-8 border border-white/10 bg-black/80 backdrop-blur-sm p-3 md:p-4 flex flex-col justify-between relative shadow-inner overflow-hidden min-h-[450px] lg:min-h-0">
-          {/* Desk leather texture background pattern */}
-          <div className="absolute inset-0 bg-[radial-gradient(#141414_1px,transparent_1px)] [background-size:12px_12px] opacity-40 pointer-events-none" />
-          
-          {/* Top mechanical roller / typewriter bar decor */}
-          <div className="relative h-10 w-full bg-neutral-900 border-y border-stone-800 shrink-0 flex items-center justify-between px-4 z-10">
-            <div className="w-4 h-6 bg-stone-700 border border-stone-600 rounded-sm shadow" />
-            <div className="flex-1 mx-2 h-2.5 bg-neutral-950 border border-stone-800/80 rounded-full overflow-hidden flex items-center">
-              <div className="h-[2px] bg-amber-500/20 w-full animate-pulse" />
-            </div>
-            <div className="w-4 h-6 bg-stone-700 border border-stone-600 rounded-sm shadow" />
-            <div className="absolute left-1/2 -translate-x-1/2 -bottom-2 bg-stone-800 text-[7px] text-stone-500 font-mono tracking-widest px-1.5 border border-stone-700 select-none">
-              CARRIAGE RETURN
-            </div>
-          </div>
-
-          {/* THE PAPER SHEET CONTAINER */}
-          <div className="flex-1 my-2 bg-[#f7f4eb] text-neutral-950 border border-amber-950/20 p-4 md:p-5 shadow-2xl relative overflow-y-auto custom-scrollbar flex flex-col min-h-[140px]">
-            {/* Fine texture lines of paper */}
-            <div className="absolute inset-0 bg-gradient-to-b from-[#fbf9f4] via-[#f7f4eb] to-[#efebe0] pointer-events-none" />
-            <div className="absolute inset-y-0 left-8 w-[1px] bg-red-400/20 pointer-events-none" />
-
-            {/* Paper content */}
-            <div className="relative z-10 flex-1 flex flex-col justify-between min-h-0">
-              
-              {isGenerating ? (
-                /* LOADING & EXPLANATORY SCREEN DURING AI GENERATION */
-                <div className="flex-1 flex flex-col items-center justify-center text-center py-6 px-4 animate-fade-in text-neutral-900 my-auto">
-                  <div className="relative mb-3.5 animate-bounce">
-                    <div className="w-12 h-12 border-4 border-amber-900/15 border-t-amber-900 rounded-full animate-spin" />
-                    <Lucide.PenTool className="w-5 h-5 text-amber-950 absolute inset-0 m-auto" />
-                  </div>
-                  
-                  <div className="space-y-3 max-w-md">
-                    <span className="font-mono text-[8px] md:text-[9px] text-amber-900/60 uppercase tracking-[0.25em] font-bold block animate-pulse">
-                      ✉ ОТПРАВКА В ИЗДАТЕЛЬСТВО
-                    </span>
-                    <h3 className="font-serif text-xs md:text-sm font-bold text-neutral-900 italic uppercase">
-                      ИИ-Литератор создает новое дело...
-                    </h3>
-                    <p className="font-serif text-[10px] md:text-[11px] leading-relaxed text-neutral-700 italic">
-                      «Издательский ИИ-Ассистент кропотливо изучает ваш замысел, сплетает интригующие диалоги подозреваемых, генерирует интерактивные улики и расставляет ловушки на месте преступления. Слышен быстрый стук печатных литер...»
-                    </p>
-                    <div className="h-[1px] bg-neutral-300 w-20 mx-auto my-1" />
-                    <p className="font-mono text-[8px] text-neutral-500">
-                      Процесс занимает от 5 до 15 секунд. Пожалуйста, не закрывайте кабинет.
-                    </p>
-                  </div>
-                </div>
-              ) : !generationResult ? (
-                <>
-                  <div>
-                    {/* Mode Choice inside the paper */}
-                    <div className="flex justify-center gap-3 mb-3 select-none">
-                      <button
-                        onClick={() => {
-                          try { gameAudio.playClick(); } catch (e) {}
-                          setWriteType("single");
-                        }}
-                        className={`px-2.5 py-1 font-serif text-[10px] font-bold tracking-wide transition-all border ${
-                          writeType === "single"
-                            ? "border-neutral-900 bg-neutral-950 text-white"
-                            : "border-neutral-900/10 hover:border-neutral-900/40 text-neutral-600"
-                        }`}
-                      >
-                        ✍ Одиночное дело
-                      </button>
-                      <button
-                        onClick={() => {
-                          try { gameAudio.playClick(); } catch (e) {}
-                          setWriteType("campaign");
-                        }}
-                        className={`px-2.5 py-1 font-serif text-[10px] font-bold tracking-wide transition-all border ${
-                          writeType === "campaign"
-                            ? "border-neutral-900 bg-neutral-950 text-white"
-                            : "border-neutral-900/10 hover:border-neutral-900/40 text-neutral-600"
-                        }`}
-                      >
-                        📚 Бульварный роман (3-5 глав)
-                      </button>
+        <div className="lg:col-span-8 flex items-center justify-center min-h-[450px] lg:min-h-0 relative select-none">
+          <div className="relative inline-block mx-auto max-h-full max-w-full overflow-hidden">
+            <img 
+              src={bgImage} 
+              alt="Typewriter" 
+              className="max-h-[calc(100vh-140px)] w-auto object-contain select-none pointer-events-none block rounded-lg shadow-2xl border border-stone-800/40"
+            />
+            
+            {/* THE PAPER SHEET CONTAINER - OVERLAY */}
+            <div 
+              className="absolute flex flex-col justify-between overflow-y-auto custom-scrollbar p-2 md:p-3.5 lg:p-4 select-text pointer-events-auto"
+              style={{
+                top: coords.paper.top,
+                left: coords.paper.left,
+                width: coords.paper.width,
+                height: coords.paper.height,
+              }}
+            >
+              {/* Paper content */}
+              <div className="flex-1 flex flex-col justify-between min-h-0">
+                {isGenerating ? (
+                  /* LOADING & EXPLANATORY SCREEN DURING AI GENERATION */
+                  <div className="flex-1 flex flex-col items-center justify-center text-center py-2 md:py-4 px-2 animate-fade-in text-neutral-900 my-auto">
+                    <div className="relative mb-2 animate-bounce">
+                      <div className="w-8 h-8 md:w-10 md:h-10 border-4 border-amber-900/15 border-t-amber-900 rounded-full animate-spin" />
+                      <Lucide.PenTool className="w-4 h-4 text-amber-950 absolute inset-0 m-auto" />
                     </div>
-
-                    <div className="text-center mb-2">
-                      <span className="font-mono text-[7.5px] text-neutral-400 block uppercase tracking-widest leading-none">
-                        ПОЛЕ ДЛЯ НАБОРА ТЕКСТА
+                    
+                    <div className="space-y-1.5 max-w-md">
+                      <span className="font-mono text-[7px] md:text-[8px] text-amber-900/60 uppercase tracking-[0.25em] font-bold block animate-pulse">
+                        ✉ ОТПРАВКА В ИЗДАТЕЛЬСТВО
                       </span>
-                      <h3 className="font-serif text-[11px] font-bold text-neutral-800 uppercase italic mt-1">
-                        {writeType === "single" ? "Сводка одиночного происшествия" : "Сюжетная линия будущего романа"}
+                      <h3 className="font-serif text-[10px] md:text-[11px] font-bold text-neutral-900 italic uppercase">
+                        ИИ-Литератор создает новое дело...
                       </h3>
-                    </div>
-
-                    {/* TEXTAREA WRITING SPACE */}
-                    <div className="relative mt-2 flex-1 flex flex-col min-h-0">
-                      <textarea
-                        value={ideaText}
-                        onChange={(e) => {
-                          if (e.target.value.length > ideaText.length) {
-                            try { gameAudio.playTypewriterKey(); } catch (err) {}
-                          }
-                          setIdeaText(e.target.value);
-                          setWriterError(null);
-                        }}
-                        placeholder={
-                          writeType === "single"
-                            ? "Напишите краткую идею дела... Например: 'Кот находит запертую шкатулку вора в лавке антиквара, но вор нападает в темноте...'"
-                            : "Напишите замысел бульварного романа... Например: 'Таинственное ограбление века в Музее. Ванс и Миднайт идут по следу похитителей...'"
-                        }
-                        className="w-full flex-1 min-h-[60px] md:min-h-[100px] bg-transparent text-neutral-900 font-serif text-[11px] md:text-[12px] leading-relaxed resize-none border-b border-dashed border-neutral-300 focus:outline-none focus:border-neutral-600 text-left placeholder:text-neutral-400 placeholder:italic select-text"
-                        disabled={isGenerating}
-                      />
-                      <div className="text-[8px] font-mono text-neutral-400 text-right mt-1">
-                        {ideaText.length} симв. // Вводите с клавиатуры или нажимайте клавиши ниже
-                      </div>
-                    </div>
-                  </div>
-
-                  {writerError && (
-                    <div className="mt-2.5 bg-red-50 border border-red-200/60 p-2 text-center animate-fade-in shrink-0">
-                      <p className="font-mono text-[9px] text-red-700 font-bold uppercase tracking-wider flex items-center justify-center gap-1.5">
-                        <Lucide.AlertCircle className="w-3.5 h-3.5 text-red-600 shrink-0" />
-                        {writerError}
+                      <p className="font-serif text-[8.5px] md:text-[9.5px] leading-relaxed text-neutral-700 italic">
+                        «Издательский ИИ-Ассистент кропотливо изучает ваш замысел, сплетает интригующие диалоги подозреваемых, генерирует интерактивные улики и расставляет ловушки на месте преступления. Слышен быстрый стук печатных литер...»
+                      </p>
+                      <div className="h-[1px] bg-neutral-300 w-12 mx-auto my-0.5" />
+                      <p className="font-mono text-[7px] text-neutral-500">
+                        Процесс занимает от 5 до 15 секунд. Пожалуйста, не закрывайте кабинет.
                       </p>
                     </div>
-                  )}
-
-                  {/* SUBMIT LEATHER STAMP */}
-                  <div className="text-center mt-3 shrink-0">
-                    <button
-                      onClick={handleGenerate}
-                      disabled={isGenerating}
-                      className="inline-flex items-center gap-2 px-6 h-9 bg-neutral-900 hover:bg-neutral-800 text-white text-[9.5px] font-sans font-bold uppercase tracking-[0.2em] rounded-none shadow-md disabled:opacity-30 transition-all cursor-pointer"
-                    >
-                      <Lucide.Settings className="w-3.5 h-3.5 animate-spin" style={{ animationDuration: '4s' }} />
-                      Запустить в производство
-                    </button>
                   </div>
-                </>
-              ) : (
-                /* RESULT VIEW ON THE PAPER */
-                <div className="flex flex-col justify-between h-full text-neutral-900 animate-fade-in text-left">
-                  <div>
-                    <div className="flex justify-between items-center border-b border-neutral-300 pb-2 mb-3">
-                      <span className="font-mono text-[8px] text-neutral-500 uppercase tracking-widest">
-                        ✓ ИЗДАТЕЛЬСТВО СВЯЗАЛОСЬ // РОМАН ПРИНЯТ
-                      </span>
-                      <button
-                        onClick={clearWriterResults}
-                        className="text-[9px] font-mono text-red-700 hover:text-red-900 underline"
-                      >
-                        Написать другое
-                      </button>
+                ) : !generationResult ? (
+                  <>
+                    <div className="flex-1 flex flex-col min-h-0">
+                      {/* Mode Choice inside the paper */}
+                      <div className="flex justify-center gap-2 mb-2 select-none">
+                        <button
+                          onClick={() => {
+                            try { gameAudio.playClick(); } catch (e) {}
+                            setWriteType("single");
+                          }}
+                          className={`px-2 py-0.5 font-serif text-[8px] md:text-[9px] font-bold tracking-wide transition-all border ${
+                            writeType === "single"
+                              ? "border-neutral-900 bg-neutral-950 text-white"
+                              : "border-neutral-900/10 hover:border-neutral-900/40 text-neutral-600"
+                          }`}
+                        >
+                          ✍ Одиночное дело
+                        </button>
+                        <button
+                          onClick={() => {
+                            try { gameAudio.playClick(); } catch (e) {}
+                            setWriteType("campaign");
+                          }}
+                          className={`px-2 py-0.5 font-serif text-[8px] md:text-[9px] font-bold tracking-wide transition-all border ${
+                            writeType === "campaign"
+                              ? "border-neutral-900 bg-neutral-950 text-white"
+                              : "border-neutral-900/10 hover:border-neutral-900/40 text-neutral-600"
+                          }`}
+                        >
+                          📚 Бульварный роман (3-5 глав)
+                        </button>
+                      </div>
+
+                      <div className="text-center mb-1">
+                        <span className="font-mono text-[7px] text-neutral-400 block uppercase tracking-widest leading-none">
+                          ПОЛЕ ДЛЯ НАБОРА ТЕКСТА
+                        </span>
+                        <h3 className="font-serif text-[9px] md:text-[10px] font-bold text-neutral-800 uppercase italic mt-0.5">
+                          {writeType === "single" ? "Сводка одиночного происшествия" : "Сюжетная линия будущего романа"}
+                        </h3>
+                      </div>
+
+                      {/* TEXTAREA WRITING SPACE */}
+                      <div className="relative mt-1 flex-1 flex flex-col min-h-0">
+                        <textarea
+                          value={ideaText}
+                          onChange={(e) => {
+                            if (e.target.value.length > ideaText.length) {
+                              try { gameAudio.playTypewriterKey(); } catch (err) {}
+                            }
+                            setIdeaText(e.target.value);
+                            setWriterError(null);
+                          }}
+                          placeholder={
+                            writeType === "single"
+                              ? "Напишите краткую идею дела... Например: 'Кот находит запертую шкатулку вора в лавке антиквара, но вор нападает в темноте...'"
+                              : "Напишите замысел бульварного романа... Например: 'Таинственное ограбление века в Музее. Ванс и Миднайт идут по следу похитителей...'"
+                          }
+                          className="w-full flex-1 min-h-[40px] md:min-h-[80px] bg-transparent text-neutral-950 font-serif text-[10px] md:text-[11.5px] leading-relaxed resize-none border-b border-dashed border-neutral-300 focus:outline-none focus:border-neutral-600 text-left placeholder:text-neutral-400 placeholder:italic select-text"
+                          disabled={isGenerating}
+                        />
+                        <div className="text-[7px] font-mono text-neutral-400 text-right mt-0.5">
+                          {ideaText.length} симв. // Вводите с клавиатуры или нажимайте клавиши ниже
+                        </div>
+                      </div>
                     </div>
 
-                    {writeType === "single" ? (
-                      <div className="space-y-2">
-                        <span className="px-2 py-0.5 border border-amber-900 bg-amber-900 text-white font-mono text-[7px] font-bold uppercase tracking-widest inline-block">
-                          {generationResult.caseName || "Дело раскрыто!"}
-                        </span>
-                        <h3 className="font-serif text-md font-bold italic tracking-wide">
-                          {generationResult.title}
-                        </h3>
-                        <p className="font-serif text-[11px] leading-relaxed italic text-neutral-700">
-                          {generationResult.description}
+                    {writerError && (
+                      <div className="mt-1 bg-red-50 border border-red-200/60 p-1 text-center animate-fade-in shrink-0">
+                        <p className="font-mono text-[8px] text-red-700 font-bold uppercase tracking-wider flex items-center justify-center gap-1">
+                          <Lucide.AlertCircle className="w-3 h-3 text-red-600 shrink-0" />
+                          {writerError}
                         </p>
-                        <div className="h-[1px] bg-neutral-200 my-2" />
-                        <div className="font-mono text-[8.5px] text-neutral-500 space-y-0.5">
-                          <div>• Бюджет контракта: <strong className="text-emerald-800 font-sans font-bold">+{generationResult.reward}$</strong></div>
-                          <div>• Место действия: <strong>{generationResult.roomTemplateId}</strong></div>
-                          <div>• Уровень опасности: <strong>{generationResult.risk === 'high' ? 'Высокий' : generationResult.risk === 'medium' ? 'Средний' : 'Низкий'}</strong></div>
-                        </div>
-                        <div className="border border-emerald-900/10 bg-emerald-50 p-2.5 mt-3">
-                          <p className="font-serif text-[10px] text-emerald-950 italic">
-                            «Барт зажег трубку: "Клянусь усами Миднайта, этот набросок достоин первых полос! Мы добавили это расследование в ежедневные оперативные сводки на доску!"»
-                          </p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-2.5">
-                        <span className="px-2 py-0.5 border border-purple-950 bg-purple-950 text-white font-mono text-[7px] font-bold uppercase tracking-widest inline-block">
-                          РОМАН ИЗ 3-Х ГЛАВ
-                        </span>
-                        <h3 className="font-serif text-xs font-bold tracking-wide italic border-b border-neutral-200 pb-1">
-                          «{gameState.customCampaignTitle || "Повесть о Миднайте"}»
-                        </h3>
-
-                        <div className="space-y-2 max-h-[150px] overflow-y-auto pr-1">
-                          {generationResult.chapters?.map((ch: any, i: number) => (
-                            <div key={i} className="border-l-2 border-amber-800/40 pl-2">
-                              <h4 className="font-serif text-[10.5px] font-bold leading-tight">
-                                {ch.caseName}: {ch.title}
-                              </h4>
-                              <p className="text-[9px] font-serif text-neutral-600 italic leading-snug">
-                                {ch.description}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-
-                        <div className="border border-purple-900/15 bg-purple-50 p-2 text-left">
-                          <p className="font-serif text-[9.5px] text-purple-950 italic">
-                            «Кампания успешно вписана в кодекс. Пройдите все главы романа в Особых Сюжетных Расследованиях на доске. По завершении вы сможете издать роман и получить вердикт ИИ-Критика!»
-                          </p>
-                        </div>
                       </div>
                     )}
-                  </div>
 
-                  <button
-                    onClick={clearWriterResults}
-                    className="mt-3 w-full h-8 bg-neutral-900 hover:bg-neutral-800 text-white text-[8.5px] font-sans font-bold uppercase tracking-wider rounded-none transition-all cursor-pointer"
-                  >
-                    Вернуться к пергаменту
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* VIRTUAL RETRO ROUNDED KEYS OF TYPEWRITER */}
-          <div className="relative shrink-0 border-t border-neutral-800 bg-[#070707] p-2 md:p-3 mt-1 select-none">
-            {/* Typewriter mechanical bars decor overlay background */}
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#030303]/40 to-neutral-950 pointer-events-none" />
-            
-            <div className="relative z-10 flex flex-col gap-1.5 md:gap-2 max-w-xl mx-auto">
-              {keyboardRows.map((row, rIdx) => (
-                <div key={rIdx} className="flex justify-center gap-1 md:gap-1.5">
-                  {row.map((char) => {
-                    const isPressed = activeKey === char;
-                    return (
+                    {/* SUBMIT LEATHER STAMP */}
+                    <div className="text-center mt-2 shrink-0">
                       <button
-                        key={char}
-                        onClick={() => handleVirtualKeyPress(char)}
-                        disabled={isGenerating || !!generationResult}
-                        className={`w-6.5 h-6.5 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-mono text-[8px] sm:text-[10px] font-bold border cursor-pointer select-none transition-all shadow-md active:scale-95 ${
-                          isPressed
-                            ? "bg-amber-500 border-amber-600 text-black scale-95 shadow-inner"
-                            : "bg-gradient-to-b from-stone-800 to-stone-950 hover:from-stone-750 hover:to-stone-900 border-stone-700/60 text-stone-300 shadow"
-                        }`}
+                        onClick={handleGenerate}
+                        disabled={isGenerating}
+                        className="inline-flex items-center gap-1.5 px-4 h-7.5 bg-neutral-900 hover:bg-neutral-800 text-white text-[8.5px] font-sans font-bold uppercase tracking-[0.15em] rounded-none shadow-md disabled:opacity-30 transition-all cursor-pointer"
                       >
-                        {isShiftActive ? char.toUpperCase() : char.toLowerCase()}
+                        <Lucide.Settings className="w-3 h-3 animate-spin" style={{ animationDuration: '4s' }} />
+                        Запустить в производство
                       </button>
-                    );
-                  })}
-                </div>
-              ))}
+                    </div>
+                  </>
+                ) : (
+                  /* RESULT VIEW ON THE PAPER */
+                  <div className="flex flex-col justify-between h-full text-neutral-900 animate-fade-in text-left">
+                    <div>
+                      <div className="flex justify-between items-center border-b border-neutral-300 pb-1 mb-1.5">
+                        <span className="font-mono text-[7px] text-neutral-500 uppercase tracking-widest">
+                          ✓ ИЗДАТЕЛЬСТВО СВЯЗАЛОСЬ // РОМАН ПРИНЯТ
+                        </span>
+                        <button
+                          onClick={clearWriterResults}
+                          className="text-[8px] font-mono text-red-700 hover:text-red-900 underline"
+                        >
+                          Написать другое
+                        </button>
+                      </div>
+
+                      {writeType === "single" ? (
+                        <div className="space-y-1.5 overflow-y-auto max-h-[140px] pr-1">
+                          <span className="px-1.5 py-0.5 border border-amber-900 bg-amber-900 text-white font-mono text-[6.5px] font-bold uppercase tracking-widest inline-block">
+                            {generationResult.caseName || "Дело раскрыто!"}
+                          </span>
+                          <h3 className="font-serif text-xs font-bold italic tracking-wide">
+                            {generationResult.title}
+                          </h3>
+                          <p className="font-serif text-[10px] leading-relaxed italic text-neutral-700">
+                            {generationResult.description}
+                          </p>
+                          <div className="h-[1px] bg-neutral-200 my-1" />
+                          <div className="font-mono text-[7.5px] text-neutral-500 space-y-0.5">
+                            <div>• Бюджет контракта: <strong className="text-emerald-800 font-sans font-bold">+{generationResult.reward}$</strong></div>
+                            <div>• Место действия: <strong>{generationResult.roomTemplateId}</strong></div>
+                            <div>• Уровень опасности: <strong>{generationResult.risk === 'high' ? 'Высокий' : generationResult.risk === 'medium' ? 'Средний' : 'Низкий'}</strong></div>
+                          </div>
+                          <div className="border border-emerald-900/10 bg-emerald-50 p-1.5 mt-2">
+                            <p className="font-serif text-[8.5px] text-emerald-950 italic">
+                              «Барт зажег трубку: "Клянусь усами Миднайта, этот набросок достоин первых полос! Мы добавили это расследование в ежедневные оперативные сводки на доску!"»
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-1.5">
+                          <span className="px-1.5 py-0.5 border border-purple-950 bg-purple-950 text-white font-mono text-[6.5px] font-bold uppercase tracking-widest inline-block">
+                            РОМАН ИЗ 3-Х ГЛАВ
+                          </span>
+                          <h3 className="font-serif text-[10px] font-bold tracking-wide italic border-b border-neutral-200 pb-0.5">
+                            «{gameState.customCampaignTitle || "Повесть о Миднайте"}»
+                          </h3>
+
+                          <div className="space-y-1.5 max-h-[100px] overflow-y-auto pr-1">
+                            {generationResult.chapters?.map((ch: any, i: number) => (
+                              <div key={i} className="border-l border-amber-800/40 pl-1.5">
+                                <h4 className="font-serif text-[9px] font-bold leading-tight">
+                                  {ch.caseName}: {ch.title}
+                                </h4>
+                                <p className="text-[8px] font-serif text-neutral-600 italic leading-snug">
+                                  {ch.description}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="border border-purple-900/15 bg-purple-50 p-1.5 text-left">
+                            <p className="font-serif text-[8.5px] text-purple-950 italic leading-normal">
+                              «Кампания успешно вписана в кодекс. Пройдите все главы романа в Особых Сюжетных Расследованиях на доске. По завершении вы сможете издать роман и получить вердикт ИИ-Критика!»
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={clearWriterResults}
+                      className="mt-2 w-full h-7 bg-neutral-900 hover:bg-neutral-800 text-white text-[8px] font-sans font-bold uppercase tracking-wider rounded-none transition-all cursor-pointer"
+                    >
+                      Вернуться к пергаменту
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* VIRTUAL TYPEWRITER OVERLAYS - KEYBOARD */}
+            <div 
+              className="absolute flex flex-col justify-between pointer-events-auto select-none"
+              style={{
+                top: coords.keyboard.top,
+                left: coords.keyboard.left,
+                width: coords.keyboard.width,
+                height: coords.keyboard.height,
+              }}
+            >
+              {/* Typewriter Rows */}
+              <div className="flex flex-col justify-between h-[75%] w-full">
+                {keyboardRows.map((row, rIdx) => (
+                  <div key={rIdx} className="flex justify-center gap-[0.5%] md:gap-[0.8%] h-[28%] w-full">
+                    {row.map((char) => {
+                      const isPressed = activeKey === char;
+                      return (
+                        <button
+                          key={char}
+                          onClick={() => handleVirtualKeyPress(char)}
+                          disabled={isGenerating || !!generationResult}
+                          className={`w-[7%] aspect-square rounded-full flex items-center justify-center font-mono text-[6px] sm:text-[9px] md:text-[10px] font-bold border cursor-pointer select-none transition-all active:scale-90 ${
+                            isPressed
+                              ? "bg-amber-500/80 border-amber-600 text-black scale-95 shadow-inner shadow-amber-950"
+                              : "bg-black/10 hover:bg-amber-500/10 border-white/5 hover:border-amber-500/35 text-stone-300/60 hover:text-white"
+                          }`}
+                        >
+                          {isShiftActive ? char.toUpperCase() : char.toLowerCase()}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
 
               {/* Spacebar & Action Keys Row */}
-              <div className="flex justify-center gap-2 items-center mt-0.5">
+              <div className="flex justify-center gap-[1%] items-center h-[22%] w-full mt-0.5 md:mt-1">
                 <button
                   onClick={() => {
                     try { gameAudio.playClick(); } catch (e) {}
                     setIsShiftActive((prev) => !prev);
                   }}
                   disabled={isGenerating || !!generationResult}
-                  className={`px-2.5 h-6 md:h-7 font-mono text-[7px] md:text-[8px] uppercase tracking-wider rounded border cursor-pointer transition-all ${
+                  className={`w-[14%] h-[90%] font-mono text-[5.5px] sm:text-[7.5px] md:text-[9px] uppercase tracking-wider rounded border cursor-pointer transition-all flex items-center justify-center ${
                     isShiftActive
-                      ? "bg-amber-500 border-amber-600 text-black font-bold"
-                      : "bg-stone-900 hover:bg-stone-850 text-stone-400 hover:text-white border-stone-800"
+                      ? "bg-amber-500/85 border-amber-600 text-black font-bold"
+                      : "bg-black/15 hover:bg-amber-500/15 border-white/5 hover:border-amber-500/35 text-stone-300/70"
                   }`}
                   title="Shift (Заглавные)"
                 >
-                  [Shift]
+                  Shift
                 </button>
 
                 <button
                   onClick={handleBackspacePress}
                   disabled={isGenerating || !!generationResult || ideaText.length === 0}
-                  className="px-2 h-6 md:h-7 bg-stone-900 hover:bg-stone-850 text-stone-400 hover:text-white font-mono text-[7.5px] md:text-[8px] uppercase tracking-wider rounded border border-stone-800 cursor-pointer"
+                  className="w-[12%] h-[90%] bg-black/15 hover:bg-amber-500/15 border-white/5 hover:border-amber-500/35 text-stone-300/70 font-mono text-[5.5px] sm:text-[7.5px] md:text-[9px] uppercase tracking-wider rounded cursor-pointer transition-all flex items-center justify-center"
                   title="Стереть"
                 >
-                  [←]
+                  ←
                 </button>
 
                 <button
                   onClick={handleSpacePress}
                   disabled={isGenerating || !!generationResult}
-                  className="w-24 sm:w-36 h-6 md:h-7 bg-stone-900 hover:bg-stone-850 rounded border border-stone-800/80 shadow cursor-pointer"
+                  className="w-[42%] h-[90%] bg-black/5 hover:bg-amber-500/15 border-white/5 hover:border-amber-500/35 rounded shadow cursor-pointer transition-all"
                   title="Пробел"
                 />
 
                 <button
                   onClick={handleEnterPress}
                   disabled={isGenerating || !!generationResult}
-                  className="px-2 h-6 md:h-7 bg-stone-900 hover:bg-stone-850 text-amber-500 font-mono text-[7.5px] md:text-[8px] uppercase tracking-wider rounded border border-stone-800 cursor-pointer"
+                  className="w-[14%] h-[90%] bg-black/15 hover:bg-amber-500/15 border-white/5 hover:border-amber-500/35 text-amber-500/80 font-mono text-[5.5px] sm:text-[7.5px] md:text-[9px] uppercase tracking-wider rounded cursor-pointer transition-all font-bold flex items-center justify-center"
                   title="Перевод строки"
                 >
-                  [↩]
+                  ↩ Enter
                 </button>
               </div>
             </div>
