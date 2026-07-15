@@ -267,15 +267,12 @@ export default function TornNotePuzzle({
 
   const cols = activeNote.cols || 6;
   const rows = activeNote.rows || 1;
+  const charsPerPiece = activeNote.pieces[0]?.textLines[0]?.length || 10;
+  const maxGridWidth = `min(380px, 40vh * ${cols / rows})`;
+  const fontSizeCss = `min(calc(84vw / (${cols * charsPerPiece * 0.61})), calc(${maxGridWidth} / (${cols * charsPerPiece * 0.61})))`;
 
   const getAspectClass = (cCount: number, rCount: number) => {
-    const num = cCount * rCount;
-    if (num === 4) return 'aspect-[1.5/1]';
-    if (num === 6) return 'aspect-[1.1/1]';
-    if (num === 8) return 'aspect-[1/1.1]';
-    if (num === 9) return 'aspect-[1.3/1]';
-    if (num === 12) return 'aspect-[1.2/1]';
-    return 'aspect-[1/1.2]';
+    return 'aspect-square';
   };
 
   // Custom jagged rip clip-path styles
@@ -313,19 +310,19 @@ export default function TornNotePuzzle({
   };
 
   return (
-    <div className="fixed inset-0 bg-stone-950/95 backdrop-blur-md z-[100] flex flex-col items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 bg-stone-950/95 backdrop-blur-md z-[100] flex flex-col items-center justify-center p-2 sm:p-4 overflow-hidden">
       {/* Background grain texture */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-stone-900/40 via-stone-950/90 to-stone-950 pointer-events-none" />
 
       {/* Main Container */}
-      <div className="w-full max-w-4xl border-2 border-stone-800 bg-[#16120e] p-6 sm:p-8 shadow-2xl relative flex flex-col items-center animate-fade-in text-stone-200">
+      <div className="w-full max-w-2xl border-2 border-stone-800 bg-[#16120e] p-3 sm:p-4 shadow-2xl relative flex flex-col items-center animate-fade-in text-stone-200 max-h-[96vh] overflow-y-auto">
         
         {/* Retro style paper clips and design touches */}
         <div className="absolute -top-3 left-1/4 w-12 h-6 border-b border-x border-stone-500 rounded-b bg-stone-700 opacity-60" />
         <div className="absolute -top-3 right-1/4 w-12 h-6 border-b border-x border-stone-500 rounded-b bg-stone-700 opacity-60" />
         
         {/* Header */}
-        <div className="w-full flex justify-between items-start border-b border-stone-800 pb-4 mb-6">
+        <div className="w-full flex justify-between items-start border-b border-stone-800 pb-2 mb-3">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="p-1 bg-amber-900/50 border border-amber-600 rounded">
@@ -354,7 +351,7 @@ export default function TornNotePuzzle({
 
         {/* Instructions Panel */}
         {!isSuccess && (
-          <div className="w-full bg-[#1b140f] border border-amber-900/30 p-3 mb-6 text-xs font-sans leading-relaxed text-amber-100 flex items-start gap-2.5">
+          <div className="w-full bg-[#1b140f] border border-amber-900/30 p-2.5 mb-3 text-xs font-sans leading-relaxed text-amber-100 flex items-start gap-2.5">
             <Lucide.Info className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
             <div>
               <strong className="text-amber-400">Как играть:</strong> Нажмите на клочок записки, чтобы выбрать его. Затем нажмите на другой клочок, чтобы <strong className="text-white underline">поменять их местами</strong>. Используйте кнопку поворотника <strong className="text-amber-500">⟳ 90°</strong> в углу каждого клочка, чтобы крутить его. Буквы должны выстроиться в ровные горизонтальные строчки!
@@ -363,7 +360,7 @@ export default function TornNotePuzzle({
         )}
 
         {/* Puzzle Board Area */}
-        <div className="w-full flex flex-col items-center justify-center my-4 py-8 px-4 bg-stone-900/60 border border-stone-800 shadow-inner relative overflow-hidden min-h-[300px]">
+        <div className="w-full flex flex-col items-center justify-center my-2 py-3 px-2 bg-stone-900/60 border border-stone-800 shadow-inner relative overflow-hidden min-h-[160px] max-h-[50vh]">
           
           {/* Wooden/table accent grids */}
           <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,_transparent_1px),_linear-gradient(90deg,_rgba(255,255,255,0.02)_1px,_transparent_1px)] bg-[size:40px_40px] opacity-25" />
@@ -373,9 +370,11 @@ export default function TornNotePuzzle({
             style={{
               display: 'grid',
               gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+              maxWidth: `calc(min(380px, 40vh) * ${cols / rows})`,
+              width: '100%',
             }}
-            className={`relative z-10 w-full max-w-2xl select-none transition-all duration-500 ${
-              isSuccess ? 'gap-0 shadow-2xl border border-stone-400/30 p-1.5 bg-[#fbf8f0]' : 'gap-2 sm:gap-3'
+            className={`relative z-10 select-none transition-all duration-500 ${
+              isSuccess ? 'gap-0 shadow-2xl border border-stone-400/30 p-1 bg-[#fbf8f0]' : 'gap-1'
             }`}
           >
             {boardSlots.map((piece, idx) => {
@@ -407,21 +406,34 @@ export default function TornNotePuzzle({
                         clipPath: isSuccess ? 'none' : getPieceClipPath(cols, rows, piece.originalIndex),
                         transform: `rotate(${piece.rotation}deg)`,
                       }}
-                      className={`absolute inset-0 bg-[#fbf8f0] p-1.5 py-3 flex flex-col justify-between items-center text-stone-950 transition-all duration-500 ${
+                      className={`absolute inset-0 bg-[#fbf8f0] flex flex-col justify-center items-center text-stone-950 transition-all duration-500 ${
                         isSuccess 
-                          ? 'border-y border-stone-300/40 shadow-none' 
-                          : 'border-y border-stone-200 shadow-md hover:brightness-105 active:scale-95'
+                          ? 'p-0 border-none shadow-none rounded-none' 
+                          : 'p-0.5 border-y border-stone-200 shadow-md hover:brightness-105 active:scale-95'
                       }`}
                     >
                       {/* Top burn mark details */}
-                      <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-b from-stone-400/15 to-transparent pointer-events-none" />
+                      {!isSuccess && (
+                        <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-b from-stone-400/15 to-transparent pointer-events-none" />
+                      )}
 
                       {/* Handwritten / Monospace Text lines on the strip */}
-                      <div className="flex-1 flex flex-col justify-around w-full font-mono text-[9px] sm:text-xs font-bold leading-none tracking-tight text-center whitespace-pre py-1 select-none">
+                      <div 
+                        style={{
+                          fontSize: fontSizeCss,
+                        }}
+                        className={`flex-1 flex flex-col justify-center gap-0.5 w-full leading-none text-center whitespace-pre select-none ${
+                          activeNote.fontStyle === 'handwritten' 
+                            ? 'font-handwritten font-bold tracking-wide' 
+                            : 'font-typewriter font-bold tracking-tight'
+                        }`}
+                      >
                         {piece.textLines.map((line, lIdx) => (
                           <div 
                             key={`line_${lIdx}`} 
-                            className="bg-transparent text-[#1f242d] border-b border-stone-200/30 select-none pb-0.5"
+                            className={`bg-transparent text-[#1f242d] select-none pb-0 ${
+                              isSuccess ? '' : 'border-b border-stone-200/10'
+                            }`}
                           >
                             {line}
                           </div>
@@ -429,7 +441,9 @@ export default function TornNotePuzzle({
                       </div>
 
                       {/* Torn texture bottom detail */}
-                      <div className="absolute bottom-0 inset-x-0 h-1 bg-gradient-to-t from-stone-400/15 to-transparent pointer-events-none" />
+                      {!isSuccess && (
+                        <div className="absolute bottom-0 inset-x-0 h-1 bg-gradient-to-t from-stone-400/15 to-transparent pointer-events-none" />
+                      )}
                     </div>
                   )}
 
@@ -473,7 +487,11 @@ export default function TornNotePuzzle({
               </span>
             </div>
 
-            <p className="font-serif text-sm sm:text-base italic leading-relaxed text-stone-800 font-medium pl-2 border-l-2 border-stone-300">
+            <p className={`text-sm sm:text-base leading-relaxed text-stone-800 font-medium pl-2 border-l-2 border-stone-300 ${
+              activeNote.fontStyle === 'handwritten' 
+                ? 'font-handwritten text-lg sm:text-xl tracking-wide' 
+                : 'font-typewriter tracking-tight'
+            }`}>
               «{activeNote.fullText}»
             </p>
 

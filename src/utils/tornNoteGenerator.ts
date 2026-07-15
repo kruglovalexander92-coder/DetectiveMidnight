@@ -272,6 +272,7 @@ export function initializeTornNote(roomTemplateId: string, heldClueId: string | 
 
   // Shuffle the pieces before presenting them in the tray
   const shuffledPieces = shuffleArray(pieces);
+  const fontStyle = Math.random() < 0.5 ? 'handwritten' : 'typewriter';
 
   return {
     id: roomTemplateId,
@@ -281,6 +282,7 @@ export function initializeTornNote(roomTemplateId: string, heldClueId: string | 
     rewardClaimed: false,
     clueIdToUnlock: heldClueId,
     cols,
-    rows
+    rows,
+    fontStyle
   };
 }

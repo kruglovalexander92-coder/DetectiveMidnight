@@ -130,10 +130,12 @@ export default function WriterMode({
         return f;
       });
       
+      const currentMin = prev.currentTimeMinutes ?? 540;
       return {
         ...prev,
         caseFolders: updatedFolders,
-        writerRoyalties: (prev.writerRoyalties ?? 0) + evalResult.profit
+        writerRoyalties: (prev.writerRoyalties ?? 0) + evalResult.profit,
+        currentTimeMinutes: Math.min(1080, currentMin + 60) // 1 hour for publishing paperwork
       };
     });
   };
@@ -329,11 +331,15 @@ export default function WriterMode({
           leadPurchased: true, // Custom stories have free leads
         };
 
-        setGameState((prev) => ({
-          ...prev,
-          availableJobs: [customJob, ...(prev.availableJobs ?? [])],
-          writerCasesToday: (prev.writerCasesToday ?? 0) + 1,
-        }));
+        setGameState((prev) => {
+          const currentMin = prev.currentTimeMinutes ?? 540;
+          return {
+            ...prev,
+            availableJobs: [customJob, ...(prev.availableJobs ?? [])],
+            writerCasesToday: (prev.writerCasesToday ?? 0) + 1,
+            currentTimeMinutes: Math.min(1080, currentMin + 120), // 2 hours to write a memoir
+          };
+        });
       } else {
         // Campaign chapters
         const customChapters: Job[] = data.chapters.map((ch: any, idx: number) => ({
@@ -350,13 +356,17 @@ export default function WriterMode({
           completed: false,
         }));
 
-        setGameState((prev) => ({
-          ...prev,
-          campaignChapters: customChapters,
-          customCampaignIdea: ideaText,
-          customCampaignTitle: data.chapters[data.chapters.length - 1]?.title || "Повесть о Миднайте",
-          writerNovelLastDay: prev.currentDay ?? 1,
-        }));
+        setGameState((prev) => {
+          const currentMin = prev.currentTimeMinutes ?? 540;
+          return {
+            ...prev,
+            campaignChapters: customChapters,
+            customCampaignIdea: ideaText,
+            customCampaignTitle: data.chapters[data.chapters.length - 1]?.title || "Повесть о Миднайте",
+            writerNovelLastDay: prev.currentDay ?? 1,
+            currentTimeMinutes: Math.min(1080, currentMin + 240), // 4 hours to write a massive novel
+          };
+        });
       }
     } catch (err: any) {
       console.error(err);

@@ -575,6 +575,9 @@ export default function GameScene({
   const currentLocation = gameState.storyState?.currentLocationId || (isFourRoomBuilding ? 'hall' : 'pier');
 
   const isVisible = (id: ObjectId) => {
+    if (id === 'safeStand') {
+      return hasMultipleRooms && (currentLocation === 'basement' || currentLocation === 'warehouse');
+    }
     if (!hasMultipleRooms) return true;
     if (isFourRoomBuilding) {
       if (currentLocation === 'hall') {
@@ -595,9 +598,84 @@ export default function GameScene({
     }
   };
   
+  const isDeskVisible = isVisible('desk');
+
+  // Dynamic, non-overlapping floor layout grid
+  const shouldPutFishbowlOnDesk = isDeskVisible && !hasMultipleRooms;
+
+  // 1. Filter visible floor items
+  const floorIds = ['bookshelf', 'desk', 'safeStand', 'fishbowl', 'lamp', 'trashcan'] as const;
+  const activeFloorIds = floorIds.filter(id => {
+    if (id === 'safeStand') return isVisible('safeStand');
+    if (id === 'fishbowl') return isVisible('fishbowl') && !shouldPutFishbowlOnDesk;
+    return isVisible(id);
+  });
+
+  // 2. Sort active items by their original x coordinates to preserve layout variety
+  const sortedFloorIds = [...activeFloorIds].sort((a, b) => {
+    let xA = objects[a as ObjectId]?.x ?? 0;
+    let xB = objects[b as ObjectId]?.x ?? 0;
+    if (a === 'fishbowl') xA = objects.fishbowl?.x ?? 74;
+    if (b === 'fishbowl') xB = objects.fishbowl?.x ?? 74;
+    return xA - xB;
+  });
+
+  // 3. Define widths with proportional scaling if total width exceeds available width
+  const baseWidths: Record<string, number> = {
+    bookshelf: 25,
+    desk: 46,
+    lamp: 6,
+    trashcan: 12,
+    safeStand: 25,
+    fishbowl: 20
+  };
+
+  const leftMargin = 1.5;
+  const rightMargin = 1.5;
+  const availableWidth = 100 - leftMargin - rightMargin;
+
+  const rawTotalWidth = sortedFloorIds.reduce((sum, id) => sum + (baseWidths[id] || 10), 0);
+  const scaleFactor = rawTotalWidth > availableWidth ? availableWidth / rawTotalWidth : 1.0;
+
+  const getFloorItemWidth = (id: string) => {
+    return (baseWidths[id] || 10) * scaleFactor;
+  };
+
+  const totalItemsWidth = sortedFloorIds.reduce((sum, id) => sum + getFloorItemWidth(id), 0);
+
+  // 4. Calculate equal gap padding
+  const gapCount = sortedFloorIds.length - 1;
+  let itemGap = gapCount > 0 ? (availableWidth - totalItemsWidth) / gapCount : 0;
+
+  // Cap gap size for compact visual centering if there are few items
+  const maxGap = 20;
+  if (itemGap > maxGap && gapCount > 0) {
+    itemGap = maxGap;
+  }
+
+  const finalBlockWidth = totalItemsWidth + gapCount * itemGap;
+  const actualLeftMargin = leftMargin + (availableWidth - finalBlockWidth) / 2;
+
+  // 5. Build layout positioning map
+  const floorLayout: Record<string, { left: number; width: number }> = {};
+  let currentLeft = actualLeftMargin;
+
+  sortedFloorIds.forEach((id) => {
+    const width = getFloorItemWidth(id);
+    floorLayout[id] = {
+      left: currentLeft,
+      width: width
+    };
+    currentLeft += width + itemGap;
+  });
+
+  // --- DERIVE INDIVIDUAL POSITIONS FROM THE GRID LAYOUT ---
+
+  // Desk position
+  const deskScreenLeft = floorLayout['desk']?.left ?? 38;
+  const deskScreenWidth = floorLayout['desk']?.width ?? 46;
+
   const deskScale = 1.4875;
-  const deskX = (objects.desk?.x ?? 43) - ((objects.desk?.w ?? 32) * (deskScale - 1)) / 2;
-  const deskW = (objects.desk?.w ?? 32) * deskScale;
   const deskY = (objects.desk?.y ?? 58) - ((objects.desk?.h ?? 32) * (deskScale - 1));
   const deskH = (objects.desk?.h ?? 32) * deskScale;
 
@@ -605,9 +683,6 @@ export default function GameScene({
   const idLower_scene = roomId_scene.toLowerCase();
   const isDressingRoom = roomId_scene === 'room_ballerina' || idLower_scene.includes('ballerina') || idLower_scene.includes('dress');
 
-  const deskScreenLeft = deskX + deskW * 0.1;
-  const deskScreenWidth = deskW * 0.8;
-  
   // For dressing rooms with a mirror table, make the container taller by shifting the top upwards
   const deskScreenTop = isDressingRoom 
     ? (deskY + deskH * 0.2) - (deskH * 0.35) 
@@ -617,50 +692,41 @@ export default function GameScene({
     ? (deskH * 0.8) + (deskH * 0.35) 
     : (deskH * 0.8);
 
-  // Keep the deskTabletopY at the same level relative to the floor so safe/clues sit on the actual table tabletop, not on the mirror
+  // Keep the deskTabletopY at the same level relative to the floor
   const deskTabletopY = isDressingRoom
     ? (deskY + deskH * 0.36)
     : (deskScreenTop + deskScreenHeight * 0.2);
 
-  const isDeskVisible = isVisible('desk');
-
   // Dynamic Positioning of SafeStand
-  let safeStandLeft = objects.safeStand?.x ?? 58;
-  let safeStandTop = objects.safeStand?.y ?? 84;
-  let safeStandWidth = objects.safeStand?.w ?? 16;
-  let safeStandHeight = objects.safeStand?.h ?? 18;
+  const safeStandLeft = floorLayout['safeStand']?.left ?? 10;
+  const safeStandWidth = floorLayout['safeStand']?.width ?? 25;
+  const safeStandHeight = 25;
+  const safeStandTop = 84 - safeStandHeight + 1.0;
 
-  if (isVisible('safeStand')) {
-    // If visible, place it on the left side instead of near the desk
-    safeStandLeft = 10;
-    safeStandWidth = 25; // 20 * 1.25 = 25
-    safeStandHeight = 25; // 20 * 1.25 = 25
-    safeStandTop = 84 - safeStandHeight + 1.0;
-  }
-
-  // Dynamic Positioning of Fishbowl & its Stand (Cabinet)
-  // Let's place it opposite to the safe stand!
-  const isSafeStandOnLeft = safeStandLeft < 50;
-
-  let fishbowlStandLeft = isSafeStandOnLeft ? 74 : 14;
-  let fishbowlStandWidth = 20;
-  let fishbowlStandHeight = 20;
-  let fishbowlStandTop = 84 - fishbowlStandHeight + 1.0;
-
+  // Dynamic Positioning of Fishbowl & its Stand
   const roomId = gameState.roomInfo?.id || '';
   const idLower = roomId.toLowerCase();
   const isRoundAquarium = idLower.includes('shop') || idLower.includes('grocery') || idLower.includes('bar');
+
+  const fishbowlStandLeft = floorLayout['fishbowl']?.left ?? 74;
+  const fishbowlStandWidth = floorLayout['fishbowl']?.width ?? 20;
+  const fishbowlStandHeight = 20;
+  const fishbowlStandTop = 84 - fishbowlStandHeight + 1.0;
 
   let fishbowlWidth = isRoundAquarium ? 24 : 20;
   let fishbowlHeight = isRoundAquarium ? 22 : 18;
   let fishbowlLeft = fishbowlStandLeft + (fishbowlStandWidth - fishbowlWidth) / 2;
   let fishbowlTop = fishbowlStandTop - fishbowlHeight + 12.8;
 
-  // Dynamic Positioning of Lamp
-  let lampLeft = objects.lamp?.x ?? 74;
-  if (isVisible('safeStand')) {
-    lampLeft = isSafeStandOnLeft ? 86 : 5;
+  if (shouldPutFishbowlOnDesk) {
+    fishbowlWidth = deskScreenWidth * 0.28;
+    fishbowlHeight = fishbowlWidth * (isRoundAquarium ? 0.91 : 0.85);
+    fishbowlLeft = deskScreenLeft + deskScreenWidth * 0.04;
+    fishbowlTop = deskTabletopY - fishbowlHeight + 3.0;
   }
+
+  // Dynamic Positioning of Lamp
+  const lampLeft = floorLayout['lamp']?.left ?? 74;
 
   // Dynamic Positioning of Safe
   let safeLeft = objects.safe?.x ?? 87;
@@ -669,10 +735,10 @@ export default function GameScene({
   let safeHeight = objects.safe?.h ?? 28;
 
   if (isVisible('safeStand')) {
-    safeWidth = safeStandWidth * 0.68; // (0.8 * 0.85) = 0.68 approx 15% reduction
-    safeHeight = safeStandHeight * 1.0; // Adjusted for better fit
+    safeWidth = safeStandWidth * 0.68;
+    safeHeight = safeStandHeight * 1.0;
     safeLeft = safeStandLeft + (safeStandWidth - safeWidth) / 2;
-    safeTop = safeStandTop - safeHeight + 11.0; // Adjusted to sit on top of stand
+    safeTop = safeStandTop - safeHeight + 11.0;
   } else if (isDeskVisible) {
     safeWidth = deskScreenWidth * 0.52;
     safeHeight = safeWidth * 1.125;
@@ -685,59 +751,56 @@ export default function GameScene({
     safeTop = 84 - safeHeight + 1.0;
   }
 
+  // Dynamic Coordinates for wall picture / painting (placed centered between 2 windows)
+  const getPaintingGeometry = () => {
+    let theme: 'dressingr' | 'grocery' | 'industrial' | 'office' | 'cabin' = 'cabin';
+    if (roomId === 'room_ballerina' || idLower.includes('ballerina') || idLower.includes('dress')) {
+      theme = 'dressingr';
+    } else if (roomId === 'room_shop' || idLower.includes('grocer') || idLower.includes('shop') || idLower.includes('kitchen')) {
+      theme = 'grocery';
+    } else if (
+      roomId === 'room_basement' || 
+      roomId === 'room_alleyway' || 
+      roomId === 'story_chapter_3' || 
+      idLower.includes('industr') || 
+      idLower.includes('ware') || 
+      idLower.includes('pier') || 
+      idLower.includes('garage') || 
+      idLower.includes('workshop')
+    ) {
+      theme = 'industrial';
+    } else if (
+      roomId === 'room_banker' || 
+      roomId === 'room_mansion' || 
+      roomId === 'room_museum' || 
+      roomId === 'room_office' || 
+      idLower.includes('office') || 
+      idLower.includes('bank') || 
+      idLower.includes('mansion') || 
+      idLower.includes('museum')
+    ) {
+      theme = 'office';
+    }
+
+    const w = 12;
+    const h = 15;
+    let left = 44; // default centered between 2 windows (ends at 56%)
+    let top = 16;
+
+    if (theme === 'grocery') {
+      // 3 windows at 15%, 41%, 67%. Place it between window 2 (ends at 59%) and window 3 (starts at 67%)
+      left = 60.5;
+    }
+
+    return { left, top, width: w, height: h };
+  };
+
   // Dynamic Coordinates for cat placements (percentages from left and top of container)
   const getBookshelfGeometry = () => {
-    const w = objects.bookshelf?.w ?? 20;
-    const h = objects.bookshelf?.h ?? 70;
-    const x = objects.bookshelf?.x ?? 4;
-
-    const scaleW = 2.4 * 0.95 * 0.8; // reduced by 20%
-    const scaleH = 1.25 * 0.95 * 0.8; // reduced by 20%
-
-    const width = w * scaleW;
-    const height = h * scaleH;
-
-    // Floor is at exactly 84% vertical height
+    const left = floorLayout['bookshelf']?.left ?? 2;
+    const width = floorLayout['bookshelf']?.width ?? 25;
+    const height = (objects.bookshelf?.h ?? 70) * 1.25 * 0.95 * 0.8;
     const top = 84.0 - height;
-    let left = Math.max(-2, x - w * 0.45);
-
-    // Collision checking with other floor objects to prevent overlap
-    if (isDeskVisible) {
-      if (x < deskX) {
-        // Bookshelf is to the left of the desk, push it left to avoid overlap
-        left = Math.min(left, deskX - width - 0.5);
-      } else {
-        // Bookshelf is to the right of the desk, push it right to avoid overlap
-        left = Math.max(left, deskX + deskW + 0.5);
-      }
-    }
-
-    if (isVisible('safeStand')) {
-      if (x < safeStandLeft) {
-        left = Math.min(left, safeStandLeft - width - 0.5);
-      } else {
-        left = Math.max(left, safeStandLeft + safeStandWidth + 0.5);
-      }
-    }
-
-    if (isVisible('safe')) {
-      const safeRight = safeLeft + safeWidth;
-      const bookshelfRight = left + width;
-      // Extra precaution for safe overlap
-      if (left < safeRight && safeLeft < bookshelfRight) {
-        const safeCenter = safeLeft + safeWidth / 2;
-        const bookshelfCenter = left + width / 2;
-        if (bookshelfCenter < safeCenter) {
-          left = safeLeft - width - 1.0;
-        } else {
-          left = safeRight + 1.0;
-        }
-      }
-    }
-
-    // Bound within the room width
-    left = Math.max(-2, Math.min(100 - width, left));
-
     return { left, top, width, height };
   };
 
@@ -746,14 +809,30 @@ export default function GameScene({
     const obj = objects[spot as ObjectId];
     if (!obj) return { x: 45, y: 84, height: 'h-16' };
     
-    if (spot === 'safe') {
-      return { x: safeLeft + safeWidth / 2, y: safeTop + 2, height: 'h-14' };
+    let x = 45;
+    if (spot === 'bookshelf') {
+      const geom = getBookshelfGeometry();
+      x = geom.left + geom.width / 2;
+    } else if (spot === 'desk') {
+      x = deskScreenLeft + deskScreenWidth / 2;
+    } else if (spot === 'safe') {
+      x = safeLeft + safeWidth / 2;
+    } else if (spot === 'fishbowl') {
+      x = fishbowlLeft + fishbowlWidth / 2;
+    } else if (spot === 'lamp') {
+      x = lampLeft + (floorLayout['lamp']?.width ?? 6) / 2;
+    } else if (spot === 'trashcan') {
+      const trashcanWidth = floorLayout['trashcan']?.width ?? 12;
+      const trashcanLeft = floorLayout['trashcan']?.left ?? 80;
+      x = trashcanLeft + trashcanWidth / 2;
+    } else if (spot === 'safeStand') {
+      x = safeStandLeft + safeStandWidth / 2;
+    } else if (spot === 'painting') {
+      x = getPaintingGeometry().left + getPaintingGeometry().width / 2;
+    } else {
+      x = obj.x ? obj.x + (obj.w || 10) / 2 : 45;
     }
-    if (spot === 'fishbowl') {
-      return { x: fishbowlLeft + fishbowlWidth / 2, y: fishbowlTop + 1, height: 'h-12' };
-    }
-    
-    const x = obj.x ? obj.x + (obj.w || 10) / 2 : 45;
+
     let y = 84;
     let height = 'h-14';
     
@@ -1535,10 +1614,10 @@ export default function GameScene({
         onClick={() => handleObjectClick('painting')}
         className="absolute group cursor-pointer z-10 flex flex-col items-center"
         style={{
-          left: `${(objects.painting.x ?? 25) + (objects.painting.w ?? 12) * 0.1}%`,
-          top: `${(objects.painting.y ?? 15) + (objects.painting.h ?? 12) * 0.1}%`,
-          width: `${(objects.painting.w ?? 12) * 0.8}%`,
-          height: `${(objects.painting.w ?? 12) * 0.8 * 1.6}%`, // Perfect 1:1 physical aspect ratio on 16:10 screen!
+          left: `${getPaintingGeometry().left}%`,
+          top: `${getPaintingGeometry().top}%`,
+          width: `${getPaintingGeometry().width}%`,
+          height: `${getPaintingGeometry().width * 1.6}%`, // Perfect 1:1 physical aspect ratio on 16:10 screen!
           zIndex: objects.painting.zIndex
         }}
       >
@@ -1714,29 +1793,31 @@ export default function GameScene({
       {isVisible('fishbowl') && (
         <>
           {/* Render Stand/Cabinet for Fishbowl */}
-          <div
-            id="fishbowl-stand-obj"
-            className="absolute z-10 flex flex-col justify-end"
-            style={{
-              left: `${fishbowlStandLeft}%`,
-              top: `${fishbowlStandTop}%`,
-              width: `${fishbowlStandWidth}%`,
-              height: `${fishbowlStandHeight}%`,
-              zIndex: objects.safeStand?.zIndex
-            }}
-          >
-            <div className="relative w-full h-full">
-              <img
-                src={getFishbowlStandImg()}
-                alt="Подставка"
-                className="w-full h-full object-contain drop-shadow-md brightness-95"
-                referrerPolicy="no-referrer"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
-              />
+          {!shouldPutFishbowlOnDesk && (
+            <div
+              id="fishbowl-stand-obj"
+              className="absolute z-10 flex flex-col justify-end"
+              style={{
+                left: `${fishbowlStandLeft}%`,
+                top: `${fishbowlStandTop}%`,
+                width: `${fishbowlStandWidth}%`,
+                height: `${fishbowlStandHeight}%`,
+                zIndex: objects.safeStand?.zIndex
+              }}
+            >
+              <div className="relative w-full h-full">
+                <img
+                  src={getFishbowlStandImg()}
+                  alt="Подставка"
+                  className="w-full h-full object-contain drop-shadow-md brightness-95"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Actual Fishbowl */}
           <div
@@ -1788,9 +1869,9 @@ export default function GameScene({
         onClick={() => handleObjectClick('lamp')}
         className="absolute group cursor-pointer z-[12] flex flex-col justify-end brightness-[0.82] saturate-[85%] transition-all duration-300 hover:brightness-100 hover:saturate-100"
         style={{
-          left: `${lampLeft + (objects.lamp.w ?? 8) * 0.1}%`,
+          left: `${lampLeft}%`,
           top: `${(objects.lamp.y ?? 45) + (objects.lamp.h ?? 55) * 0.2 - 2}%`,
-          width: `${(objects.lamp.w ?? 8) * 0.75}%`,
+          width: `${floorLayout['lamp']?.width ?? 6}%`,
           height: `${(objects.lamp.h ?? 55) * 0.75}%`,
           zIndex: objects.lamp.zIndex
         }}
@@ -1853,10 +1934,10 @@ export default function GameScene({
         onClick={() => handleObjectClick('trashcan')}
         className="absolute group cursor-pointer z-15"
         style={{
-          left: `${(objects.trashcan.x ?? 80) - (objects.trashcan.w ?? 10) * 0.3}%`,
-          top: `${(objects.trashcan.y ?? 82) - (objects.trashcan.h ?? 16) * 0.6}%`,
-          width: `${(objects.trashcan.w ?? 10) * 1.6}%`,
-          height: `${(objects.trashcan.h ?? 16) * 1.6}%`,
+          left: `${floorLayout['trashcan']?.left ?? 80}%`,
+          top: `${84.0 - (floorLayout['trashcan']?.width ?? 12) * 1.6}%`,
+          width: `${floorLayout['trashcan']?.width ?? 12}%`,
+          height: `${(floorLayout['trashcan']?.width ?? 12) * 1.6}%`,
           zIndex: objects.trashcan.zIndex
         }}
       >

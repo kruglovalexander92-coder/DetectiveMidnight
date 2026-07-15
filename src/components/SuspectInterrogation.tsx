@@ -124,6 +124,14 @@ export default function SuspectInterrogation({
         [currentSketch.id]: [...currentLogs, reply]
       }));
     }
+
+    setGameState(prev => {
+      const currentMin = prev.currentTimeMinutes ?? 540;
+      return {
+        ...prev,
+        currentTimeMinutes: Math.min(1080, currentMin + 15)
+      };
+    });
   };
 
   const verifySketch = () => {
@@ -153,9 +161,11 @@ export default function SuspectInterrogation({
         }
         return s;
       });
+      const currentMin = prev.currentTimeMinutes ?? 540;
       return {
         ...prev,
-        sketches: updatedSketches
+        sketches: updatedSketches,
+        currentTimeMinutes: Math.min(1080, currentMin + 20)
       };
     });
 

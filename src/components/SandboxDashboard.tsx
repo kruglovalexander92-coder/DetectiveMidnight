@@ -79,9 +79,10 @@ export default function SandboxDashboard({
   const dailyJobs = (gameState.availableJobs ?? []).filter(j => j && !j.completed);
   const completedChapters = gameState.storyState?.completedChapters ?? [];
   const [storyViewMode, setStoryViewMode] = useState<'cards' | 'interrogate'>('cards');
-  const [activeTab, setActiveTab] = useState<'daily' | 'story'>('daily');
+  const [activeTab, setActiveTab] = useState<'daily' | 'story' | 'archive'>('daily');
   const [isCrimeBoardOpen, setIsCrimeBoardOpen] = useState(false);
   const [pendingJob, setPendingJob] = useState<Job | null>(null);
+  const [zoomedJob, setZoomedJob] = useState<Job | null>(null);
   const [activeInterrogationSketchId, setActiveInterrogationSketchId] = useState<string | undefined>(undefined);
   const [isArchiveExpanded, setIsArchiveExpanded] = useState(false);
   const [unacknowledgedChapter, setUnacknowledgedChapter] = useState<Job | null>(null);
@@ -272,55 +273,55 @@ export default function SandboxDashboard({
 
   return (
     <div 
-      className="flex-1 w-full max-w-7xl mx-auto p-3 md:p-4 lg:py-3.5 flex flex-col gap-3 relative z-20 animate-fade-in border border-white/10 bg-[#070708]/90 backdrop-blur-[0.5px]"
+      className="flex-1 w-full max-w-7xl mx-auto p-2 md:p-3 lg:py-2.5 flex flex-col gap-2 relative z-20 animate-fade-in border border-white/10 bg-[#070708]/90 backdrop-blur-[0.5px]"
     >
       
       {/* Top dashboard summary board */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5 items-stretch shrink-0 relative z-10">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5 items-stretch shrink-0 relative z-10">
         
         {/* Day Calendar polaroid card (4 cols) */}
-        <div className="md:col-span-4 border border-white/10 bg-black/80 p-4 flex flex-col justify-between relative overflow-hidden backdrop-blur-md">
+        <div className="md:col-span-4 border border-white/10 bg-black/80 p-2.5 flex flex-col justify-between relative overflow-hidden backdrop-blur-md">
           <div className="absolute top-0 right-0 w-16 h-16 border-t border-r border-white/5 pointer-events-none" />
           
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             <div>
-              <span className="font-mono text-[8px] uppercase tracking-[0.25em] text-amber-500/80 block mb-1">
+              <span className="font-mono text-[7px] uppercase tracking-[0.25em] text-amber-500/80 block mb-0.5">
                 📅 ДЕТЕКТИВНЫЙ КАЛЕНДАРЬ
               </span>
-              <div className="font-serif text-3xl font-bold text-white tracking-wide italic leading-none mb-0.5">
+              <div className="font-serif text-2xl font-bold text-white tracking-wide italic leading-none mb-0.5">
                 День {currentDay}
               </div>
-              <span className="font-sans text-[9px] text-white/40 uppercase tracking-widest block mb-2">
+              <span className="font-sans text-[8.5px] text-white/40 uppercase tracking-widest block mb-1">
                 Бюро на плаву: {gameState.daysSurvived ?? (currentDay - 1)} дн.
               </span>
 
-              <div className="h-[1px] bg-white/10 my-2" />
+              <div className="h-[1px] bg-white/10 my-1" />
               
-              <p className="font-serif text-[10px] leading-relaxed text-white/50 italic">
+              <p className="font-serif text-[9px] leading-normal text-white/50 italic">
                 «Расходы на аренду офиса и поставки лососевого паштета списываются в конце каждого дня. Если баланс опустится ниже нуля, контора закроется банками-кредиторами!»
               </p>
             </div>
 
             {/* Budget Widget (Moved here and made larger) */}
-            <div className="border border-emerald-500/20 bg-emerald-950/20 p-2.5 flex justify-between items-center rounded-none">
+            <div className="border border-emerald-500/20 bg-emerald-950/20 p-1.5 flex justify-between items-center rounded-none">
               <div>
-                <span className="font-mono text-[8px] uppercase tracking-wider text-emerald-400 block leading-none mb-1">
+                <span className="font-mono text-[7px] uppercase tracking-wider text-emerald-400 block leading-none mb-0.5">
                   БЮДЖЕТ БЮРО
                 </span>
-                <span className="font-sans text-2xl font-bold text-emerald-400 font-mono tracking-wide leading-none">
+                <span className="font-sans text-xl font-bold text-emerald-400 font-mono tracking-wide leading-none">
                   {cash}$
                 </span>
               </div>
-              <Lucide.Wallet className="w-5 h-5 text-emerald-500/60" />
+              <Lucide.Wallet className="w-4 h-4 text-emerald-500/60" />
             </div>
 
             {/* Daily Bills List */}
-            <div className="border border-white/5 bg-neutral-950 p-2">
-              <div className="flex justify-between items-center text-[10px] font-mono text-white/50 mb-0.5">
+            <div className="border border-white/5 bg-neutral-950 p-1.5">
+              <div className="flex justify-between items-center text-[9px] font-mono text-white/50 mb-0.5">
                 <span>Ежедневные счета:</span>
                 <span className="text-red-400 font-bold">-110$</span>
               </div>
-              <div className="space-y-0 text-[8px] font-mono text-white/30 pl-2">
+              <div className="space-y-0 text-[7.5px] font-mono text-white/30 pl-2">
                 <div>• Аренда офиса Барта: 50$</div>
                 <div>• Паштет из лосося для кота: 35$</div>
                 <div>• Крепкий табак Барта: 15$</div>
@@ -332,7 +333,7 @@ export default function SandboxDashboard({
           {/* End Day Button (Moved here) */}
           <button
             onClick={handleEndDayClick}
-            className="w-full h-9 mt-3 bg-[#d4d4d8] hover:bg-white text-black font-sans text-[10px] font-bold uppercase tracking-[0.2em] rounded-none transition-all flex items-center justify-center gap-1.5 shrink-0 shadow hover:scale-[1.01] cursor-pointer"
+            className="w-full h-8 mt-2 bg-[#d4d4d8] hover:bg-white text-black font-sans text-[9px] font-bold uppercase tracking-[0.2em] rounded-none transition-all flex items-center justify-center gap-1.5 shrink-0 shadow hover:scale-[1.01] cursor-pointer"
           >
             <Lucide.Moon className="w-3.5 h-3.5 fill-black text-black" />
             Завершить день (-110$)
@@ -341,31 +342,31 @@ export default function SandboxDashboard({
 
         {/* Bureau Status Board (8 cols) */}
         <div 
-          className="md:col-span-8 border border-white/10 p-4 md:p-5 flex flex-col justify-between relative overflow-hidden bg-cover bg-center bg-no-repeat min-h-[220px]"
-          style={{ backgroundImage: `url('${activeTab === 'story' ? '/src/img/Art/Agency2.png' : '/src/img/Art/Agency.png'}')` }}
+          className="md:col-span-8 border border-white/10 p-3 flex flex-col justify-between relative overflow-hidden bg-cover bg-center bg-no-repeat min-h-[160px]"
+          style={{ backgroundImage: `url('${activeTab === 'story' ? '/src/img/Art/Agency2.png' : (activeTab === 'archive' ? '/src/img/Art/Archive.png' : '/src/img/Art/Agency.png')}')` }}
         >
           {/* No dark overlay, keeping original brightness */}
 
           {/* Wrapper to place all content above overlay */}
-          <div className="relative z-10 flex-1 flex flex-col justify-between gap-2 h-full">
-            <div className="bg-black/55 border border-white/5 p-2.5 max-w-sm backdrop-blur-[1px] shadow-lg">
-              <span className="font-mono text-[8px] uppercase tracking-[0.25em] text-white/50 block mb-0.5">
+          <div className="relative z-10 flex-1 flex flex-col justify-between gap-1.5 h-full">
+            <div className="bg-black/55 border border-white/5 p-2 max-w-sm backdrop-blur-[1px] shadow-lg">
+              <span className="font-mono text-[7.5px] uppercase tracking-[0.25em] text-white/50 block mb-0.5">
                 ЛИЦЕНЗИОННЫЙ СТАТУС БЮРО
               </span>
-              <h2 className="font-serif text-lg sm:text-xl font-bold text-white leading-tight">
+              <h2 className="font-serif text-base sm:text-lg font-bold text-white leading-tight">
                 Агентство «Ванс и Миднайт»
               </h2>
               
               {/* Bureau Rating Badge (Moved here under the Agency name) */}
-              <div className="flex items-center gap-1.5 mt-2">
-                <div className="px-2.5 py-0.5 border border-amber-500/30 bg-amber-950/40 rounded-none text-[9px] font-mono text-amber-400 font-bold uppercase tracking-widest leading-none flex items-center gap-1.5 shadow">
+              <div className="flex items-center gap-1.5 mt-1.5">
+                <div className="px-2 py-0.5 border border-amber-500/30 bg-amber-950/40 rounded-none text-[8.5px] font-mono text-amber-400 font-bold uppercase tracking-widest leading-none flex items-center gap-1 shadow">
                   <span>★</span>
                   <span>{reputation} ({currentRank.toUpperCase()})</span>
                 </div>
               </div>
             </div>
 
-            <p className="font-serif italic text-[10px] text-white/90 leading-relaxed text-left max-w-lg mt-auto bg-black/55 border border-white/5 p-2.5 backdrop-blur-[1px] shadow-lg">
+            <p className="font-serif italic text-[9px] text-white/90 leading-relaxed text-left max-w-lg mt-auto bg-black/55 border border-white/5 p-2 backdrop-blur-[1px] shadow-lg">
               «Раскрывайте криминальные дела на сводках, чтобы заработать историю и восстановить репутацию»
             </p>
           </div>
@@ -373,7 +374,7 @@ export default function SandboxDashboard({
       </div>
 
       {/* Main Corkboard Section */}
-      <div className="flex-1 border border-white/10 bg-black/80 p-4 md:p-5 text-white text-left shadow-2xl relative overflow-y-auto md:overflow-y-hidden custom-scrollbar flex flex-col gap-4 md:gap-3.5 backdrop-blur-md">
+      <div className="flex-1 border border-white/10 bg-black/80 p-3 text-white text-left shadow-2xl relative overflow-y-auto md:overflow-y-hidden custom-scrollbar flex flex-col gap-2.5 backdrop-blur-md">
         {/* Wood texture background simulation */}
         <div className="absolute inset-0 bg-[radial-gradient(#1a1410_1px,transparent_1px)] [background-size:16px_16px] opacity-25 pointer-events-none" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#100c0a]/40 to-[#080605] pointer-events-none" />
@@ -385,22 +386,14 @@ export default function SandboxDashboard({
               try { gameAudio.playClick(); } catch (e) {}
               setActiveTab('daily');
             }}
-            className={`flex-1 sm:flex-initial px-5 py-1.5 font-serif text-[11px] sm:text-[12px] font-bold uppercase tracking-widest transition-all rounded-none flex items-center justify-center gap-2 border cursor-pointer ${
+            className={`flex-1 sm:flex-initial px-1.5 sm:px-3 py-1 font-serif text-[9px] sm:text-[10.5px] font-bold uppercase tracking-wider transition-all rounded-none flex items-center justify-center gap-1 border cursor-pointer ${
               activeTab === 'daily'
                 ? 'bg-amber-950/40 border-amber-500/50 text-amber-300 shadow-lg'
                 : 'bg-black/40 border-transparent text-white/40 hover:text-white/70 hover:bg-white/5'
             }`}
           >
-            <Lucide.ClipboardList className={`w-3.5 h-3.5 ${activeTab === 'daily' ? 'text-amber-400' : 'text-white/40'}`} />
+            <Lucide.ClipboardList className={`w-3 h-3 ${activeTab === 'daily' ? 'text-amber-400' : 'text-white/40'}`} />
             <span>Ежедневные Контракты</span>
-            {(() => {
-              const count = dailyJobs.filter(job => !job.completed && reputation >= job.reputationRequired).length;
-              return count > 0 ? (
-                <span className="ml-1.5 bg-rose-700 text-white font-mono text-[9px] font-bold px-1.5 py-0.2 animate-pulse flex items-center gap-0.5 rounded-none">
-                  ! {count}
-                </span>
-              ) : null;
-            })()}
           </button>
 
           <button
@@ -408,14 +401,32 @@ export default function SandboxDashboard({
               try { gameAudio.playClick(); } catch (e) {}
               setActiveTab('story');
             }}
-            className={`flex-1 sm:flex-initial px-5 py-1.5 font-serif text-[11px] sm:text-[12px] font-bold uppercase tracking-widest transition-all rounded-none flex items-center justify-center gap-2 border cursor-pointer ${
+            className={`flex-1 sm:flex-initial px-1.5 sm:px-3 py-1 font-serif text-[9px] sm:text-[10.5px] font-bold uppercase tracking-wider transition-all rounded-none flex items-center justify-center gap-1 border cursor-pointer ${
               activeTab === 'story'
                 ? 'bg-amber-950/40 border-amber-500/50 text-amber-300 shadow-lg'
                 : 'bg-black/40 border-transparent text-white/40 hover:text-white/70 hover:bg-white/5'
             }`}
           >
-            <Lucide.Compass className={`w-3.5 h-3.5 ${activeTab === 'story' ? 'text-amber-400' : 'text-white/40'}`} />
+            <Lucide.Compass className={`w-3 h-3 ${activeTab === 'story' ? 'text-amber-400' : 'text-white/40'}`} />
             <span>Сюжетные Кампании</span>
+          </button>
+
+          <button
+            onClick={() => {
+              try { gameAudio.playClick(); } catch (e) {}
+              setActiveTab('archive');
+            }}
+            className={`flex-1 sm:flex-initial px-1.5 sm:px-3 py-1 font-serif text-[9px] sm:text-[10.5px] font-bold uppercase tracking-wider transition-all rounded-none flex items-center justify-center gap-1 border cursor-pointer ${
+              activeTab === 'archive'
+                ? 'bg-amber-950/40 border-amber-500/50 text-amber-300 shadow-lg'
+                : 'bg-black/40 border-transparent text-white/40 hover:text-white/70 hover:bg-white/5'
+            }`}
+          >
+            <Lucide.Archive className={`w-3 h-3 ${activeTab === 'archive' ? 'text-amber-400' : 'text-white/40'}`} />
+            <span>Архив дел {(() => {
+              const totalArchived = archivedChapters.length + archivedSoloJobs.length;
+              return totalArchived > 0 ? `(${totalArchived})` : '';
+            })()}</span>
           </button>
 
           {/* Writer Cabinet Tab Button ("Писать мемуары") */}
@@ -430,19 +441,18 @@ export default function SandboxDashboard({
                 } catch (e) {}
                 onOpenWriter();
               }}
-              className={`flex-1 sm:flex-initial px-5 py-2.5 font-serif text-[11px] sm:text-[12px] font-bold uppercase tracking-widest transition-all rounded-none flex items-center justify-center gap-2 border cursor-pointer ${
+              className={`flex-1 sm:flex-initial px-1.5 sm:px-3 py-1 font-serif text-[9px] sm:text-[10.5px] font-bold uppercase tracking-wider transition-all rounded-none flex items-center justify-center gap-1 border cursor-pointer ${
                 currentDay < 5 
                   ? "bg-black/25 border-transparent text-white/20 hover:text-white/30 hover:bg-white/5"
                   : "bg-black/40 border-transparent text-white/40 hover:text-white/70 hover:bg-white/5"
               }`}
             >
               {currentDay < 5 ? (
-                <Lucide.Lock className="w-3.5 h-3.5 text-red-500/50" />
+                <Lucide.Lock className="w-3 h-3 text-red-500/50" />
               ) : (
-                <Lucide.PenTool className="w-3.5 h-3.5 text-white/40" />
+                <Lucide.PenTool className="w-3 h-3 text-white/40" />
               )}
               <span>Писать мемуары</span>
-              {currentDay < 5 && <span className="text-[9px] text-red-500/60 font-mono normal-case tracking-normal">(с 5 дн.)</span>}
             </button>
           )}
         </div>
@@ -470,7 +480,7 @@ export default function SandboxDashboard({
                  </p>
                </div>
              ) : (
-               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 lg:gap-3">
+               <div className="flex flex-row overflow-x-auto gap-2.5 lg:gap-3 pb-3 pt-1.5 custom-scrollbar md:grid md:grid-cols-2 lg:grid-cols-3 md:overflow-x-visible md:pb-0">
                  {dailyJobs.map(job => {
                    const isLocked = reputation < job.reputationRequired;
                    const hasLeadPaid = job.infoCost === 0 || job.leadPurchased;
@@ -478,7 +488,10 @@ export default function SandboxDashboard({
                    return (
                      <div 
                        key={job.id} 
-                       className={`border transition-all flex flex-col justify-between p-2.5 py-2 rounded-none relative ${
+                       onClick={() => {
+                          try { gameAudio.playClick(); } catch (e) {}
+                          setZoomedJob(job);
+                        }} className={`border transition-all flex flex-col justify-between p-2.5 py-2 rounded-none relative cursor-zoom-in shrink-0 w-[270px] md:w-auto hover:border-amber-500/55 hover:shadow-lg hover:scale-[1.01] ${
                         job.completed
                           ? 'border-emerald-800/10 bg-emerald-950/5 text-emerald-100/40 opacity-60'
                           : isLocked
@@ -713,7 +726,10 @@ export default function SandboxDashboard({
                           const Icon = (Lucide as any)[iconName] || Lucide.FileText;
 
                           return (
-                            <div key={chapter.id} className={`border p-4 flex flex-col justify-between relative transition-all shadow-md ${borderStyles}`}>
+                            <div key={chapter.id} onClick={() => {
+                              try { gameAudio.playClick(); } catch (e) {}
+                              setZoomedJob(chapter);
+                            }} className={`border p-4 flex flex-col justify-between relative transition-all shadow-md cursor-zoom-in hover:scale-[1.01] ${borderStyles}`}>
                               {/* Pushpin decor */}
                               <div className={`absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full border shadow pointer-events-none ${
                                 isLocked ? 'bg-neutral-800 border-neutral-950' : 'bg-red-700 border-red-950'
@@ -765,7 +781,10 @@ export default function SandboxDashboard({
 
                               {!isLocked && (
                                 <button
-                                  onClick={() => handleStartJobClick(chapter)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleStartJobClick(chapter);
+                                  }}
                                   className="w-full h-8 font-sans text-[9px] font-bold uppercase tracking-[0.15em] transition-all bg-amber-600 hover:bg-amber-500 text-white rounded-none flex items-center justify-center gap-1.5"
                                 >
                                   <Lucide.Search className="w-3 h-3" />
@@ -778,251 +797,7 @@ export default function SandboxDashboard({
                       </div>
                     )}
 
-                    {/* EXPANDABLE COMPACT ARCHIVE SECTION */}
-                    {(archivedChapters.length > 0 || archivedSoloJobs.length > 0) && (
-                      <div className="mt-6 border border-zinc-850 bg-zinc-950/30">
-                        <button
-                          onClick={() => {
-                            try { gameAudio.playClick(); } catch (e) {}
-                            setIsArchiveExpanded(!isArchiveExpanded);
-                          }}
-                          className="w-full px-4 py-3 bg-zinc-950/50 hover:bg-zinc-950/80 flex items-center justify-between font-serif text-[11px] font-bold tracking-wide uppercase text-zinc-400 transition-all cursor-pointer border-none rounded-none"
-                        >
-                          <div className="flex items-center gap-2">
-                            <Lucide.Archive className="w-3.5 h-3.5 text-zinc-500" />
-                            <span>Архив раскрытых дел ({archivedChapters.length + archivedSoloJobs.length})</span>
-                          </div>
-                          <span className="font-mono text-[9px] text-zinc-500 uppercase tracking-wider">
-                            {isArchiveExpanded ? '[ Скрыть ▲ ]' : '[ Развернуть ▼ ]'}
-                          </span>
-                        </button>
-                        
-                        {isArchiveExpanded && (
-                          <div className="border-t border-zinc-900 bg-[#0b0a09] animate-fade-in">
-                            {/* Archive Tabs */}
-                            <div className="flex border-b border-zinc-800 bg-black/40">
-                              <button
-                                onClick={() => {
-                                  try { gameAudio.playClick(); } catch (e) {}
-                                  setArchiveSubTab('story');
-                                }}
-                                className={`px-4 py-2 font-serif text-[10px] uppercase tracking-wider font-bold transition-all border-b-2 rounded-none cursor-pointer ${
-                                  archiveSubTab === 'story'
-                                    ? 'border-amber-500 text-white'
-                                    : 'border-transparent text-white/45 hover:text-white/70'
-                                }`}
-                              >
-                                Сюжетные дела ({archivedChapters.length})
-                              </button>
-                              <button
-                                onClick={() => {
-                                  try { gameAudio.playClick(); } catch (e) {}
-                                  setArchiveSubTab('solo');
-                                }}
-                                className={`px-4 py-2 font-serif text-[10px] uppercase tracking-wider font-bold transition-all border-b-2 rounded-none cursor-pointer ${
-                                  archiveSubTab === 'solo'
-                                    ? 'border-amber-500 text-white'
-                                    : 'border-transparent text-white/45 hover:text-white/70'
-                                }`}
-                              >
-                                Одиночные дела ({archivedSoloJobs.length})
-                              </button>
-                            </div>
 
-                            <div className="p-4">
-                              {archiveSubTab === 'story' ? (
-                                archivedChapters.length === 0 ? (
-                                  <p className="font-serif text-[10px] text-white/35 italic text-center py-6">
-                                    Нет раскрытых сюжетных дел.
-                                  </p>
-                                ) : (
-                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    {archivedChapters.map((chapter) => {
-                                      const index = campaignChapters.findIndex(c => c.id === chapter.id);
-                                      const chNum = index + 1;
-                                      
-                                      // Romanizing helper
-                                      const romanize = (num: number): string => {
-                                        const roman = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
-                                        return roman[num - 1] || num.toString();
-                                      };
-
-                                      const iconsPool = ['Compass', 'Anchor', 'Wind', 'BookOpen', 'Shield', 'Key', 'Eye', 'Map', 'Cat', 'Award'];
-                                      const iconName = iconsPool[(chNum - 1) % iconsPool.length];
-                                      const Icon = (Lucide as any)[iconName] || Lucide.FileText;
-
-                                      return (
-                                        <div 
-                                          key={chapter.id} 
-                                          className="border border-emerald-950/30 bg-emerald-950/5 text-emerald-100/60 p-4 flex flex-col justify-between relative shadow-inner"
-                                        >
-                                          <div>
-                                            <div className="flex justify-between items-start mb-2 border-b border-emerald-950/20 pb-1.5">
-                                              <span className="font-mono text-[8px] uppercase tracking-wider text-emerald-500/55 block">
-                                                Сюжет // Глава {romanize(chNum)}
-                                              </span>
-                                              <span className="px-1.5 py-0.5 border border-emerald-500/20 bg-emerald-950/40 text-emerald-400 text-[7px] font-mono font-bold uppercase tracking-widest rounded-none">
-                                                РАСКРЫТО ✓
-                                              </span>
-                                            </div>
-
-                                            <div className="flex gap-2 items-start mb-2">
-                                              <div className="p-1.5 bg-black/40 border border-white/5 shrink-0 text-emerald-500/50">
-                                                <Icon className="w-3.5 h-3.5" />
-                                              </div>
-                                              <h4 className="font-serif text-xs font-bold leading-tight text-emerald-200/50">
-                                                {chapter.title}
-                                              </h4>
-                                            </div>
-
-                                            <p className="text-[10px] leading-relaxed text-emerald-100/40 mb-4 font-sans line-clamp-3 italic">
-                                              {chapter.description}
-                                            </p>
-                                          </div>
-
-                                          <button
-                                            onClick={() => handleStartJobClick(chapter)}
-                                            className="w-full h-8 font-sans text-[9px] font-bold uppercase tracking-[0.15em] transition-all rounded-none flex items-center justify-center gap-1.5 bg-zinc-950 border border-zinc-800 hover:border-emerald-700 hover:bg-emerald-950/20 text-emerald-400 hover:text-emerald-300 shadow cursor-pointer"
-                                          >
-                                            <Lucide.RotateCcw className="w-3 h-3 text-emerald-500" />
-                                            Перепройти бесплатно
-                                          </button>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                )
-                              ) : (
-                                archivedSoloJobs.length === 0 ? (
-                                  <p className="font-serif text-[10px] text-white/35 italic text-center py-6">
-                                    Нет завершенных одиночных дел. Раскройте ежедневные контракты или дела писателя выше, чтобы они переместились сюда!
-                                  </p>
-                                ) : (
-                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    {archivedSoloJobs.map((job) => {
-                                      return (
-                                        <div 
-                                          key={job.id} 
-                                          className="border border-emerald-950/30 bg-emerald-950/5 text-emerald-100/60 p-4 flex flex-col justify-between relative shadow-inner"
-                                        >
-                                          <div>
-                                            <div className="flex justify-between items-start mb-2 border-b border-emerald-950/20 pb-1.5">
-                                              <span className="font-mono text-[8px] uppercase tracking-wider text-emerald-500/55 block">
-                                                Дело #{job.id.split('_').slice(-1)[0]}
-                                              </span>
-                                              <span className="px-1.5 py-0.5 border border-emerald-500/20 bg-emerald-950/40 text-emerald-400 text-[7px] font-mono font-bold uppercase tracking-widest rounded-none">
-                                                В АРХИВЕ ✓
-                                              </span>
-                                            </div>
-
-                                            <div className="flex gap-2 items-start mb-2">
-                                              <div className="p-1.5 bg-black/40 border border-white/5 shrink-0 text-emerald-500/50">
-                                                <Lucide.FileText className="w-3.5 h-3.5" />
-                                              </div>
-                                              <h4 className="font-serif text-xs font-bold leading-tight text-emerald-200/50">
-                                                {job.title}
-                                              </h4>
-                                            </div>
-
-                                            <p className="text-[10px] leading-relaxed text-emerald-100/40 mb-4 font-sans line-clamp-3 italic">
-                                              {job.description}
-                                            </p>
-
-                                            {/* Parent folder status / tags */}
-                                            {(() => {
-                                              const parentFolder = (gameState.caseFolders ?? []).find(f => f.caseIds.includes(job.id));
-                                              if (parentFolder) {
-                                                return (
-                                                  <div className="mb-4 p-1.5 bg-neutral-950/80 border border-emerald-950/25 text-[8.5px] font-serif text-emerald-400/80 italic">
-                                                    📁 Подшито в роман-папку: <span className="font-bold text-emerald-300">«{parentFolder.title}»</span>
-                                                  </div>
-                                                );
-                                              }
-                                              return null;
-                                            })()}
-                                          </div>
-
-                                          <div className="space-y-2">
-                                            <button
-                                              onClick={() => handleStartJobClick(job)}
-                                              className="w-full h-8 font-sans text-[9px] font-bold uppercase tracking-[0.15em] transition-all rounded-none flex items-center justify-center gap-1.5 bg-zinc-950 border border-zinc-800 hover:border-emerald-700 hover:bg-emerald-950/20 text-emerald-400 hover:text-emerald-300 shadow cursor-pointer"
-                                            >
-                                              <Lucide.RotateCcw className="w-3 h-3 text-emerald-500" />
-                                              Перепройти бесплатно
-                                            </button>
-
-                                            {(() => {
-                                              const parentFolder = (gameState.caseFolders ?? []).find(f => f.caseIds.includes(job.id));
-                                              const isFiled = !!parentFolder;
-
-                                              if (isFiled) {
-                                                return (
-                                                  <div className="text-center text-[8px] font-mono text-emerald-500/55 uppercase py-1 border border-dashed border-emerald-950/35 bg-emerald-950/5">
-                                                    Подшито ✓
-                                                  </div>
-                                                );
-                                              }
-
-                                              const activeFolders = (gameState.caseFolders ?? []).filter(f => f.status === 'writing');
-
-                                              if (fileJobId === job.id) {
-                                                return (
-                                                  <div className="bg-zinc-950 p-2 border border-amber-900/35 space-y-1.5 text-left animate-fade-in relative z-20">
-                                                    <div className="text-[7.5px] font-mono text-amber-500 font-bold uppercase">
-                                                      Выберите роман-папку:
-                                                    </div>
-                                                    {activeFolders.length > 0 ? (
-                                                      <div className="space-y-1 max-h-[80px] overflow-y-auto custom-scrollbar">
-                                                        {activeFolders.map(folder => (
-                                                          <button
-                                                            key={folder.id}
-                                                            onClick={() => handleFileCaseToFolder(folder.id, job.id)}
-                                                            className="w-full text-left px-2 py-1 bg-[#141210] hover:bg-amber-950/30 border border-white/5 text-[9px] font-serif text-white truncate hover:border-amber-500/30 transition-all cursor-pointer block"
-                                                          >
-                                                            📁 «{folder.title}»
-                                                          </button>
-                                                        ))}
-                                                      </div>
-                                                    ) : (
-                                                      <div className="text-[8px] font-serif text-white/40 italic leading-tight">
-                                                        Нет активных романов-папок. Создайте их в Кабинете писателя!
-                                                      </div>
-                                                    )}
-                                                    <button
-                                                      onClick={() => setFileJobId(null)}
-                                                      className="w-full py-0.5 border border-white/10 hover:bg-white/5 text-center text-[7.5px] font-mono text-white/50 uppercase cursor-pointer block"
-                                                    >
-                                                      Отмена
-                                                    </button>
-                                                  </div>
-                                                );
-                                              }
-
-                                              return (
-                                                <button
-                                                  onClick={() => {
-                                                    try { gameAudio.playClick(); } catch (e) {}
-                                                    setFileJobId(job.id);
-                                                  }}
-                                                  className="w-full h-8 font-sans text-[9px] font-bold uppercase tracking-[0.15em] transition-all rounded-none flex items-center justify-center gap-1.5 bg-[#12100e] border border-amber-900/35 hover:border-amber-500 hover:bg-amber-950/20 text-amber-500 hover:text-amber-400 shadow cursor-pointer"
-                                                >
-                                                  <Lucide.FolderPlus className="w-3 h-3 text-amber-500" />
-                                                  Подшить в роман
-                                                </button>
-                                              );
-                                            })()}
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                )
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
                 );
               })()
@@ -1033,6 +808,267 @@ export default function SandboxDashboard({
                 initialActiveSketchId={activeInterrogationSketchId}
               />
             )}
+          </div>
+        )}
+
+        {/* TAB 3: ARCHIVE */}
+        {activeTab === 'archive' && (
+          <div className="relative z-10 flex-1 flex flex-col animate-fade-in text-left overflow-y-auto custom-scrollbar">
+            <div className="flex justify-between items-center border-b border-amber-900/40 pb-1.5 mb-2 shrink-0">
+              <div className="flex items-center gap-2">
+                <Lucide.Archive className="w-4 h-4 text-amber-500" />
+                <h3 className="font-serif text-xs sm:text-sm font-bold italic tracking-wide text-amber-100 uppercase">
+                  Архив раскрытых и завершенных дел
+                </h3>
+              </div>
+              <span className="font-mono text-[8px] uppercase tracking-widest text-amber-500/40 hidden sm:inline">
+                ДЕЛО ЗАКРЫТО // СЕЙФ БЮРО
+              </span>
+            </div>
+
+            <div className="border border-zinc-850 bg-zinc-950/30 flex-1 flex flex-col overflow-hidden">
+              <div className="flex border-b border-zinc-800 bg-black/40 shrink-0 select-none">
+                <button
+                  onClick={() => {
+                    try { gameAudio.playClick(); } catch (e) {}
+                    setArchiveSubTab('story');
+                  }}
+                  className={`px-4 py-2 font-serif text-[10px] uppercase tracking-wider font-bold transition-all border-b-2 rounded-none cursor-pointer ${
+                    archiveSubTab === 'story'
+                      ? 'border-amber-500 text-white bg-white/5'
+                      : 'border-transparent text-white/45 hover:text-white/70 hover:bg-white/5'
+                  }`}
+                >
+                  Сюжетные дела ({archivedChapters.length})
+                </button>
+                <button
+                  onClick={() => {
+                    try { gameAudio.playClick(); } catch (e) {}
+                    setArchiveSubTab('solo');
+                  }}
+                  className={`px-4 py-2 font-serif text-[10px] uppercase tracking-wider font-bold transition-all border-b-2 rounded-none cursor-pointer ${
+                    archiveSubTab === 'solo'
+                      ? 'border-amber-500 text-white bg-white/5'
+                      : 'border-transparent text-white/45 hover:text-white/70 hover:bg-white/5'
+                  }`}
+                >
+                  Одиночные дела ({archivedSoloJobs.length})
+                </button>
+              </div>
+
+              <div className="p-4 flex-1 overflow-y-auto custom-scrollbar">
+                {archiveSubTab === 'story' ? (
+                  archivedChapters.length === 0 ? (
+                    <p className="font-serif text-[10px] text-white/35 italic text-center py-6">
+                      Нет раскрытых сюжетных дел.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {archivedChapters.map((chapter) => {
+                        const index = campaignChapters.findIndex(c => c.id === chapter.id);
+                        const chNum = index + 1;
+                        
+                        const romanize = (num: number): string => {
+                          const roman = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
+                          return roman[num - 1] || num.toString();
+                        };
+
+                        const iconsPool = ['Compass', 'Anchor', 'Wind', 'BookOpen', 'Shield', 'Key', 'Eye', 'Map', 'Cat', 'Award'];
+                        const iconName = iconsPool[(chNum - 1) % iconsPool.length];
+                        const Icon = (Lucide as any)[iconName] || Lucide.FileText;
+
+                        return (
+                          <div 
+                            key={chapter.id} 
+                            onClick={() => {
+                              try { gameAudio.playClick(); } catch (e) {}
+                              setZoomedJob(chapter);
+                            }}
+                            className="border border-emerald-950/30 bg-emerald-950/5 text-emerald-100/60 p-4 flex flex-col justify-between relative shadow-inner cursor-zoom-in hover:border-emerald-700/50 hover:bg-emerald-950/10 transition-all hover:scale-[1.01]"
+                          >
+                            <div>
+                              <div className="flex justify-between items-start mb-2 border-b border-emerald-950/20 pb-1.5">
+                                <span className="font-mono text-[8px] uppercase tracking-wider text-emerald-500/55 block">
+                                  Сюжет // Глава {romanize(chNum)}
+                                </span>
+                                <span className="px-1.5 py-0.5 border border-emerald-500/20 bg-emerald-950/40 text-emerald-400 text-[7px] font-mono font-bold uppercase tracking-widest rounded-none">
+                                  РАСКРЫТО ✓
+                                </span>
+                              </div>
+
+                              <div className="flex gap-2 items-start mb-2">
+                                <div className="p-1.5 bg-black/40 border border-white/5 shrink-0 text-emerald-500/50">
+                                  <Icon className="w-3.5 h-3.5" />
+                                </div>
+                                <h4 className="font-serif text-xs font-bold leading-tight text-emerald-200/50">
+                                  {chapter.title}
+                                </h4>
+                              </div>
+
+                              <p className="text-[10px] leading-relaxed text-emerald-100/40 mb-4 font-sans line-clamp-3 italic">
+                                {chapter.description}
+                              </p>
+                            </div>
+
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleStartJobClick(chapter);
+                              }}
+                              className="w-full h-8 font-sans text-[9px] font-bold uppercase tracking-[0.15em] transition-all rounded-none flex items-center justify-center gap-1.5 bg-zinc-950 border border-zinc-800 hover:border-emerald-700 hover:bg-emerald-950/20 text-emerald-400 hover:text-emerald-300 shadow cursor-pointer"
+                            >
+                              <Lucide.RotateCcw className="w-3 h-3 text-emerald-500" />
+                              Перепройти бесплатно
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )
+                ) : (
+                  archivedSoloJobs.length === 0 ? (
+                    <p className="font-serif text-[10px] text-white/35 italic text-center py-6">
+                      Нет завершенных одиночных дел. Раскройте ежедневные контракты или дела писателя, чтобы они переместились сюда!
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {archivedSoloJobs.map((job) => {
+                        return (
+                          <div 
+                            key={job.id} 
+                            onClick={() => {
+                              try { gameAudio.playClick(); } catch (e) {}
+                              setZoomedJob(job);
+                            }}
+                            className="border border-emerald-950/30 bg-emerald-950/5 text-emerald-100/60 p-4 flex flex-col justify-between relative shadow-inner cursor-zoom-in hover:border-emerald-700/50 hover:bg-emerald-950/10 transition-all hover:scale-[1.01]"
+                          >
+                            <div>
+                              <div className="flex justify-between items-start mb-2 border-b border-emerald-950/20 pb-1.5">
+                                <span className="font-mono text-[8px] uppercase tracking-wider text-emerald-500/55 block">
+                                  Дело #{job.id.split('_').slice(-1)[0]}
+                                </span>
+                                <span className="px-1.5 py-0.5 border border-emerald-500/20 bg-emerald-950/40 text-emerald-400 text-[7px] font-mono font-bold uppercase tracking-widest rounded-none">
+                                  В АРХИВЕ ✓
+                                </span>
+                              </div>
+
+                              <div className="flex gap-2 items-start mb-2">
+                                <div className="p-1.5 bg-black/40 border border-white/5 shrink-0 text-emerald-500/50">
+                                  <Lucide.FileText className="w-3.5 h-3.5" />
+                                </div>
+                                <h4 className="font-serif text-xs font-bold leading-tight text-emerald-200/50">
+                                  {job.title}
+                                </h4>
+                              </div>
+
+                              <p className="text-[10px] leading-relaxed text-emerald-100/40 mb-4 font-sans line-clamp-3 italic">
+                                {job.description}
+                              </p>
+
+                              {(() => {
+                                const parentFolder = (gameState.caseFolders ?? []).find(f => f.caseIds.includes(job.id));
+                                if (parentFolder) {
+                                  return (
+                                    <div className="mb-4 p-1.5 bg-neutral-950/80 border border-emerald-950/25 text-[8.5px] font-serif text-emerald-400/80 italic">
+                                      📁 Подшито в роман-папку: <span className="font-bold text-emerald-300">«{parentFolder.title}»</span>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </div>
+
+                            <div className="space-y-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStartJobClick(job);
+                                }}
+                                className="w-full h-8 font-sans text-[9px] font-bold uppercase tracking-[0.15em] transition-all rounded-none flex items-center justify-center gap-1.5 bg-zinc-950 border border-zinc-800 hover:border-emerald-700 hover:bg-emerald-950/20 text-emerald-400 hover:text-emerald-300 shadow cursor-pointer"
+                              >
+                                <Lucide.RotateCcw className="w-3 h-3 text-emerald-500" />
+                                Перепройти бесплатно
+                              </button>
+
+                              {(() => {
+                                const parentFolder = (gameState.caseFolders ?? []).find(f => f.caseIds.includes(job.id));
+                                const isFiled = !!parentFolder;
+
+                                if (isFiled) {
+                                  return (
+                                    <div className="text-center text-[8px] font-mono text-emerald-500/55 uppercase py-1 border border-dashed border-emerald-950/35 bg-emerald-950/5">
+                                      Подшито ✓
+                                    </div>
+                                  );
+                                }
+
+                                const activeFolders = (gameState.caseFolders ?? []).filter(f => f.status === 'writing');
+
+                                if (fileJobId === job.id) {
+                                  return (
+                                    <div 
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="bg-zinc-950 p-2 border border-amber-900/35 space-y-1.5 text-left animate-fade-in relative z-20 cursor-default"
+                                    >
+                                      <div className="text-[7.5px] font-mono text-amber-500 font-bold uppercase">
+                                        Выберите роман-папку:
+                                      </div>
+                                      {activeFolders.length > 0 ? (
+                                        <div className="space-y-1 max-h-[80px] overflow-y-auto custom-scrollbar">
+                                          {activeFolders.map(folder => (
+                                            <button
+                                              key={folder.id}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleFileCaseToFolder(folder.id, job.id);
+                                              }}
+                                              className="w-full text-left px-2 py-1 bg-[#141210] hover:bg-amber-950/30 border border-white/5 text-[9px] font-serif text-white truncate hover:border-amber-500/30 transition-all cursor-pointer block"
+                                            >
+                                              📁 «{folder.title}»
+                                            </button>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <div className="text-[8px] font-serif text-white/40 italic leading-tight">
+                                          Нет активных романов-папок. Создайте их в Кабинете писателя!
+                                        </div>
+                                      )}
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setFileJobId(null);
+                                        }}
+                                        className="w-full py-0.5 border border-white/10 hover:bg-white/5 text-center text-[7.5px] font-mono text-white/50 uppercase cursor-pointer block"
+                                      >
+                                        Отмена
+                                      </button>
+                                    </div>
+                                  );
+                                }
+
+                                return (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      try { gameAudio.playClick(); } catch (e) {}
+                                      setFileJobId(job.id);
+                                    }}
+                                    className="w-full h-8 font-sans text-[9px] font-bold uppercase tracking-[0.15em] transition-all rounded-none flex items-center justify-center gap-1.5 bg-[#12100e] border border-amber-900/35 hover:border-amber-550 hover:bg-amber-950/20 text-amber-500 hover:text-amber-400 shadow cursor-pointer"
+                                  >
+                                    <Lucide.FolderPlus className="w-3 h-3 text-amber-500" />
+                                    Подшить в роман
+                                  </button>
+                                );
+                              })()}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -1214,6 +1250,168 @@ export default function SandboxDashboard({
           </div>
         </div>
       )}
+
+      {/* Zoomed Case dossier detail popup */}
+      {zoomedJob && (() => {
+        const isStoryOrCampaign = zoomedJob.id.startsWith('story_') || zoomedJob.id.startsWith('custom_campaign_ch_');
+        
+        const getChapterNum = (job: Job) => {
+          if (job.id.startsWith('story_chapter_')) {
+            return parseInt(job.id.replace('story_chapter_', ''), 10);
+          }
+          const campaignChapters = gameState.campaignChapters && gameState.campaignChapters.length > 0
+            ? gameState.campaignChapters
+            : STORY_CHAPTERS_DATA;
+          const index = campaignChapters.findIndex(c => c.id === job.id);
+          return index !== -1 ? index + 1 : 1;
+        };
+
+        const chNum = getChapterNum(zoomedJob);
+        const isJobCompleted = zoomedJob.completed || (isStoryOrCampaign && completedChapters.includes(chNum));
+        const isJobLocked = reputation < zoomedJob.reputationRequired;
+        const hasLeadPaid = zoomedJob.infoCost === 0 || zoomedJob.leadPurchased;
+
+        return (
+          <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4 backdrop-blur-md">
+            <div className="max-w-lg w-full border border-amber-900/50 bg-[#0d0a08] p-6 sm:p-7 relative shadow-2xl animate-fade-in flex flex-col text-left">
+              <div className="absolute inset-1.5 border border-white/5 pointer-events-none" />
+              
+              {/* Pushpin decor */}
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 w-7 h-7 rounded-full bg-red-700 border-2 border-stone-900 shadow-xl z-20 flex items-center justify-center pointer-events-none">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+              </div>
+
+              {/* Solved / Archived Stamp */}
+              {isJobCompleted && (
+                <div className="absolute top-12 right-6 border-2 border-dashed border-emerald-500/40 text-emerald-400 font-serif text-[11px] font-bold uppercase tracking-widest px-3 py-1 rotate-12 select-none z-20 pointer-events-none bg-emerald-950/20 backdrop-blur-[1px]">
+                  РАСКРЫТО ✓
+                </div>
+              )}
+              {isJobLocked && (
+                <div className="absolute top-12 right-6 border-2 border-dashed border-red-500/40 text-red-400 font-serif text-[11px] font-bold uppercase tracking-widest px-3 py-1 -rotate-12 select-none z-20 pointer-events-none bg-red-950/20 backdrop-blur-[1px]">
+                  ЗАКРЫТО 🔒
+                </div>
+              )}
+
+              {/* Dossier Header */}
+              <div className="flex justify-between items-start border-b border-amber-950/30 pb-2.5 mb-4">
+                <div>
+                  <span className="font-mono text-[8px] text-amber-500/70 uppercase tracking-[0.25em] block mb-0.5">
+                    📂 УГОЛОВНОЕ ДЕЛО №{zoomedJob.id.split('_').slice(-1)[0].toUpperCase()}
+                  </span>
+                  <span className="font-serif text-[9px] text-white/40 italic uppercase tracking-wider block">
+                    {isStoryOrCampaign ? `СЮЖЕТНАЯ КАМПАНИЯ // ГЛАВА ${chNum}` : 'ОДИНАРНЫЙ УЛИЧНЫЙ КОНТРАКТ'}
+                  </span>
+                </div>
+                <button 
+                  onClick={() => {
+                    try { gameAudio.playClick(); } catch (e) {}
+                    setZoomedJob(null);
+                  }}
+                  className="text-white/40 hover:text-white font-mono text-[9px] uppercase tracking-wider border border-white/10 hover:border-white/30 px-2 py-0.5 transition-all cursor-pointer bg-white/5"
+                >
+                  [Закрыть]
+                </button>
+              </div>
+
+              {/* Content Body */}
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-serif text-base font-bold text-amber-100 uppercase tracking-wide leading-snug">
+                    {zoomedJob.title || zoomedJob.caseName}
+                  </h4>
+                </div>
+
+                <div className="p-3 border border-amber-950/20 bg-[#120e0c] font-serif text-[11.5px] italic text-white/80 leading-relaxed max-h-[140px] overflow-y-auto custom-scrollbar">
+                  «{zoomedJob.description}»
+                </div>
+
+                {/* Dossier Meta Grid */}
+                <div className="grid grid-cols-2 gap-2 text-[10px] font-mono border-t border-b border-amber-950/20 py-3 my-2 text-white/70">
+                  <div className="flex items-center gap-1.5">
+                    <Lucide.Award className="w-3.5 h-3.5 text-amber-500/80" />
+                    <span>Репутация: <strong className="text-amber-400">{zoomedJob.reputationRequired}★</strong></span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Lucide.AlertTriangle className={`w-3.5 h-3.5 ${
+                      zoomedJob.risk === 'high' ? 'text-red-500' : zoomedJob.risk === 'medium' ? 'text-amber-500' : 'text-blue-400'
+                    }`} />
+                    <span>Сложность: <strong className={
+                      zoomedJob.risk === 'high' ? 'text-red-400' : zoomedJob.risk === 'medium' ? 'text-amber-400' : 'text-blue-400'
+                    }>
+                      {zoomedJob.risk === 'high' ? 'Высокая' : zoomedJob.risk === 'medium' ? 'Средняя' : 'Низкая'}
+                    </strong></span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Lucide.DollarSign className="w-3.5 h-3.5 text-emerald-500/80" />
+                    <span>Гонорар: <strong className="text-emerald-400">+{zoomedJob.reward}$</strong></span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Lucide.Clock className="w-3.5 h-3.5 text-amber-500/80" />
+                    <span>Время: <strong className="text-white">{zoomedJob.timeLimit ? `${Math.floor(zoomedJob.timeLimit / 60)} мин.` : 'Без лимита'}</strong></span>
+                  </div>
+                </div>
+
+                {/* Lead / Hint status block */}
+                {!isJobLocked && !isJobCompleted && (
+                  <div className="p-2.5 border border-amber-950/20 bg-black/30 flex items-center justify-between text-[10px] font-mono">
+                    <div className="flex items-center gap-1.5 text-white/60">
+                      <Lucide.HelpCircle className={`w-4 h-4 ${hasLeadPaid ? 'text-emerald-400' : 'text-amber-500 animate-pulse'}`} />
+                      <span>Наводка:</span>
+                      <span className={hasLeadPaid ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>
+                        {hasLeadPaid ? 'ПОЛУЧЕНА ✓' : 'ТРЕБУЕТСЯ КУПИТЬ ⚠️'}
+                      </span>
+                    </div>
+                    {zoomedJob.infoCost > 0 && !zoomedJob.leadPurchased && (
+                      <button
+                        onClick={() => {
+                          handleBuyLeadClick(zoomedJob.id);
+                          setZoomedJob(prev => prev ? { ...prev, leadPurchased: true } : null);
+                        }}
+                        disabled={cash < zoomedJob.infoCost}
+                        className="px-2.5 py-1 border border-amber-600/30 hover:border-amber-500 bg-amber-950/20 hover:bg-amber-950/40 text-[9px] font-bold text-amber-400 disabled:opacity-40 disabled:pointer-events-none transition-all rounded-none cursor-pointer"
+                      >
+                        Купить (-{zoomedJob.infoCost}$)
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Actions Footer */}
+              <div className="flex flex-col sm:flex-row gap-2.5 mt-5">
+                <button
+                  onClick={() => {
+                    try { gameAudio.playClick(); } catch (e) {}
+                    setZoomedJob(null);
+                  }}
+                  className="flex-1 h-9 border border-white/10 hover:border-white/30 hover:bg-white/5 text-white/60 hover:text-white font-sans text-[10px] font-bold uppercase tracking-wider transition-all rounded-none flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  Закрыть досье
+                </button>
+
+                {!isJobLocked && (
+                  <button
+                    onClick={() => {
+                      setZoomedJob(null);
+                      handleStartJobClick(zoomedJob);
+                    }}
+                    disabled={!hasLeadPaid}
+                    className={`flex-1 h-9 font-sans text-[10px] font-bold uppercase tracking-wider transition-all rounded-none flex items-center justify-center gap-1.5 cursor-pointer ${
+                      !hasLeadPaid
+                        ? 'bg-neutral-800 text-white/20 border border-neutral-750 cursor-not-allowed'
+                        : 'bg-amber-600 hover:bg-amber-500 text-white shadow'
+                    }`}
+                  >
+                    <Lucide.Search className="w-4 h-4" />
+                    {isJobCompleted ? 'Перепройти бесплатно' : !hasLeadPaid ? 'Требуется наводка' : 'Начать следствие'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

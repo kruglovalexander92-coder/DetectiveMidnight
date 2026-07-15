@@ -326,6 +326,7 @@ export default function App() {
       ...generateNewGame('sandbox', 1, 150, 0),
       gameStatus: 'sandbox_dashboard' as const,
       currentDay: 1,
+      currentTimeMinutes: 540,
       daysSurvived: 0,
       availableJobs: initialJobs,
       campaignChapters: campaignChapters,
@@ -433,9 +434,11 @@ export default function App() {
               gameAudio.playClick();
             } catch (e) {}
           }
+          const currentMin = prev.currentTimeMinutes ?? 540;
           return {
             ...prev,
-            timeLeft: prev.timeLeft - 1
+            timeLeft: prev.timeLeft - 1,
+            currentTimeMinutes: Math.min(1080, currentMin + 0.2)
           };
         } else {
           // Time is up! Game is lost!
@@ -1444,6 +1447,8 @@ export default function App() {
 
       return {
         ...cleanState,
+        currentTimeMinutes: prev.currentTimeMinutes ?? 540,
+        timerMax: cleanState.timeLeft,
         availableJobs: prev.availableJobs,
         campaignChapters: prev.campaignChapters,
         currentDay: prev.currentDay,
@@ -1500,6 +1505,7 @@ export default function App() {
         return {
           ...prev,
           currentDay: nextDay,
+          currentTimeMinutes: 540,
           writerCasesToday: 0,
           daysSurvived: (prev.daysSurvived ?? 0) + (updatedCash >= 0 ? 1 : 0),
           availableJobs: newJobs,
@@ -1595,8 +1601,12 @@ export default function App() {
         }
       }
 
+      const currentMin = prev.currentTimeMinutes ?? 540;
+      const nextMin = Math.min(1080, currentMin + 120); // 2 hours for completing/aborting a case
+
       return {
         ...prev,
+        currentTimeMinutes: nextMin,
         gameStatus: 'sandbox_dashboard',
         activeJob: null,
         availableJobs: updatedJobs,
@@ -1805,7 +1815,7 @@ export default function App() {
       <FilmGrain />
 
       {/* Atmospheric Header Bar */}
-      <header className="w-full border-b border-white/10 bg-black/90 px-5 py-4 flex justify-between items-center z-30">
+      <header className="w-full border-b border-white/10 bg-black/90 px-5 py-2.5 flex justify-between items-center z-30">
         <div className="flex items-center gap-3">
           <div 
             onClick={() => {
@@ -1849,18 +1859,21 @@ export default function App() {
         <div className="flex items-center gap-4">
           {gameState.gameStatus === 'sandbox_dashboard' ? (
             (() => {
-              const completedCount = (gameState.availableJobs ?? []).filter(j => j && j.completed).length;
-              let simulatedTime = '09:00';
-              let desc = 'Утро (До темноты: 9 ч.)';
-              if (completedCount === 1) {
-                simulatedTime = '12:00';
-                desc = 'Полдень (До темноты: 6 ч.)';
-              } else if (completedCount === 2) {
-                simulatedTime = '15:00';
-                desc = 'День (До темноты: 3 ч.)';
-              } else if (completedCount >= 3) {
-                simulatedTime = '18:00';
+              const currentMin = gameState.currentTimeMinutes ?? (540 + ((gameState.availableJobs ?? []).filter(j => j && j.completed).length * 180));
+              const hr = Math.floor(currentMin / 60);
+              const mn = Math.floor(currentMin % 60);
+              const simulatedTime = `${hr.toString().padStart(2, '0')}:${mn.toString().padStart(2, '0')}`;
+              
+              let desc = 'Утро';
+              const hoursLeft = Math.max(0, 18 - hr);
+              if (hr >= 18) {
                 desc = 'Вечер (Стемнело! Пора закрывать день)';
+              } else if (hr >= 15) {
+                desc = `День (До темноты: ${hoursLeft} ч.)`;
+              } else if (hr >= 12) {
+                desc = `Полдень (До темноты: ${hoursLeft} ч.)`;
+              } else {
+                desc = `Утро (До темноты: ${hoursLeft} ч.)`;
               }
 
               return (
@@ -1868,9 +1881,13 @@ export default function App() {
                   onClick={() => {
                     gameAudio.playClick();
                     let chatDesc = "Пора приниматься за расследования!";
-                    if (completedCount === 1) chatDesc = "Половина дня впереди, работаем!";
-                    if (completedCount === 2) chatDesc = "Солнце клонится к закату. Успеем ли закрыть последнее дело?";
-                    if (completedCount >= 3) chatDesc = "На город опустились густые сумерки. Пора завершать день!";
+                    if (hr >= 18) {
+                      chatDesc = "На город опустились густые сумерки. Пора завершать день!";
+                    } else if (hr >= 15) {
+                      chatDesc = "Солнце клонится к закату. Успеем ли завершить оставшиеся дела?";
+                    } else if (hr >= 12) {
+                      chatDesc = "Половина дня позади, работаем!";
+                    }
                     
                     setGameState(prev => ({
                       ...prev,
@@ -2799,6 +2816,8 @@ export default function App() {
 
                             return {
                               ...cleanState,
+                              currentTimeMinutes: prev.currentTimeMinutes ?? 540,
+                              timerMax: cleanState.timeLeft,
                               availableJobs: updatedJobs,
                               campaignChapters: updatedCampaignChapters,
                               currentDay: prev.currentDay,

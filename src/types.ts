@@ -138,6 +138,7 @@ export interface GameState {
   revealedObjects?: ObjectId[]; // objects whose contents are highlighted/known
   // Calendar & Campaign Sandbox fields
   currentDay?: number;
+  currentTimeMinutes?: number;
   availableJobs?: Job[];
   activeJob?: Job | null;
   daysSurvived?: number;
@@ -198,6 +199,7 @@ export interface TornNoteState {
   clueIdToUnlock: string | null;
   cols?: number;
   rows?: number;
+  fontStyle?: 'handwritten' | 'typewriter';
 }
 
 export interface SuspectSketch {
