@@ -22,10 +22,7 @@ export default function TornNotePuzzle({
   const activeNote = gameState.activeTornNote;
 
   // Local state for the puzzle board
-  // We keep a local arrangement of pieces in slots 0 to 5
-  const [boardSlots, setBoardSlots] = useState<(TornNotePiece | null)[]>([
-    null, null, null, null, null, null
-  ]);
+  const [boardSlots, setBoardSlots] = useState<(TornNotePiece | null)[]>([]);
   const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [showFullLetter, setShowFullLetter] = useState(false);
@@ -34,16 +31,20 @@ export default function TornNotePuzzle({
   useEffect(() => {
     if (!activeNote) return;
 
+    const cols = activeNote.cols || 6;
+    const rows = activeNote.rows || 1;
+    const totalSlots = cols * rows;
+
     // Place pieces into slots
     // If the pieces already have a currentSlot, we place them there.
     // Otherwise, we place them in the first available slots to fill the board.
-    const initialSlots = [null, null, null, null, null, null] as (TornNotePiece | null)[];
+    const initialSlots = Array(totalSlots).fill(null) as (TornNotePiece | null)[];
     
     // We clone the pieces so we can mutate safely in state
     const piecesToPlace = activeNote.pieces.map(p => ({ ...p }));
     
-    piecesToPlace.forEach((piece, index) => {
-      if (piece.currentSlot !== null && piece.currentSlot >= 0 && piece.currentSlot < 6) {
+    piecesToPlace.forEach((piece) => {
+      if (piece.currentSlot !== null && piece.currentSlot >= 0 && piece.currentSlot < totalSlots) {
         initialSlots[piece.currentSlot] = piece;
       } else {
         // Find first empty slot
@@ -264,20 +265,51 @@ export default function TornNotePuzzle({
     }
   };
 
+  const cols = activeNote.cols || 6;
+  const rows = activeNote.rows || 1;
+
+  const getAspectClass = (cCount: number, rCount: number) => {
+    const num = cCount * rCount;
+    if (num === 4) return 'aspect-[1.5/1]';
+    if (num === 6) return 'aspect-[1.1/1]';
+    if (num === 8) return 'aspect-[1/1.1]';
+    if (num === 9) return 'aspect-[1.3/1]';
+    if (num === 12) return 'aspect-[1.2/1]';
+    return 'aspect-[1/1.2]';
+  };
+
   // Custom jagged rip clip-path styles
-  // To make it feel super authentic, we give slightly different rips based on piece index
-  const getPieceClipPath = (idx: number) => {
-    // Generate a beautiful procedural torn paper edge clip-path
-    if (idx === 0) {
-      // Left edge is straight (start of letter), right is torn
-      return "polygon(0% 0%, 93% 0%, 88% 10%, 93% 22%, 87% 35%, 94% 48%, 89% 60%, 94% 72%, 88% 85%, 93% 94%, 90% 100%, 0% 100%)";
-    } else if (idx === 5) {
-      // Left edge is torn, right edge is straight (end of letter)
-      return "polygon(10% 0%, 100% 0%, 100% 100%, 8% 100%, 12% 92%, 6% 80%, 12% 68%, 7% 55%, 13% 42%, 8% 30%, 12% 18%, 6% 8%)";
-    } else {
-      // Both edges are torn
-      return "polygon(8% 0%, 92% 0%, 87% 10%, 93% 22%, 88% 35%, 94% 48%, 89% 60%, 94% 72%, 88% 85%, 93% 94%, 89% 100%, 11% 100%, 6% 91%, 12% 82%, 7% 70%, 12% 58%, 8% 45%, 13% 32%, 7% 20%, 11% 8%)";
-    }
+  // To make it feel super authentic, we give slightly different rips based on piece grid location
+  const getPieceClipPath = (cCount: number, rCount: number, origIdx: number) => {
+    const r = Math.floor(origIdx / cCount);
+    const c = origIdx % cCount;
+
+    const leftStraight = c === 0;
+    const rightStraight = c === cCount - 1;
+    const topStraight = r === 0;
+    const bottomStraight = r === rCount - 1;
+
+    // Top edge (from 0% to 100% x)
+    const top = topStraight 
+      ? "0% 0%, 100% 0%" 
+      : "0% 0%, 15% 4%, 30% -2%, 45% 5%, 60% 1%, 75% 6%, 90% -1%, 100% 0%";
+
+    // Right edge (from 0% to 100% y)
+    const right = rightStraight
+      ? "100% 0%, 100% 100%"
+      : "100% 0%, 96% 15%, 102% 30%, 95% 45%, 98% 60%, 94% 75%, 101% 90%, 100% 100%";
+
+    // Bottom edge (from 100% to 0% x)
+    const bottom = bottomStraight
+      ? "100% 100%, 0% 100%"
+      : "100% 100%, 85% 96%, 70% 102%, 55% 95%, 40% 98%, 25% 94%, 10% 101%, 0% 100%";
+
+    // Left edge (from 100% to 0% y)
+    const left = leftStraight
+      ? "0% 100%, 0% 0%"
+      : "0% 100%, 4% 85%, -2% 70%, 5% 55%, 1% 40%, 6% 25%, -1% 10%, 0% 0%";
+
+    return `polygon(${top}, ${right}, ${bottom}, ${left})`;
   };
 
   return (
@@ -325,7 +357,7 @@ export default function TornNotePuzzle({
           <div className="w-full bg-[#1b140f] border border-amber-900/30 p-3 mb-6 text-xs font-sans leading-relaxed text-amber-100 flex items-start gap-2.5">
             <Lucide.Info className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
             <div>
-              <strong className="text-amber-400">Как играть:</strong> Нажмите на клочок записки, чтобы выбрать его. Затем нажмите на другой клочок, чтобы <strong className="text-white underline">поменять их местами</strong>. Используйте кнопку поворотника <strong className="text-amber-500">⟳ 90°</strong> под каждым клочком, чтобы крутить его. Буквы должны выстроиться в ровные горизонтальные строчки!
+              <strong className="text-amber-400">Как играть:</strong> Нажмите на клочок записки, чтобы выбрать его. Затем нажмите на другой клочок, чтобы <strong className="text-white underline">поменять их местами</strong>. Используйте кнопку поворотника <strong className="text-amber-500">⟳ 90°</strong> в углу каждого клочка, чтобы крутить его. Буквы должны выстроиться в ровные горизонтальные строчки!
             </div>
           </div>
         )}
@@ -336,10 +368,16 @@ export default function TornNotePuzzle({
           {/* Wooden/table accent grids */}
           <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,_transparent_1px),_linear-gradient(90deg,_rgba(255,255,255,0.02)_1px,_transparent_1px)] bg-[size:40px_40px] opacity-25" />
 
-          {/* Slots & Pieces Row */}
-          <div className={`flex justify-center items-center relative z-10 w-full max-w-2xl select-none transition-all duration-500 ${
-            isSuccess ? 'gap-0 shadow-2xl border border-stone-400/30 p-1 bg-[#fbf8f0]' : 'gap-1 sm:gap-2'
-          }`}>
+          {/* Slots & Pieces Grid */}
+          <div 
+            style={{
+              display: 'grid',
+              gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+            }}
+            className={`relative z-10 w-full max-w-2xl select-none transition-all duration-500 ${
+              isSuccess ? 'gap-0 shadow-2xl border border-stone-400/30 p-1.5 bg-[#fbf8f0]' : 'gap-2 sm:gap-3'
+            }`}
+          >
             {boardSlots.map((piece, idx) => {
               const isSelected = selectedSlotIndex === idx;
 
@@ -347,7 +385,7 @@ export default function TornNotePuzzle({
                 <div 
                   key={`slot_${idx}`}
                   onClick={() => handleSlotClick(idx)}
-                  className={`relative aspect-[1/2.5] w-[75px] sm:w-[95px] border transition-all duration-500 flex flex-col items-center justify-center cursor-pointer ${
+                  className={`relative ${getAspectClass(cols, rows)} w-full border transition-all duration-300 flex flex-col items-center justify-center cursor-pointer ${
                     isSelected 
                       ? 'border-amber-500 bg-amber-900/10 ring-4 ring-amber-500/30 z-20' 
                       : piece 
@@ -366,10 +404,10 @@ export default function TornNotePuzzle({
                   {piece && (
                     <div 
                       style={{ 
-                        clipPath: isSuccess ? 'none' : getPieceClipPath(piece.originalIndex),
+                        clipPath: isSuccess ? 'none' : getPieceClipPath(cols, rows, piece.originalIndex),
                         transform: `rotate(${piece.rotation}deg)`,
                       }}
-                      className={`absolute inset-0 bg-[#fbf8f0] p-2 py-4 flex flex-col justify-between items-center text-stone-950 transition-all duration-500 ${
+                      className={`absolute inset-0 bg-[#fbf8f0] p-1.5 py-3 flex flex-col justify-between items-center text-stone-950 transition-all duration-500 ${
                         isSuccess 
                           ? 'border-y border-stone-300/40 shadow-none' 
                           : 'border-y border-stone-200 shadow-md hover:brightness-105 active:scale-95'
@@ -379,11 +417,11 @@ export default function TornNotePuzzle({
                       <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-b from-stone-400/15 to-transparent pointer-events-none" />
 
                       {/* Handwritten / Monospace Text lines on the strip */}
-                      <div className="flex-1 flex flex-col justify-around w-full font-mono text-[10px] sm:text-xs font-bold leading-none tracking-tight text-center whitespace-pre py-2 select-none">
+                      <div className="flex-1 flex flex-col justify-around w-full font-mono text-[9px] sm:text-xs font-bold leading-none tracking-tight text-center whitespace-pre py-1 select-none">
                         {piece.textLines.map((line, lIdx) => (
                           <div 
                             key={`line_${lIdx}`} 
-                            className="bg-transparent text-[#1f242d] border-b border-stone-200/30 select-none pb-1"
+                            className="bg-transparent text-[#1f242d] border-b border-stone-200/30 select-none pb-0.5"
                           >
                             {line}
                           </div>
@@ -395,14 +433,14 @@ export default function TornNotePuzzle({
                     </div>
                   )}
 
-                  {/* Rotate Button Overlay at the bottom */}
+                  {/* Rotate Button Overlay nicely absolute positioned in the bottom-right corner of the slot */}
                   {piece && !isSuccess && (
                     <button
                       onClick={(e) => handleRotatePiece(idx, e)}
-                      className="absolute -bottom-7 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-stone-800 border border-stone-700 text-stone-300 hover:bg-stone-700 hover:text-white flex items-center justify-center transition-all shadow-md z-30 pointer-events-auto"
+                      className="absolute bottom-1 right-1 w-5.5 h-5.5 rounded-full bg-stone-900/90 border border-stone-700 hover:border-stone-500 text-stone-300 hover:bg-amber-950/95 hover:text-white flex items-center justify-center transition-all shadow-lg z-30 pointer-events-auto active:scale-90"
                       title="Повернуть клочок на 90 градусов"
                     >
-                      <Lucide.RotateCw className="w-3.5 h-3.5" />
+                      <Lucide.RotateCw className="w-3 h-3" />
                     </button>
                   )}
                 </div>

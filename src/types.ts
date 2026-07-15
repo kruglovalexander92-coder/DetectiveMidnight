@@ -165,6 +165,7 @@ export interface GameState {
   }[];
   caseFolders?: CaseFolder[];
   notifiedChapters?: string[];
+  notifiedUnlockDays?: number[];
 }
 
 export interface CaseFolder {
@@ -195,6 +196,8 @@ export interface TornNoteState {
   completed: boolean;
   rewardClaimed: boolean;
   clueIdToUnlock: string | null;
+  cols?: number;
+  rows?: number;
 }
 
 export interface SuspectSketch {

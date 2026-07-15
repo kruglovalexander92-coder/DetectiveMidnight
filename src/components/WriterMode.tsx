@@ -27,6 +27,10 @@ export default function WriterMode({
   const [generationResult, setGenerationResult] = useState<any>(null);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [writerError, setWriterError] = useState<string | null>(null);
+  const [warningModal, setWarningModal] = useState<{
+    title: string;
+    description: string;
+  } | null>(null);
   const [isShiftActive, setIsShiftActive] = useState(false);
   const [showRoomEditor, setShowRoomEditor] = useState(false);
 
@@ -189,7 +193,13 @@ export default function WriterMode({
     };
 
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = originalOverflow;
+    };
   }, []);
 
   const handleVirtualKeyPress = (char: string) => {
@@ -240,16 +250,30 @@ export default function WriterMode({
     if (writeType === "single") {
       const casesToday = gameState.writerCasesToday ?? 0;
       if (casesToday >= 2) {
-        setWriterError("Дневной лимит исчерпан: вы можете написать только 2 дела в день. Купите кофе и сигареты в лавке подворотни для сброса!");
+        setWarningModal({
+          title: "ЛИМИТ НА СЕГОДНЯ ИСЧЕРПАН",
+          description: "Дневной лимит исчерпан: вы можете написать только 2 дела в день. Приобретите кофе и сигареты в лавке подворотни, чтобы моментально сбросить лимит!"
+        });
         try { gameAudio.playClick(); } catch (e) {}
         return;
       }
     } else {
       const currentDay = gameState.currentDay ?? 1;
+      if (currentDay < 10) {
+        setWarningModal({
+          title: "РЕЖИМ ЗАБЛОКИРОВАН",
+          description: "Создание сюжетных линий (Больших дел из 3-5 глав) доступно только начиная с 10-го дня работы в бюро! Раскрывайте ежедневные дела и повышайте репутацию."
+        });
+        try { gameAudio.playClick(); } catch (e) {}
+        return;
+      }
       const lastNovelDay = gameState.writerNovelLastDay;
       if (lastNovelDay !== undefined && (currentDay - lastNovelDay) < 3) {
         const remainingDays = 3 - (currentDay - lastNovelDay);
-        setWriterError(`Лимит романов: писать роман можно раз в 3 дня. Откат спадет через ${remainingDays} дн. Купите кофе и сигареты в лавке подворотни!`);
+        setWarningModal({
+          title: "ОТКАТ БОЛЬШОГО ДЕЛА",
+          description: `Вы сможете написать новое Большое дело только раз в 3 дня. Откат спадет через ${remainingDays} дн. Купите кофе и сигареты в лавке подворотни, чтобы мгновенно сбросить таймер!`
+        });
         try { gameAudio.playClick(); } catch (e) {}
         return;
       }
@@ -417,7 +441,7 @@ export default function WriterMode({
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-white/40">БУЛЬВАРНЫЙ РОМАН:</span>
+            <span className="text-white/40">БОЛЬШОЕ ДЕЛО:</span>
             {isNovelAvailable ? (
               <span className="text-emerald-400 font-bold">ДОСТУПЕН</span>
             ) : (
@@ -468,7 +492,7 @@ export default function WriterMode({
             
             {/* THE PAPER SHEET CONTAINER - OVERLAY */}
             <div 
-              className="absolute flex flex-col justify-between overflow-y-auto custom-scrollbar p-2 md:p-3.5 lg:p-4 select-text pointer-events-auto"
+              className="absolute flex flex-col justify-between overflow-y-auto custom-scrollbar pt-0 pb-2 px-2 md:pt-0.5 md:pb-3.5 md:px-3.5 lg:pt-1 lg:pb-4 lg:px-4 select-text pointer-events-auto"
               style={{
                 top: coords.paper.top,
                 left: coords.paper.left,
@@ -488,13 +512,13 @@ export default function WriterMode({
                     
                     <div className="space-y-1.5 max-w-md">
                       <span className="font-mono text-[7px] md:text-[8px] text-amber-900/60 uppercase tracking-[0.25em] font-bold block animate-pulse">
-                        ✉ ОТПРАВКА В ИЗДАТЕЛЬСТВО
+                        ✉ ТАИНСТВЕННЫЙ ЗАМЫСЕЛ
                       </span>
                       <h3 className="font-serif text-[10px] md:text-[11px] font-bold text-neutral-900 italic uppercase">
-                        ИИ-Литератор создает новое дело...
+                        Барт пишет новое расследование...
                       </h3>
                       <p className="font-serif text-[8.5px] md:text-[9.5px] leading-relaxed text-neutral-700 italic">
-                        «Издательский ИИ-Ассистент кропотливо изучает ваш замысел, сплетает интригующие диалоги подозреваемых, генерирует интерактивные улики и расставляет ловушки на месте преступления. Слышен быстрый стук печатных литер...»
+                        «В клубах табачного дыма, Барт пишет свои мемуары... придумывая дело поинтереснее, в надежде прославиться. Кот дремлет рядом, но иногда вносит неожиданные правки, как бы случайно пройдясь по клавиатуре.»
                       </p>
                       <div className="h-[1px] bg-neutral-300 w-12 mx-auto my-0.5" />
                       <p className="font-mono text-[7px] text-neutral-500">
@@ -506,7 +530,7 @@ export default function WriterMode({
                   <>
                     <div className="flex-1 flex flex-col min-h-0">
                       {/* Mode Choice inside the paper */}
-                      <div className="flex justify-center gap-2 mb-2 select-none">
+                      <div className="flex justify-center gap-2 -mt-1 md:-mt-1.5 mb-2 select-none">
                         <button
                           onClick={() => {
                             try { gameAudio.playClick(); } catch (e) {}
@@ -523,15 +547,29 @@ export default function WriterMode({
                         <button
                           onClick={() => {
                             try { gameAudio.playClick(); } catch (e) {}
-                            setWriteType("campaign");
+                            const currentDay = gameState.currentDay ?? 1;
+                            if (currentDay < 10) {
+                              setWarningModal({
+                                title: "РЕЖИМ ЗАБЛОКИРОВАН",
+                                description: "Бульварные романы (Большие дела из 3-5 глав) станут доступны только начиная с 10-го дня работы в бюро! Раскрывайте дела и копите опыт."
+                              });
+                            } else {
+                              setWriteType("campaign");
+                            }
                           }}
-                          className={`px-2 py-0.5 font-serif text-[8px] md:text-[9px] font-bold tracking-wide transition-all border ${
+                          className={`px-2 py-0.5 font-serif text-[8px] md:text-[9px] font-bold tracking-wide transition-all border flex items-center gap-1 ${
                             writeType === "campaign"
                               ? "border-neutral-900 bg-neutral-950 text-white"
                               : "border-neutral-900/10 hover:border-neutral-900/40 text-neutral-600"
                           }`}
                         >
-                          📚 Бульварный роман (3-5 глав)
+                          {gameState.currentDay !== undefined && gameState.currentDay < 10 && (
+                            <Lucide.Lock className="w-2.5 h-2.5 text-red-700/60 inline" />
+                          )}
+                          <span>📚 Большое дело (3-5 глав)</span>
+                          {gameState.currentDay !== undefined && gameState.currentDay < 10 && (
+                            <span className="text-[7.5px] text-red-700/60 font-mono normal-case tracking-normal">(с 10 дн.)</span>
+                          )}
                         </button>
                       </div>
 
@@ -540,7 +578,7 @@ export default function WriterMode({
                           ПОЛЕ ДЛЯ НАБОРА ТЕКСТА
                         </span>
                         <h3 className="font-serif text-[9px] md:text-[10px] font-bold text-neutral-800 uppercase italic mt-0.5">
-                          {writeType === "single" ? "Сводка одиночного происшествия" : "Сюжетная линия будущего романа"}
+                          {writeType === "single" ? "Сводка одиночного происшествия" : "Сюжет Большого дела"}
                         </h3>
                       </div>
 
@@ -558,7 +596,7 @@ export default function WriterMode({
                           placeholder={
                             writeType === "single"
                               ? "Напишите краткую идею дела... Например: 'Кот находит запертую шкатулку вора в лавке антиквара, но вор нападает в темноте...'"
-                              : "Напишите замысел бульварного романа... Например: 'Таинственное ограбление века в Музее. Ванс и Миднайт идут по следу похитителей...'"
+                              : "Напишите сюжет для Большого дела... Например: 'Таинственное ограбление века в Музее. Ванс и Миднайт идут по следу похитителей...'"
                           }
                           className="w-full flex-1 min-h-[40px] md:min-h-[80px] bg-transparent text-neutral-950 font-serif text-[10px] md:text-[11.5px] leading-relaxed resize-none border-b border-dashed border-neutral-300 focus:outline-none focus:border-neutral-600 text-left placeholder:text-neutral-400 placeholder:italic select-text"
                           disabled={isGenerating}
@@ -579,7 +617,7 @@ export default function WriterMode({
                     )}
 
                     {/* SUBMIT LEATHER STAMP */}
-                    <div className="text-center mt-2 shrink-0">
+                    <div className="text-left pl-3 sm:pl-6 md:pl-10 mt-auto pt-4 pb-1 md:pb-2.5 shrink-0">
                       <button
                         onClick={handleGenerate}
                         disabled={isGenerating}
@@ -692,10 +730,10 @@ export default function WriterMode({
                           key={char}
                           onClick={() => handleVirtualKeyPress(char)}
                           disabled={isGenerating || !!generationResult}
-                          className={`w-[7%] aspect-square rounded-full flex items-center justify-center font-mono text-[6px] sm:text-[9px] md:text-[10px] font-bold border cursor-pointer select-none transition-all active:scale-90 ${
+                          className={`w-[7%] aspect-square rounded-full flex items-center justify-center font-mono text-[6px] sm:text-[9px] md:text-[10px] font-bold cursor-pointer select-none transition-all active:scale-90 border-2 ${
                             isPressed
                               ? "bg-amber-500/80 border-amber-600 text-black scale-95 shadow-inner shadow-amber-950"
-                              : "bg-black/10 hover:bg-amber-500/10 border-white/5 hover:border-amber-500/35 text-stone-300/60 hover:text-white"
+                              : "bg-[#1d1916] hover:bg-amber-500/10 border-[#6b5134] hover:border-amber-500/35 text-stone-300/90 hover:text-white"
                           }`}
                         >
                           {isShiftActive ? char.toUpperCase() : char.toLowerCase()}
@@ -714,10 +752,10 @@ export default function WriterMode({
                     setIsShiftActive((prev) => !prev);
                   }}
                   disabled={isGenerating || !!generationResult}
-                  className={`w-[14%] h-[90%] font-mono text-[5.5px] sm:text-[7.5px] md:text-[9px] uppercase tracking-wider rounded border cursor-pointer transition-all flex items-center justify-center ${
+                  className={`w-[14%] h-[90%] font-mono text-[5.5px] sm:text-[7.5px] md:text-[9px] uppercase tracking-wider rounded cursor-pointer transition-all flex items-center justify-center border-2 ${
                     isShiftActive
                       ? "bg-amber-500/85 border-amber-600 text-black font-bold"
-                      : "bg-black/15 hover:bg-amber-500/15 border-white/5 hover:border-amber-500/35 text-stone-300/70"
+                      : "bg-[#1d1916] hover:bg-amber-500/15 border-[#6b5134] hover:border-amber-500/35 text-stone-300/70"
                   }`}
                   title="Shift (Заглавные)"
                 >
@@ -727,7 +765,7 @@ export default function WriterMode({
                 <button
                   onClick={handleBackspacePress}
                   disabled={isGenerating || !!generationResult || ideaText.length === 0}
-                  className="w-[12%] h-[90%] bg-black/15 hover:bg-amber-500/15 border-white/5 hover:border-amber-500/35 text-stone-300/70 font-mono text-[5.5px] sm:text-[7.5px] md:text-[9px] uppercase tracking-wider rounded cursor-pointer transition-all flex items-center justify-center"
+                  className="w-[12%] h-[90%] bg-[#1d1916] hover:bg-amber-500/15 border-2 border-[#6b5134] hover:border-amber-500/35 text-stone-300/70 font-mono text-[5.5px] sm:text-[7.5px] md:text-[9px] uppercase tracking-wider rounded cursor-pointer transition-all flex items-center justify-center"
                   title="Стереть"
                 >
                   ←
@@ -736,14 +774,14 @@ export default function WriterMode({
                 <button
                   onClick={handleSpacePress}
                   disabled={isGenerating || !!generationResult}
-                  className="w-[42%] h-[90%] bg-black/5 hover:bg-amber-500/15 border-white/5 hover:border-amber-500/35 rounded shadow cursor-pointer transition-all"
+                  className="w-[42%] h-[90%] bg-[#1d1916] hover:bg-amber-500/15 border-2 border-[#6b5134] hover:border-amber-500/35 rounded shadow cursor-pointer transition-all"
                   title="Пробел"
                 />
 
                 <button
                   onClick={handleEnterPress}
                   disabled={isGenerating || !!generationResult}
-                  className="w-[14%] h-[90%] bg-black/15 hover:bg-amber-500/15 border-white/5 hover:border-amber-500/35 text-amber-500/80 font-mono text-[5.5px] sm:text-[7.5px] md:text-[9px] uppercase tracking-wider rounded cursor-pointer transition-all font-bold flex items-center justify-center"
+                  className="w-[14%] h-[90%] bg-[#1d1916] hover:bg-amber-500/15 border-2 border-[#6b5134] hover:border-amber-500/35 text-amber-500/80 font-mono text-[5.5px] sm:text-[7.5px] md:text-[9px] uppercase tracking-wider rounded cursor-pointer transition-all font-bold flex items-center justify-center"
                   title="Перевод строки"
                 >
                   ↩ Enter
@@ -815,7 +853,7 @@ export default function WriterMode({
                   try { gameAudio.playClick(); } catch (e) {}
                   setRightPanelTab('novels');
                 }}
-                className={`flex-1 pb-1.5 font-serif text-[10px] uppercase tracking-wider font-bold text-center transition-all border-b-2 rounded-none ${
+                className={`flex-1 pb-1.5 font-serif text-[12px] md:text-[13px] uppercase tracking-wider font-bold text-center transition-all border-b-2 rounded-none ${
                   rightPanelTab === 'novels'
                     ? 'border-amber-500 text-white'
                     : 'border-transparent text-white/45 hover:text-white/70'
@@ -828,7 +866,7 @@ export default function WriterMode({
                   try { gameAudio.playClick(); } catch (e) {}
                   setRightPanelTab('folders');
                 }}
-                className={`flex-1 pb-1.5 font-serif text-[10px] uppercase tracking-wider font-bold text-center transition-all border-b-2 rounded-none ${
+                className={`flex-1 pb-1.5 font-serif text-[12px] md:text-[13px] uppercase tracking-wider font-bold text-center transition-all border-b-2 rounded-none ${
                   rightPanelTab === 'folders'
                     ? 'border-amber-500 text-white'
                     : 'border-transparent text-white/45 hover:text-white/70'
@@ -844,7 +882,7 @@ export default function WriterMode({
                 !gameState.publishedBooks || gameState.publishedBooks.length === 0 ? (
                   <div className="h-full flex flex-col justify-center items-center text-center py-6">
                     <Lucide.BookMarked className="w-6 h-6 text-white/10 mb-1.5" />
-                    <p className="font-serif text-[10px] text-white/40 italic max-w-[180px]">
+                    <p className="font-serif text-[11.5px] text-white/40 italic max-w-[180px]">
                       «На полках еще нет ваших книг. Напишите сюжетную кампанию на три главы, пройдите ее и опубликуйте детективный роман!»
                     </p>
                   </div>
@@ -866,30 +904,30 @@ export default function WriterMode({
                     return (
                       <div key={book.id} className="border border-white/5 bg-black/40 p-2.5 relative hover:border-white/15 transition-all">
                         <div className="flex justify-between items-start mb-1">
-                          <h4 className="font-serif text-[10px] md:text-[11px] font-bold text-amber-100 leading-tight">
+                          <h4 className="font-serif text-[11.5px] md:text-[12.5px] font-bold text-amber-100 leading-tight">
                             «{book.title}»
                           </h4>
-                          <span className="font-mono text-[7px] text-white/30">{book.timestamp}</span>
+                          <span className="font-mono text-[8.5px] text-white/30">{book.timestamp}</span>
                         </div>
 
-                        <div className={`border p-1 text-[7px] font-mono font-bold tracking-widest text-center my-1 uppercase ${statusColors}`}>
+                        <div className={`border p-1 text-[8.5px] font-mono font-bold tracking-widest text-center my-1 uppercase ${statusColors}`}>
                           {statusLabels[book.status] || 'ОПУБЛИКОВАНО'}
                         </div>
 
-                        <p className="font-serif text-[9px] md:text-[9.5px] italic text-white/50 leading-normal mb-2">
+                        <p className="font-serif text-[10.5px] md:text-[11px] italic text-white/50 leading-normal mb-2">
                           Идея: "{book.idea}"
                         </p>
 
-                        <div className="bg-neutral-950/80 p-2 border border-white/5 mb-1 text-[9px]">
-                          <div className="font-mono text-[7px] text-amber-500/80 font-bold uppercase mb-1 flex items-center gap-1">
+                        <div className="bg-neutral-950/80 p-2 border border-white/5 mb-1 text-[10px]">
+                          <div className="font-mono text-[8px] md:text-[8.5px] text-amber-500/80 font-bold uppercase mb-1 flex items-center gap-1">
                             <Lucide.MessageSquare className="w-2.5 h-2.5" /> Колонки Критика Лондона:
                           </div>
-                          <p className="font-serif text-[9px] md:text-[9.5px] text-white/70 italic leading-snug">
+                          <p className="font-serif text-[10.5px] md:text-[11.5px] text-white/70 italic leading-snug">
                             {book.review}
                           </p>
                         </div>
 
-                        <div className="flex justify-between font-mono text-[7.5px] md:text-[8px] text-white/30 border-t border-white/5 pt-1.5 mt-1.5">
+                        <div className="flex justify-between font-mono text-[9px] md:text-[9.5px] text-white/30 border-t border-white/5 pt-1.5 mt-1.5">
                           <div className="flex items-center gap-1">
                             <span>Оценки:</span>
                             <span className="text-amber-400">Идея: {book.ratingIdea}★</span>
@@ -915,14 +953,14 @@ export default function WriterMode({
                         try { gameAudio.playClick(); } catch (e) {}
                         setShowNewFolderInput(true);
                       }}
-                      className="w-full h-8 bg-zinc-950 border border-dashed border-zinc-800 hover:border-amber-600/50 hover:bg-amber-950/10 text-amber-500 font-sans text-[8.5px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5"
+                      className="w-full h-8 bg-zinc-950 border border-dashed border-zinc-800 hover:border-amber-600/50 hover:bg-amber-950/10 text-amber-500 font-sans text-[10px] md:text-[10.5px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5"
                     >
                       <Lucide.FolderPlus className="w-3.5 h-3.5" />
                       Новый роман-папка
                     </button>
                   ) : (
                     <div className="border border-amber-900/30 bg-neutral-950 p-2.5 space-y-2">
-                      <div className="font-serif text-[9px] font-bold text-amber-200 uppercase tracking-wide">
+                      <div className="font-serif text-[10.5px] font-bold text-amber-200 uppercase tracking-wide">
                         Название нового романа-папки:
                       </div>
                       <input
@@ -930,7 +968,7 @@ export default function WriterMode({
                         value={newFolderTitle}
                         onChange={(e) => setNewFolderTitle(e.target.value)}
                         placeholder="например, Загадка пекарни Бейкера..."
-                        className="w-full h-7 bg-neutral-900 border border-white/10 text-white font-serif text-[9.5px] px-2 rounded-none outline-none focus:border-amber-500"
+                        className="w-full h-7 bg-neutral-900 border border-white/10 text-white font-serif text-[11px] px-2 rounded-none outline-none focus:border-amber-500"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') handleCreateFolder();
                         }}
@@ -942,14 +980,14 @@ export default function WriterMode({
                             setShowNewFolderInput(false);
                             setNewFolderTitle('');
                           }}
-                          className="h-6 px-2.5 border border-white/10 text-white/50 hover:text-white hover:border-white/20 font-mono text-[7.5px] uppercase tracking-wider transition-all"
+                          className="h-6 px-2.5 border border-white/10 text-white/50 hover:text-white hover:border-white/20 font-mono text-[9px] uppercase tracking-wider transition-all"
                         >
                           Отмена
                         </button>
                         <button
                           onClick={handleCreateFolder}
                           disabled={!newFolderTitle.trim()}
-                          className="h-6 px-3 bg-amber-600 hover:bg-amber-500 disabled:bg-neutral-800 text-white font-mono text-[7.5px] uppercase tracking-wider transition-all font-bold"
+                          className="h-6 px-3 bg-amber-600 hover:bg-amber-500 disabled:bg-neutral-800 text-white font-mono text-[9px] uppercase tracking-wider transition-all font-bold"
                         >
                           Создать
                         </button>
@@ -961,7 +999,7 @@ export default function WriterMode({
                   {!gameState.caseFolders || gameState.caseFolders.length === 0 ? (
                     <div className="h-full flex flex-col justify-center items-center text-center py-6">
                       <Lucide.FolderHeart className="w-6 h-6 text-white/10 mb-1.5" />
-                      <p className="font-serif text-[10px] text-white/40 italic max-w-[200px] leading-relaxed">
+                      <p className="font-serif text-[11px] md:text-[11.5px] text-white/40 italic max-w-[200px] leading-relaxed">
                         «Кабинет чист. Создайте папку-роман, чтобы подшивать туда обычные дела писателя с пересекающимися событиями, объединяя их сквозной интригой!»
                       </p>
                     </div>
@@ -990,18 +1028,18 @@ export default function WriterMode({
                       return (
                         <div key={folder.id} className="border border-white/5 bg-black/45 p-2.5 space-y-2 relative hover:border-white/10 transition-all">
                           <div className="flex justify-between items-start">
-                            <div className="flex items-center gap-1 text-amber-100 font-serif text-[10px] font-bold">
+                            <div className="flex items-center gap-1 text-amber-100 font-serif text-[11.5px] md:text-[12px] font-bold">
                               <Lucide.Folder className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                               <span>«{folder.title}»</span>
                             </div>
-                            <span className="font-mono text-[7px] text-white/30 shrink-0">{folder.timestamp}</span>
+                            <span className="font-mono text-[8.5px] text-white/30 shrink-0">{folder.timestamp}</span>
                           </div>
 
                           {/* Subheading / Tags */}
                           {folder.tags && folder.tags.length > 0 && (
                             <div className="flex flex-wrap gap-1">
                               {folder.tags.map((tag, tIdx) => (
-                                <span key={tIdx} className="bg-amber-950/20 text-amber-400 px-1 py-0.5 border border-amber-500/10 text-[7px] font-mono rounded-none">
+                                <span key={tIdx} className="bg-amber-950/20 text-amber-400 px-1 py-0.5 border border-amber-500/10 text-[8px] md:text-[8.5px] font-mono rounded-none">
                                   #{tag}
                                 </span>
                               ))}
@@ -1011,21 +1049,21 @@ export default function WriterMode({
                           {/* Status and Rating badge */}
                           {isPublished && (
                             <div className="space-y-1.5">
-                              <div className={`border p-1 text-[7px] font-mono font-bold tracking-widest text-center uppercase ${rankColors}`}>
+                              <div className={`border p-1 text-[8.5px] font-mono font-bold tracking-widest text-center uppercase ${rankColors}`}>
                                 {rankLabel} (Специфика: {folder.bestsellerRank}%)
                               </div>
-                              <div className="flex justify-between font-mono text-[7px] text-white/30">
+                              <div className="flex justify-between font-mono text-[8.5px] text-white/30">
                                 <div className="flex items-center gap-0.5">
                                   <span>Оценка:</span>
                                   {Array.from({ length: folder.rating || 3 }).map((_, i) => (
-                                    <Lucide.Star key={i} className="w-2.5 h-2.5 fill-amber-400 text-amber-400 shrink-0" />
+                                    <Lucide.Star key={i} className="w-3 h-3 fill-amber-400 text-amber-400 shrink-0" />
                                   ))}
                                 </div>
                                 <div className="text-emerald-400 font-bold">
                                   Выручка: +{folder.profit}$
                                 </div>
                               </div>
-                              <p className="font-serif text-[9px] text-white/70 italic bg-neutral-950/80 p-2 border border-white/5 leading-normal">
+                              <p className="font-serif text-[10px] md:text-[10.5px] text-white/70 italic bg-neutral-950/80 p-2 border border-white/5 leading-normal">
                                 {folder.review}
                               </p>
                             </div>
@@ -1033,12 +1071,12 @@ export default function WriterMode({
 
                           {/* Filed Cases List */}
                           <div className="space-y-1 border-t border-white/5 pt-1.5">
-                            <div className="font-mono text-[7px] text-white/40 uppercase mb-1 flex justify-between">
+                            <div className="font-mono text-[8.5px] text-white/40 uppercase mb-1 flex justify-between">
                               <span>Подшитые дела ({folder.caseIds.length})</span>
                               {isPublished && <span className="text-emerald-500 font-bold">Опубликовано ✓</span>}
                             </div>
                             {folder.caseIds.length === 0 ? (
-                              <p className="font-serif text-[8.5px] text-white/30 italic">
+                              <p className="font-serif text-[10px] text-white/30 italic">
                                 Папка пуста. Подшейте обычные дела писателя ниже.
                               </p>
                             ) : (
@@ -1046,19 +1084,19 @@ export default function WriterMode({
                                 const title = c.title || c.caseName || '';
                                 const tags = extractCaseTags(title, c.description || '');
                                 return (
-                                  <div key={c.id} className="bg-neutral-900/60 p-1.5 border border-white/5 flex justify-between items-center text-[8.5px] font-serif">
+                                  <div key={c.id} className="bg-neutral-900/60 p-1.5 border border-white/5 flex justify-between items-center text-[10px] font-serif">
                                     <div>
                                       <div className="font-bold text-white/80 leading-tight">«{c.caseName}»</div>
                                       <div className="flex gap-1 mt-0.5">
                                         {tags.map((t, idx) => (
-                                          <span key={idx} className="text-[6.5px] font-mono text-white/40">#{t}</span>
+                                          <span key={idx} className="text-[7.5px] font-mono text-white/40">#{t}</span>
                                         ))}
                                       </div>
                                     </div>
                                     {!isPublished && (
                                       <button
                                         onClick={() => handleUnfileCase(folder.id, c.id)}
-                                        className="text-red-400 hover:text-red-300 font-mono text-[7px] font-bold p-1 border border-red-500/10 hover:bg-red-950/20"
+                                        className="text-red-400 hover:text-red-300 font-mono text-[8.5px] font-bold p-1 border border-red-500/10 hover:bg-red-950/20"
                                         title="Извлечь из папки"
                                       >
                                         [Удалить]
@@ -1075,7 +1113,7 @@ export default function WriterMode({
                             <div className="space-y-1.5 pt-1 border-t border-dashed border-white/5">
                               {unfiledCustomCases.length > 0 ? (
                                 <div className="bg-neutral-950 p-1.5 border border-white/5 space-y-1">
-                                  <div className="font-mono text-[7px] text-amber-500/80 font-bold uppercase">
+                                  <div className="font-mono text-[8.5px] text-amber-500/80 font-bold uppercase">
                                     Доступные дела писателя ({unfiledCustomCases.length}):
                                   </div>
                                   <div className="max-h-[85px] overflow-y-auto custom-scrollbar space-y-1">
@@ -1083,14 +1121,14 @@ export default function WriterMode({
                                       const title = c.title || c.caseName || '';
                                       const tags = extractCaseTags(title, c.description || '');
                                       return (
-                                        <div key={c.id} className="bg-zinc-900/50 p-1 flex justify-between items-center text-[8px] font-serif hover:bg-zinc-900">
+                                        <div key={c.id} className="bg-zinc-900/50 p-1 flex justify-between items-center text-[9.5px] font-serif hover:bg-zinc-900">
                                           <div className="truncate max-w-[125px]">
                                             <span className="text-white block truncate font-bold">«{c.caseName}»</span>
-                                            <span className="text-[6.5px] font-mono text-white/30 block truncate">#{tags.join(', #')}</span>
+                                            <span className="text-[8px] font-mono text-white/30 block truncate">#{tags.join(', #')}</span>
                                           </div>
                                           <button
                                             onClick={() => handleFileCaseToFolder(folder.id, c.id)}
-                                            className="bg-amber-950/40 text-amber-400 font-mono text-[7px] font-bold px-1.5 py-0.5 border border-amber-500/20 hover:bg-amber-500 hover:text-black transition-all"
+                                            className="bg-amber-950/40 text-amber-400 font-mono text-[8.5px] font-bold px-1.5 py-0.5 border border-amber-500/20 hover:bg-amber-500 hover:text-black transition-all"
                                           >
                                             Подшить
                                           </button>
@@ -1100,7 +1138,7 @@ export default function WriterMode({
                                   </div>
                                 </div>
                               ) : (
-                                <p className="font-serif text-[8.5px] text-white/30 italic text-center">
+                                <p className="font-serif text-[10px] text-white/30 italic text-center">
                                   «Нет новых дел для подшивания. Создайте одиночное дело на печатной машинке!»
                                 </p>
                               )}
@@ -1109,13 +1147,13 @@ export default function WriterMode({
                               {folder.caseIds.length >= 2 ? (
                                 <button
                                   onClick={() => handlePublishFolder(folder.id)}
-                                  className="w-full h-7 bg-amber-600 hover:bg-amber-500 text-white font-sans text-[8px] font-bold uppercase tracking-wider transition-all rounded-none flex items-center justify-center gap-1 shadow"
+                                  className="w-full h-7 bg-amber-600 hover:bg-amber-500 text-white font-sans text-[10px] md:text-[10.5px] font-bold uppercase tracking-wider transition-all rounded-none flex items-center justify-center gap-1 shadow"
                                 >
-                                  <Lucide.BookOpen className="w-3 h-3" />
+                                  <Lucide.BookOpen className="w-3.5 h-3.5" />
                                   Опубликовать роман-папку
                                 </button>
                               ) : (
-                                <div className="text-center font-serif text-[7.5px] text-amber-200/50 italic leading-snug">
+                                <div className="text-center font-serif text-[9px] text-amber-200/50 italic leading-snug">
                                   * Подшейте как минимум 2 дела, чтобы издать готовый роман-папку.
                                 </div>
                               )}
@@ -1139,6 +1177,36 @@ export default function WriterMode({
           setGameState={setGameState}
           onClose={() => setShowRoomEditor(false)}
         />
+      )}
+
+      {/* WARNING POPUP MODAL */}
+      {warningModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md text-center">
+          <div className="relative w-full max-w-sm bg-[#0f0f12] border border-red-500/30 rounded-none p-5 font-mono text-[10px] text-neutral-300 shadow-2xl animate-fade-in">
+            <div className="absolute inset-1.5 border border-red-500/10 pointer-events-none" />
+            
+            <div className="relative z-10 space-y-3.5">
+              <Lucide.Lock className="w-8 h-8 text-red-500 mx-auto" />
+              <h2 className="font-serif text-sm font-bold italic text-white tracking-wide">
+                {warningModal.title}
+              </h2>
+              <div className="h-[1px] bg-white/10 my-1.5" />
+              <p className="font-serif text-[10.5px] text-neutral-400 leading-relaxed italic">
+                «{warningModal.description}»
+              </p>
+              
+              <button
+                onClick={() => {
+                  try { gameAudio.playClick(); } catch (e) {}
+                  setWarningModal(null);
+                }}
+                className="w-full h-9 bg-neutral-800 hover:bg-neutral-700 text-white border border-neutral-700 font-sans text-[10px] font-bold uppercase tracking-widest transition-all mt-3.5 cursor-pointer"
+              >
+                Понятно
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

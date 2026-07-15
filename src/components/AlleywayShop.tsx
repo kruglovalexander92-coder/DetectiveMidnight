@@ -54,7 +54,7 @@ export default function AlleywayShop({ gameState, onBuyItem }: AlleywayShopProps
     {
       id: 'writer_reset' as const,
       name: 'Кофе и сигареты писателя',
-      description: 'Крепкий двойной эспрессо и пачка сигарет писателя. Полностью сбрасывает суточный лимит дел и 3-дневный кулдаун бульварного романа.',
+      description: 'Крепкий двойной эспрессо и пачка сигарет писателя. Полностью сбрасывает суточный лимит дел и 3-дневный кулдаун Большого дела.',
       cost: 25,
       icon: 'Coffee' as const,
       color: 'text-rose-400',

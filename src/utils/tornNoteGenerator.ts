@@ -158,6 +158,56 @@ const TEMPLATES: Record<string, NoteTemplate> = {
 };
 
 /**
+ * Wraps text into lines of a given width
+ */
+function wrapTextToLines(text: string, numLines: number, lineWidth: number): string[] {
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let currentLine = "";
+
+  for (const word of words) {
+    if (currentLine.length === 0) {
+      currentLine = word;
+    } else if (currentLine.length + 1 + word.length <= lineWidth) {
+      currentLine += " " + word;
+    } else {
+      lines.push(currentLine);
+      currentLine = word;
+      if (lines.length === numLines - 1) {
+        break;
+      }
+    }
+  }
+  if (lines.length < numLines) {
+    lines.push(currentLine);
+  }
+
+  // If there are remaining words, append them to the last line
+  const lastIndex = lines.length - 1;
+  if (lastIndex >= 0) {
+    const remainingWordsIndex = words.indexOf(lines[lastIndex].split(" ")[0]);
+    if (remainingWordsIndex !== -1) {
+      const remainingText = words.slice(remainingWordsIndex).join(" ");
+      lines[lastIndex] = remainingText;
+    }
+  }
+
+  // Pad or truncate each line to exactly `lineWidth`
+  const result: string[] = [];
+  for (let i = 0; i < numLines; i++) {
+    let line = lines[i] || "";
+    if (line.length > lineWidth) {
+      line = line.substring(0, lineWidth);
+    } else {
+      line = line.padEnd(lineWidth, " ");
+    }
+    result.push(line);
+  }
+
+  return result;
+}
+
+/**
  * Shuffles an array in place
  */
 function shuffleArray<T>(array: T[]): T[] {
@@ -174,32 +224,50 @@ function shuffleArray<T>(array: T[]): T[] {
  */
 export function initializeTornNote(roomTemplateId: string, heldClueId: string | null): TornNoteState {
   const template = TEMPLATES[roomTemplateId] || TEMPLATES.fallback;
-  const numStrips = 6;
-  const charPerStrip = 7; // 42 / 6 = 7
+  
+  // Random configurations: 4, 6, 8, 9, 12 pieces
+  const options = [
+    { cols: 2, rows: 2, numPieces: 4, linesPerPiece: 3, charsPerPiece: 14 },
+    { cols: 3, rows: 2, numPieces: 6, linesPerPiece: 3, charsPerPiece: 10 },
+    { cols: 4, rows: 2, numPieces: 8, linesPerPiece: 3, charsPerPiece: 8 },
+    { cols: 3, rows: 3, numPieces: 9, linesPerPiece: 2, charsPerPiece: 10 },
+    { cols: 4, rows: 3, numPieces: 12, linesPerPiece: 2, charsPerPiece: 8 }
+  ];
+  const config = options[Math.floor(Math.random() * options.length)];
+  const { cols, rows, linesPerPiece, charsPerPiece } = config;
+
+  const totalLines = rows * linesPerPiece;
+  const totalWidth = cols * charsPerPiece;
+
+  const fullTextLines = wrapTextToLines(template.fullText, totalLines, totalWidth);
 
   const pieces: TornNotePiece[] = [];
 
-  for (let i = 0; i < numStrips; i++) {
-    const textLines: string[] = [];
-    for (let r = 0; r < 3; r++) {
-      const rowText = (template.rows[r] || "").padEnd(42, ' ');
-      const start = i * charPerStrip;
-      const end = start + charPerStrip;
-      textLines.push(rowText.substring(start, end));
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const originalIndex = r * cols + c;
+      const textLines: string[] = [];
+
+      for (let l = 0; l < linesPerPiece; l++) {
+        const lineIndex = r * linesPerPiece + l;
+        const lineText = fullTextLines[lineIndex] || "";
+        const start = c * charsPerPiece;
+        const end = start + charsPerPiece;
+        textLines.push(lineText.substring(start, end));
+      }
+
+      // Generate a random initial rotation (0, 90, 180, 270 degrees)
+      const rotations = [0, 90, 180, 270];
+      const randomRotation = rotations[Math.floor(Math.random() * rotations.length)];
+
+      pieces.push({
+        id: `piece_${originalIndex}`,
+        originalIndex,
+        textLines,
+        rotation: randomRotation,
+        currentSlot: null // Starts in the tray
+      });
     }
-
-    // Generate a random initial rotation (0, 90, 180, 270 degrees)
-    // Avoid making it too frustrating, let's use 0, 90, 180, 270
-    const rotations = [0, 90, 180, 270];
-    const randomRotation = rotations[Math.floor(Math.random() * rotations.length)];
-
-    pieces.push({
-      id: `strip_${i}`,
-      originalIndex: i,
-      textLines,
-      rotation: randomRotation,
-      currentSlot: null // Starts in the tray
-    });
   }
 
   // Shuffle the pieces before presenting them in the tray
@@ -211,6 +279,8 @@ export function initializeTornNote(roomTemplateId: string, heldClueId: string | 
     pieces: shuffledPieces,
     completed: false,
     rewardClaimed: false,
-    clueIdToUnlock: heldClueId
+    clueIdToUnlock: heldClueId,
+    cols,
+    rows
   };
 }

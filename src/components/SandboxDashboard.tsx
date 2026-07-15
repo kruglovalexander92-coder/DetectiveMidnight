@@ -76,7 +76,7 @@ export default function SandboxDashboard({
   const currentDay = gameState.currentDay ?? 1;
   const reputation = gameState.reputation ?? 0;
   const cash = gameState.economy?.cash ?? 150;
-  const dailyJobs = (gameState.availableJobs ?? []).filter(Boolean);
+  const dailyJobs = (gameState.availableJobs ?? []).filter(j => j && !j.completed);
   const completedChapters = gameState.storyState?.completedChapters ?? [];
   const [storyViewMode, setStoryViewMode] = useState<'cards' | 'interrogate'>('cards');
   const [activeTab, setActiveTab] = useState<'daily' | 'story'>('daily');
@@ -85,6 +85,55 @@ export default function SandboxDashboard({
   const [activeInterrogationSketchId, setActiveInterrogationSketchId] = useState<string | undefined>(undefined);
   const [isArchiveExpanded, setIsArchiveExpanded] = useState(false);
   const [unacknowledgedChapter, setUnacknowledgedChapter] = useState<Job | null>(null);
+
+  const [archiveSubTab, setArchiveSubTab] = useState<'story' | 'solo'>('story');
+  const [fileJobId, setFileJobId] = useState<string | null>(null);
+
+  const campaignChapters = gameState.campaignChapters && gameState.campaignChapters.length > 0 
+    ? gameState.campaignChapters 
+    : STORY_CHAPTERS_DATA;
+
+  const archivedChapters = campaignChapters.filter((chapter, idx) => {
+    const chNum = idx + 1;
+    const isCompleted = chapter.completed || completedChapters.includes(chNum);
+    return isCompleted;
+  });
+
+  const archivedSoloJobs = (gameState.availableJobs ?? []).filter(j => j && j.completed);
+
+  // Automatically switch sub-tab if one of them is empty
+  useEffect(() => {
+    if (archivedChapters.length === 0 && archivedSoloJobs.length > 0 && archiveSubTab === 'story') {
+      setArchiveSubTab('solo');
+    } else if (archivedChapters.length > 0 && archivedSoloJobs.length === 0 && archiveSubTab === 'solo') {
+      setArchiveSubTab('story');
+    }
+  }, [archivedChapters.length, archivedSoloJobs.length, archiveSubTab]);
+
+  const handleFileCaseToFolder = (folderId: string, caseId: string) => {
+    try { gameAudio.playClick(); } catch (e) {}
+    setGameState(prev => {
+      const folders = (prev.caseFolders ?? []).map(f => {
+        if (f.id === folderId) {
+          if (f.caseIds.includes(caseId)) return f;
+          const updatedIds = [...f.caseIds, caseId];
+          const cases = (prev.availableJobs ?? []).filter(j => updatedIds.includes(j.id));
+          const tagsSet = new Set<string>();
+          cases.forEach(c => {
+            extractCaseTags(c.title || c.caseName || '', c.description || '').forEach(t => tagsSet.add(t));
+          });
+          return {
+            ...f,
+            caseIds: updatedIds,
+            tags: Array.from(tagsSet).slice(0, 4)
+          };
+        }
+        return f;
+      });
+      return { ...prev, caseFolders: folders };
+    });
+    setFileJobId(null);
+  };
 
   // Check for newly unlocked story campaign or chapters to show the pop-up
   useEffect(() => {
@@ -109,7 +158,17 @@ export default function SandboxDashboard({
 
       if (firstUnlocked) {
         const notified = gameState.notifiedChapters ?? [];
-        if (!notified.includes(firstUnlocked.id)) {
+        
+        // Failsafe check from localStorage
+        let localNotified: string[] = [];
+        try {
+          const stored = localStorage.getItem('noir_midnight_notified_chapters');
+          if (stored) {
+            localNotified = JSON.parse(stored);
+          }
+        } catch (e) {}
+
+        if (!notified.includes(firstUnlocked.id) && !localNotified.includes(firstUnlocked.id)) {
           setUnacknowledgedChapter(firstUnlocked);
         }
       }
@@ -119,6 +178,20 @@ export default function SandboxDashboard({
   const handleAcknowledgeChapter = (openTab: boolean) => {
     if (unacknowledgedChapter) {
       const chapterId = unacknowledgedChapter.id;
+      
+      // Save immediately to localStorage as a failsafe fallback!
+      try {
+        let localNotified: string[] = [];
+        const stored = localStorage.getItem('noir_midnight_notified_chapters');
+        if (stored) {
+          localNotified = JSON.parse(stored);
+        }
+        if (!localNotified.includes(chapterId)) {
+          localNotified.push(chapterId);
+          localStorage.setItem('noir_midnight_notified_chapters', JSON.stringify(localNotified));
+        }
+      } catch (e) {}
+
       setGameState(prev => {
         const notified = prev.notifiedChapters ?? [];
         if (!notified.includes(chapterId)) {
@@ -351,14 +424,25 @@ export default function SandboxDashboard({
               onClick={() => {
                 try {
                   gameAudio.playClick();
-                  gameAudio.playTypewriterBell();
+                  if (currentDay >= 5) {
+                    gameAudio.playTypewriterBell();
+                  }
                 } catch (e) {}
                 onOpenWriter();
               }}
-              className="flex-1 sm:flex-initial px-5 py-2.5 font-serif text-[11px] sm:text-[12px] font-bold uppercase tracking-widest transition-all rounded-none flex items-center justify-center gap-2 border cursor-pointer bg-black/40 border-transparent text-white/40 hover:text-white/70 hover:bg-white/5"
+              className={`flex-1 sm:flex-initial px-5 py-2.5 font-serif text-[11px] sm:text-[12px] font-bold uppercase tracking-widest transition-all rounded-none flex items-center justify-center gap-2 border cursor-pointer ${
+                currentDay < 5 
+                  ? "bg-black/25 border-transparent text-white/20 hover:text-white/30 hover:bg-white/5"
+                  : "bg-black/40 border-transparent text-white/40 hover:text-white/70 hover:bg-white/5"
+              }`}
             >
-              <Lucide.PenTool className="w-3.5 h-3.5 text-white/40" />
+              {currentDay < 5 ? (
+                <Lucide.Lock className="w-3.5 h-3.5 text-red-500/50" />
+              ) : (
+                <Lucide.PenTool className="w-3.5 h-3.5 text-white/40" />
+              )}
               <span>Писать мемуары</span>
+              {currentDay < 5 && <span className="text-[9px] text-red-500/60 font-mono normal-case tracking-normal">(с 5 дн.)</span>}
             </button>
           )}
         </div>
@@ -567,20 +651,10 @@ export default function SandboxDashboard({
 
             {storyViewMode === 'cards' ? (
               (() => {
-                const campaignChapters = gameState.campaignChapters && gameState.campaignChapters.length > 0 
-                  ? gameState.campaignChapters 
-                  : STORY_CHAPTERS_DATA;
-
                 const activeChapters = campaignChapters.filter((chapter, idx) => {
                   const chNum = idx + 1;
                   const isCompleted = chapter.completed || completedChapters.includes(chNum);
                   return !isCompleted;
-                });
-
-                const archivedChapters = campaignChapters.filter((chapter, idx) => {
-                  const chNum = idx + 1;
-                  const isCompleted = chapter.completed || completedChapters.includes(chNum);
-                  return isCompleted;
                 });
 
                 return (
@@ -705,7 +779,7 @@ export default function SandboxDashboard({
                     )}
 
                     {/* EXPANDABLE COMPACT ARCHIVE SECTION */}
-                    {archivedChapters.length > 0 && (
+                    {(archivedChapters.length > 0 || archivedSoloJobs.length > 0) && (
                       <div className="mt-6 border border-zinc-850 bg-zinc-950/30">
                         <button
                           onClick={() => {
@@ -716,7 +790,7 @@ export default function SandboxDashboard({
                         >
                           <div className="flex items-center gap-2">
                             <Lucide.Archive className="w-3.5 h-3.5 text-zinc-500" />
-                            <span>Архив раскрытых дел ({archivedChapters.length})</span>
+                            <span>Архив раскрытых дел ({archivedChapters.length + archivedSoloJobs.length})</span>
                           </div>
                           <span className="font-mono text-[9px] text-zinc-500 uppercase tracking-wider">
                             {isArchiveExpanded ? '[ Скрыть ▲ ]' : '[ Развернуть ▼ ]'}
@@ -724,60 +798,227 @@ export default function SandboxDashboard({
                         </button>
                         
                         {isArchiveExpanded && (
-                          <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-zinc-900 bg-[#0b0a09] animate-fade-in">
-                            {archivedChapters.map((chapter) => {
-                              const index = campaignChapters.findIndex(c => c.id === chapter.id);
-                              const chNum = index + 1;
-                              
-                              // Romanizing helper
-                              const romanize = (num: number): string => {
-                                const roman = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
-                                return roman[num - 1] || num.toString();
-                              };
+                          <div className="border-t border-zinc-900 bg-[#0b0a09] animate-fade-in">
+                            {/* Archive Tabs */}
+                            <div className="flex border-b border-zinc-800 bg-black/40">
+                              <button
+                                onClick={() => {
+                                  try { gameAudio.playClick(); } catch (e) {}
+                                  setArchiveSubTab('story');
+                                }}
+                                className={`px-4 py-2 font-serif text-[10px] uppercase tracking-wider font-bold transition-all border-b-2 rounded-none cursor-pointer ${
+                                  archiveSubTab === 'story'
+                                    ? 'border-amber-500 text-white'
+                                    : 'border-transparent text-white/45 hover:text-white/70'
+                                }`}
+                              >
+                                Сюжетные дела ({archivedChapters.length})
+                              </button>
+                              <button
+                                onClick={() => {
+                                  try { gameAudio.playClick(); } catch (e) {}
+                                  setArchiveSubTab('solo');
+                                }}
+                                className={`px-4 py-2 font-serif text-[10px] uppercase tracking-wider font-bold transition-all border-b-2 rounded-none cursor-pointer ${
+                                  archiveSubTab === 'solo'
+                                    ? 'border-amber-500 text-white'
+                                    : 'border-transparent text-white/45 hover:text-white/70'
+                                }`}
+                              >
+                                Одиночные дела ({archivedSoloJobs.length})
+                              </button>
+                            </div>
 
-                              const iconsPool = ['Compass', 'Anchor', 'Wind', 'BookOpen', 'Shield', 'Key', 'Eye', 'Map', 'Cat', 'Award'];
-                              const iconName = iconsPool[(chNum - 1) % iconsPool.length];
-                              const Icon = (Lucide as any)[iconName] || Lucide.FileText;
+                            <div className="p-4">
+                              {archiveSubTab === 'story' ? (
+                                archivedChapters.length === 0 ? (
+                                  <p className="font-serif text-[10px] text-white/35 italic text-center py-6">
+                                    Нет раскрытых сюжетных дел.
+                                  </p>
+                                ) : (
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {archivedChapters.map((chapter) => {
+                                      const index = campaignChapters.findIndex(c => c.id === chapter.id);
+                                      const chNum = index + 1;
+                                      
+                                      // Romanizing helper
+                                      const romanize = (num: number): string => {
+                                        const roman = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
+                                        return roman[num - 1] || num.toString();
+                                      };
 
-                              return (
-                                <div 
-                                  key={chapter.id} 
-                                  className="border border-emerald-950/30 bg-emerald-950/5 text-emerald-100/60 p-4 flex flex-col justify-between relative shadow-inner"
-                                >
-                                  <div>
-                                    <div className="flex justify-between items-start mb-2 border-b border-emerald-950/20 pb-1.5">
-                                      <span className="font-mono text-[8px] uppercase tracking-wider text-emerald-500/55 block">
-                                        Сюжет // Глава {romanize(chNum)}
-                                      </span>
-                                      <span className="px-1.5 py-0.5 border border-emerald-500/20 bg-emerald-950/40 text-emerald-400 text-[7px] font-mono font-bold uppercase tracking-widest rounded-none">
-                                        РАСКРЫТО ✓
-                                      </span>
-                                    </div>
+                                      const iconsPool = ['Compass', 'Anchor', 'Wind', 'BookOpen', 'Shield', 'Key', 'Eye', 'Map', 'Cat', 'Award'];
+                                      const iconName = iconsPool[(chNum - 1) % iconsPool.length];
+                                      const Icon = (Lucide as any)[iconName] || Lucide.FileText;
 
-                                    <div className="flex gap-2 items-start mb-2">
-                                      <div className="p-1.5 bg-black/40 border border-white/5 shrink-0 text-emerald-500/50">
-                                        <Icon className="w-3.5 h-3.5" />
-                                      </div>
-                                      <h4 className="font-serif text-xs font-bold leading-tight text-emerald-200/50">
-                                        {chapter.title}
-                                      </h4>
-                                    </div>
+                                      return (
+                                        <div 
+                                          key={chapter.id} 
+                                          className="border border-emerald-950/30 bg-emerald-950/5 text-emerald-100/60 p-4 flex flex-col justify-between relative shadow-inner"
+                                        >
+                                          <div>
+                                            <div className="flex justify-between items-start mb-2 border-b border-emerald-950/20 pb-1.5">
+                                              <span className="font-mono text-[8px] uppercase tracking-wider text-emerald-500/55 block">
+                                                Сюжет // Глава {romanize(chNum)}
+                                              </span>
+                                              <span className="px-1.5 py-0.5 border border-emerald-500/20 bg-emerald-950/40 text-emerald-400 text-[7px] font-mono font-bold uppercase tracking-widest rounded-none">
+                                                РАСКРЫТО ✓
+                                              </span>
+                                            </div>
 
-                                    <p className="text-[10px] leading-relaxed text-emerald-100/40 mb-4 font-sans line-clamp-3 italic">
-                                      {chapter.description}
-                                    </p>
+                                            <div className="flex gap-2 items-start mb-2">
+                                              <div className="p-1.5 bg-black/40 border border-white/5 shrink-0 text-emerald-500/50">
+                                                <Icon className="w-3.5 h-3.5" />
+                                              </div>
+                                              <h4 className="font-serif text-xs font-bold leading-tight text-emerald-200/50">
+                                                {chapter.title}
+                                              </h4>
+                                            </div>
+
+                                            <p className="text-[10px] leading-relaxed text-emerald-100/40 mb-4 font-sans line-clamp-3 italic">
+                                              {chapter.description}
+                                            </p>
+                                          </div>
+
+                                          <button
+                                            onClick={() => handleStartJobClick(chapter)}
+                                            className="w-full h-8 font-sans text-[9px] font-bold uppercase tracking-[0.15em] transition-all rounded-none flex items-center justify-center gap-1.5 bg-zinc-950 border border-zinc-800 hover:border-emerald-700 hover:bg-emerald-950/20 text-emerald-400 hover:text-emerald-300 shadow cursor-pointer"
+                                          >
+                                            <Lucide.RotateCcw className="w-3 h-3 text-emerald-500" />
+                                            Перепройти бесплатно
+                                          </button>
+                                        </div>
+                                      );
+                                    })}
                                   </div>
+                                )
+                              ) : (
+                                archivedSoloJobs.length === 0 ? (
+                                  <p className="font-serif text-[10px] text-white/35 italic text-center py-6">
+                                    Нет завершенных одиночных дел. Раскройте ежедневные контракты или дела писателя выше, чтобы они переместились сюда!
+                                  </p>
+                                ) : (
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {archivedSoloJobs.map((job) => {
+                                      return (
+                                        <div 
+                                          key={job.id} 
+                                          className="border border-emerald-950/30 bg-emerald-950/5 text-emerald-100/60 p-4 flex flex-col justify-between relative shadow-inner"
+                                        >
+                                          <div>
+                                            <div className="flex justify-between items-start mb-2 border-b border-emerald-950/20 pb-1.5">
+                                              <span className="font-mono text-[8px] uppercase tracking-wider text-emerald-500/55 block">
+                                                Дело #{job.id.split('_').slice(-1)[0]}
+                                              </span>
+                                              <span className="px-1.5 py-0.5 border border-emerald-500/20 bg-emerald-950/40 text-emerald-400 text-[7px] font-mono font-bold uppercase tracking-widest rounded-none">
+                                                В АРХИВЕ ✓
+                                              </span>
+                                            </div>
 
-                                  <button
-                                    onClick={() => handleStartJobClick(chapter)}
-                                    className="w-full h-8 font-sans text-[9px] font-bold uppercase tracking-[0.15em] transition-all rounded-none flex items-center justify-center gap-1.5 bg-zinc-950 border border-zinc-800 hover:border-emerald-700 hover:bg-emerald-950/20 text-emerald-400 hover:text-emerald-300 shadow"
-                                  >
-                                    <Lucide.RotateCcw className="w-3 h-3 text-emerald-500" />
-                                    Перепройти бесплатно
-                                  </button>
-                                </div>
-                              );
-                            })}
+                                            <div className="flex gap-2 items-start mb-2">
+                                              <div className="p-1.5 bg-black/40 border border-white/5 shrink-0 text-emerald-500/50">
+                                                <Lucide.FileText className="w-3.5 h-3.5" />
+                                              </div>
+                                              <h4 className="font-serif text-xs font-bold leading-tight text-emerald-200/50">
+                                                {job.title}
+                                              </h4>
+                                            </div>
+
+                                            <p className="text-[10px] leading-relaxed text-emerald-100/40 mb-4 font-sans line-clamp-3 italic">
+                                              {job.description}
+                                            </p>
+
+                                            {/* Parent folder status / tags */}
+                                            {(() => {
+                                              const parentFolder = (gameState.caseFolders ?? []).find(f => f.caseIds.includes(job.id));
+                                              if (parentFolder) {
+                                                return (
+                                                  <div className="mb-4 p-1.5 bg-neutral-950/80 border border-emerald-950/25 text-[8.5px] font-serif text-emerald-400/80 italic">
+                                                    📁 Подшито в роман-папку: <span className="font-bold text-emerald-300">«{parentFolder.title}»</span>
+                                                  </div>
+                                                );
+                                              }
+                                              return null;
+                                            })()}
+                                          </div>
+
+                                          <div className="space-y-2">
+                                            <button
+                                              onClick={() => handleStartJobClick(job)}
+                                              className="w-full h-8 font-sans text-[9px] font-bold uppercase tracking-[0.15em] transition-all rounded-none flex items-center justify-center gap-1.5 bg-zinc-950 border border-zinc-800 hover:border-emerald-700 hover:bg-emerald-950/20 text-emerald-400 hover:text-emerald-300 shadow cursor-pointer"
+                                            >
+                                              <Lucide.RotateCcw className="w-3 h-3 text-emerald-500" />
+                                              Перепройти бесплатно
+                                            </button>
+
+                                            {(() => {
+                                              const parentFolder = (gameState.caseFolders ?? []).find(f => f.caseIds.includes(job.id));
+                                              const isFiled = !!parentFolder;
+
+                                              if (isFiled) {
+                                                return (
+                                                  <div className="text-center text-[8px] font-mono text-emerald-500/55 uppercase py-1 border border-dashed border-emerald-950/35 bg-emerald-950/5">
+                                                    Подшито ✓
+                                                  </div>
+                                                );
+                                              }
+
+                                              const activeFolders = (gameState.caseFolders ?? []).filter(f => f.status === 'writing');
+
+                                              if (fileJobId === job.id) {
+                                                return (
+                                                  <div className="bg-zinc-950 p-2 border border-amber-900/35 space-y-1.5 text-left animate-fade-in relative z-20">
+                                                    <div className="text-[7.5px] font-mono text-amber-500 font-bold uppercase">
+                                                      Выберите роман-папку:
+                                                    </div>
+                                                    {activeFolders.length > 0 ? (
+                                                      <div className="space-y-1 max-h-[80px] overflow-y-auto custom-scrollbar">
+                                                        {activeFolders.map(folder => (
+                                                          <button
+                                                            key={folder.id}
+                                                            onClick={() => handleFileCaseToFolder(folder.id, job.id)}
+                                                            className="w-full text-left px-2 py-1 bg-[#141210] hover:bg-amber-950/30 border border-white/5 text-[9px] font-serif text-white truncate hover:border-amber-500/30 transition-all cursor-pointer block"
+                                                          >
+                                                            📁 «{folder.title}»
+                                                          </button>
+                                                        ))}
+                                                      </div>
+                                                    ) : (
+                                                      <div className="text-[8px] font-serif text-white/40 italic leading-tight">
+                                                        Нет активных романов-папок. Создайте их в Кабинете писателя!
+                                                      </div>
+                                                    )}
+                                                    <button
+                                                      onClick={() => setFileJobId(null)}
+                                                      className="w-full py-0.5 border border-white/10 hover:bg-white/5 text-center text-[7.5px] font-mono text-white/50 uppercase cursor-pointer block"
+                                                    >
+                                                      Отмена
+                                                    </button>
+                                                  </div>
+                                                );
+                                              }
+
+                                              return (
+                                                <button
+                                                  onClick={() => {
+                                                    try { gameAudio.playClick(); } catch (e) {}
+                                                    setFileJobId(job.id);
+                                                  }}
+                                                  className="w-full h-8 font-sans text-[9px] font-bold uppercase tracking-[0.15em] transition-all rounded-none flex items-center justify-center gap-1.5 bg-[#12100e] border border-amber-900/35 hover:border-amber-500 hover:bg-amber-950/20 text-amber-500 hover:text-amber-400 shadow cursor-pointer"
+                                                >
+                                                  <Lucide.FolderPlus className="w-3 h-3 text-amber-500" />
+                                                  Подшить в роман
+                                                </button>
+                                              );
+                                            })()}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>

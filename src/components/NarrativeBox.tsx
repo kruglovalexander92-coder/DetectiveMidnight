@@ -632,15 +632,9 @@ export default function NarrativeBox({ dialogue, onNext, pendingVictory }: Narra
             [ Кликни для пропуска диалога ]
           </div>
         ) : pendingVictory ? (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (onNext) onNext();
-            }}
-            className="px-4 py-1.5 bg-amber-500/20 hover:bg-amber-500/40 border border-amber-500/40 text-[9.5px] text-amber-400 font-sans font-bold uppercase tracking-widest animate-pulse transition-all rounded-none"
-          >
-            Завершить расследование
-          </button>
+          <div className="font-mono text-[8.5px] text-amber-400 tracking-[0.1em] uppercase animate-pulse">
+            [ Расследование раскрыто! Нажмите кнопку на панели справа ]
+          </div>
         ) : (
           <div className="font-mono text-[8px] text-white/30 tracking-[0.15em] uppercase">
             [ Далее // Нажми на текст ]

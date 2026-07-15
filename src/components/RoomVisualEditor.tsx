@@ -536,7 +536,7 @@ export default function RoomVisualEditor({
         }
 
       case 'desk':
-        if (bgLower.includes('dressing')) return '/src/img/Dressingr_Console01.png';
+        if (bgLower.includes('dressing')) return '/src/img/Dressingr_Tablemirror.png';
         if (bgLower.includes('grocery')) return '/src/img/Grocery_Table.png';
         if (bgLower.includes('office')) return '/src/img/Office_Table.png';
         return '/src/img/Cabin_Table.png';

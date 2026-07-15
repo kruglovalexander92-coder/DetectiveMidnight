@@ -30,36 +30,44 @@ function getAgencyHint(gameState: GameState): string {
   const incompleteSketches = (gameState.sketches ?? []).filter(s => s && !s.completed);
   const currentDay = gameState.currentDay ?? 1;
 
+  let priorityText = "";
   if (cash < 110 && incompleteJobs.length > 0) {
-    return "Наш бюджет опасно низок! В конце дня снимутся налоги и расходы (-110$), и если мы уйдем в минус — агентство закроют. Срочно выезжай на любое доступное дело!";
-  }
-  if (incompleteSketches.length > 0) {
-    return "Свидетели ждут в приемной! Загляни во вкладку «Допрос и Фоторобот», чтобы составить фотороботы преступников на 100%. Это даст важнейшие зацепки перед началом расследований!";
-  }
-  if (incompleteJobs.length > 0) {
+    priorityText = "Наш бюджет опасно низок! В конце дня спишутся расходы на содержание офиса (-110$). Если мы уйдем в минус — игра будет окончена. Срочно раскройте любое доступное дело!";
+  } else if (incompleteSketches.length > 0) {
+    priorityText = "Свидетели ждут в приемной! Загляните во вкладку «Допрос и Фоторобот» сверху, чтобы составить фотороботы на 100%. Это даст важные зацепки перед расследованиями!";
+  } else if (incompleteJobs.length > 0) {
     const firstJob = incompleteJobs[0];
-    return `В сводках есть нераскрытое оперативное дело: "${firstJob.title}". Кликай по карточке и нажимай «Начать расследование», чтобы выехать на место!`;
-  }
-  
-  // Story chapters hint
-  const completedChapters = gameState.storyState?.completedChapters ?? [];
-  const chapters = gameState.campaignChapters && gameState.campaignChapters.length > 0 
-    ? gameState.campaignChapters 
-    : [
-        { id: 'story_chapter_1', title: 'Похищение Сапфирового Глаза', reputationRequired: 0, reward: 200, infoCost: 0, completed: false, risk: 'low', roomTemplateId: 'room_antique', timeLimit: null },
-        { id: 'story_chapter_2', title: 'Контрабанда в полночь', reputationRequired: 15, reward: 300, infoCost: 0, completed: false, risk: 'medium', roomTemplateId: 'room_captain', timeLimit: 210 },
-        { id: 'story_chapter_3', title: 'Финал в небесах', reputationRequired: 30, reward: 400, infoCost: 0, completed: false, risk: 'high', roomTemplateId: 'room_captain', timeLimit: 150 }
-      ];
-  
-  const activeCh = chapters.find((ch, idx) => !ch.completed && !completedChapters.includes(idx + 1));
-  if (activeCh && currentDay >= 3) {
-    if (reputation < (activeCh.reputationRequired ?? 0)) {
-      return `Для продвижения по сюжету к главе "${activeCh.title}" нам не хватает репутации (нужно ${activeCh.reputationRequired}★, у нас ${reputation}★). Раскрывай ежедневные дела в сводках!`;
+    priorityText = `В сводках есть нераскрытое оперативное дело: «${firstJob.title}». Кликните по его карточке и нажмите «Начать расследование», чтобы выехать на место с котиком Миднайтом!`;
+  } else {
+    // Story chapters hint
+    const completedChapters = gameState.storyState?.completedChapters ?? [];
+    const chapters = gameState.campaignChapters && gameState.campaignChapters.length > 0 
+      ? gameState.campaignChapters 
+      : [
+          { id: 'story_chapter_1', title: 'Похищение Сапфирового Глаза', reputationRequired: 0, reward: 200, infoCost: 0, completed: false, risk: 'low', roomTemplateId: 'room_antique', timeLimit: null },
+          { id: 'story_chapter_2', title: 'Контрабанда в полночь', reputationRequired: 15, reward: 300, infoCost: 0, completed: false, risk: 'medium', roomTemplateId: 'room_captain', timeLimit: 210 },
+          { id: 'story_chapter_3', title: 'Финал в небесах', reputationRequired: 30, reward: 400, infoCost: 0, completed: false, risk: 'high', roomTemplateId: 'room_captain', timeLimit: 150 }
+        ];
+    
+    const activeCh = chapters.find((ch, idx) => !ch.completed && !completedChapters.includes(idx + 1));
+    if (activeCh && currentDay >= 3) {
+      if (reputation < (activeCh.reputationRequired ?? 0)) {
+        priorityText = `Для продвижения по сюжету к главе «${activeCh.title}» не хватает репутации (требуется ${activeCh.reputationRequired}★, у нас ${reputation}★). Раскрывайте ежедневные дела в оперативных сводках!`;
+      } else {
+        priorityText = `Мы готовы к крупному делу! Сюжетная глава «${activeCh.title}» ждет вас. Нажмите на карточку главы внизу экрана!`;
+      }
+    } else {
+      priorityText = "Все дела на сегодня завершены! Мы отлично потрудились. Самое время нажать на красную кнопку «Завершить день» справа вверху, чтобы перейти к следующему дню.";
     }
-    return `Мы готовы к крупному делу! Сюжетная глава "${activeCh.title}" ждет нас. Нажимай на карточку главы ниже!`;
   }
-  
-  return "Все оперативные дела на сегодня завершены! Барт, мы отлично потрудились. Пора нажать на кнопку «Завершить день», чтобы оплатить счета и перейти к следующему дню.";
+
+  return `На экране детективного агентства вы управляете расследованиями, финансами и кодексом писателя:\n\n` +
+         `• Ежедневные контракты: Выбирайте доступные дела на доске объявлений в центре экрана. Каждое раскрытое дело приносит наличные и повышает вашу Репутацию (★).\n` +
+         `• Допрос и фоторобот: Проводите беседы со свидетелями во вкладке сверху, чтобы получить дополнительные и стопроцентные улики.\n` +
+         `• Особые сюжетные расследования: Доступны в нижней панели. Они продвигают общую историю вперед при достижении нужного уровня Репутации.\n` +
+         `• Писательский кабинет: Доступен с 5-го дня. Там вы можете писать собственные одиночные дела или Большие сюжетные кампании, чтобы издавать их за роялти ($) в сейф писателя.\n` +
+         `• Конец дня: Кнопка «Завершить день» переводит календарь вперед и списывает расходы за содержание офиса.\n\n` +
+         `ТЕКУЩАЯ ЦЕЛЬ ДЛЯ ВАС:\n«${priorityText}»`;
 }
 
 function getLogicalHint(gameState: GameState): string {
@@ -176,6 +184,16 @@ export default function App() {
   
   // Writer and AI Critic States
   const [isWriterOpen, setIsWriterOpen] = useState(false);
+  const [activeUnlockModal, setActiveUnlockModal] = useState<{
+    type: 'memoirs' | 'novels';
+    title: string;
+    description: string;
+  } | null>(null);
+  const [warningModal, setWarningModal] = useState<{
+    title: string;
+    description: string;
+    type?: 'warning' | 'hint';
+  } | null>(null);
   const [showPublishPopup, setShowPublishPopup] = useState(false);
   const [ratingIdea, setRatingIdea] = useState(5);
   const [ratingExecution, setRatingExecution] = useState(5);
@@ -210,6 +228,51 @@ export default function App() {
       setRatingExecution(5);
     }
   }, [gameState.campaignChapters, gameState.customCampaignIdea]);
+
+  // Check for day-based feature unlocks (Memoirs at Day 5, Novels at Day 10)
+  useEffect(() => {
+    if (gameState.gameStatus === 'intro') return;
+    const currentDay = gameState.currentDay ?? 1;
+    const notified = gameState.notifiedUnlockDays ?? [];
+
+    if (currentDay >= 5 && currentDay < 10 && !notified.includes(5)) {
+      setActiveUnlockModal({
+        type: 'memoirs',
+        title: '🔓 РАЗБЛОКИРОВАНЫ МЕМУАРЫ!',
+        description: 'Барт Ванс наконец-то смахнул вековую пыль со своей любимой пишущей машинки! В главном меню бюро теперь доступна вкладка «Писать мемуары». Создавайте собственные детективные расследования, публикуйте их и получайте щедрые гонорары с раскрытых дел!'
+      });
+      setGameState(prev => ({
+        ...prev,
+        notifiedUnlockDays: [...(prev.notifiedUnlockDays ?? []), 5]
+      }));
+    } else if (currentDay >= 10 && !notified.includes(10)) {
+      setActiveUnlockModal({
+        type: 'novels',
+        title: '🔓 РАЗБЛОКИРОВАНЫ БОЛЬШИЕ ДЕЛА!',
+        description: 'Издательство предлагает вам крупный контракт! Теперь в Писательском Кабинете вы можете создавать полноценные «Большие дела» (сюжетные детективные кампании из 3-5 глав) с единой сквозной интригой. Пройдите все главы истории на доске в Сюжетных Кампаниях, соберите отзывы критиков и заработайте состояние!'
+      });
+      setGameState(prev => {
+        const nextNotified = [...(prev.notifiedUnlockDays ?? [])];
+        if (!nextNotified.includes(5)) nextNotified.push(5); // also include 5 if skipped
+        nextNotified.push(10);
+        return {
+          ...prev,
+          notifiedUnlockDays: nextNotified
+        };
+      });
+    }
+  }, [gameState.currentDay, gameState.gameStatus]);
+
+  // Prevent body scrolling during day transitions
+  useEffect(() => {
+    if (dayTransition) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [dayTransition]);
 
   // Check if saved game exists in localStorage on mount or state changes
   const [hasSavedGame, setHasSavedGame] = useState<boolean>(false);
@@ -1262,6 +1325,7 @@ export default function App() {
     const cleanState = generateNewGame(nextMode, nextChapter, currentCash, gameState.reputation || 0);
     cleanState.gameStatus = 'playing';
     cleanState.isMuted = gameState.isMuted;
+    cleanState.notifiedChapters = gameState.notifiedChapters || [];
     setGameState(cleanState);
     
     setTimeout(() => {
@@ -1386,6 +1450,7 @@ export default function App() {
         daysSurvived: prev.daysSurvived,
         gameStatus: 'playing',
         isMuted: prev.isMuted,
+        notifiedChapters: prev.notifiedChapters || [],
         storyState: {
           ...cleanState.storyState,
           completedChapters: prev.storyState?.completedChapters || []
@@ -1838,14 +1903,22 @@ export default function App() {
             onClick={() => {
               gameAudio.playClick();
               const hintText = getLogicalHint(gameState);
-              setGameState(prev => ({
-                ...prev,
-                activeDialogue: {
-                  sender: 'detective',
-                  text: `«Хм... ${hintText}»`,
-                  mood: 'thoughtful'
-                }
-              }));
+              if (gameState.gameStatus === 'sandbox_dashboard') {
+                setWarningModal({
+                  title: "ПОДРАЗДЕЛЕНИЕ СВЯЗИ С АГЕНТСТВОМ",
+                  description: hintText,
+                  type: 'hint'
+                });
+              } else {
+                setGameState(prev => ({
+                  ...prev,
+                  activeDialogue: {
+                    sender: 'detective',
+                    text: `«Хм... ${hintText}»`,
+                    mood: 'thoughtful'
+                  }
+                }));
+              }
             }}
             className="px-3 h-8 rounded-none border border-white/10 hover:border-white/30 bg-black text-[9px] font-sans uppercase tracking-[0.15em] flex items-center gap-1.5 text-white/50 hover:text-white transition-all shadow"
             title="Получить подсказку"
@@ -1948,7 +2021,17 @@ export default function App() {
             onEndDay={handleEndDay}
             onBuyLead={handleBuyLead}
             onReturnToMenu={handleReturnToMenu}
-            onOpenWriter={() => setIsWriterOpen(true)}
+            onOpenWriter={() => {
+              const currentDay = gameState.currentDay ?? 1;
+              if (currentDay < 5) {
+                setWarningModal({
+                  title: "КАБИНЕТ ПИСАТЕЛЯ ЗАБЛОКИРОВАН",
+                  description: `Писать мемуары будет доступно только начиная с 5-го дня работы в бюро! (Сейчас день ${currentDay}). Раскрывайте ежедневные дела и повышайте репутацию, чтобы набраться опыта для написания мемуаров.`
+                });
+              } else {
+                setIsWriterOpen(true);
+              }
+            }}
           />
           {isWriterOpen && (
             <WriterMode
@@ -1992,7 +2075,7 @@ export default function App() {
         </div>
 
         {/* Right side: Case files, logs, clues */}
-        <div className="w-full lg:w-[320px] flex flex-col gap-3 shrink-0">
+        <div className="w-full lg:w-[320px] flex flex-col gap-3 shrink-0 lg:self-stretch">
           {/* Tracker holds case cards & items */}
           <ClueTracker 
             currentClues={gameState.currentClues}
@@ -2003,6 +2086,34 @@ export default function App() {
             activeTornNote={gameState.activeTornNote}
             onOpenTornNote={() => setIsTornNoteOpen(true)}
           />
+
+          {gameState.pendingVictory && (
+            <div className="lg:mt-auto pt-3 flex flex-col gap-2 text-center select-none">
+              <div className="text-[10px] font-sans text-amber-400 font-bold tracking-[0.08em] uppercase animate-pulse py-2 px-3 border border-amber-500/20 bg-amber-500/5">
+                Все улики найдены, дело можно закрывать
+              </div>
+              <button
+                onClick={() => {
+                  try { gameAudio.playClick(); } catch (e) {}
+                  setGameState(prev => {
+                    if (prev.pendingVictory) {
+                      return {
+                        ...prev,
+                        activeDialogue: null,
+                        gameStatus: 'won',
+                        pendingVictory: false
+                      };
+                    }
+                    return prev;
+                  });
+                }}
+                className="w-full py-3.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-sans font-bold uppercase tracking-[0.15em] animate-pulse transition-all rounded-none shadow-lg border border-amber-600 flex items-center justify-center gap-2 cursor-pointer relative z-30"
+              >
+                <Lucide.CheckCircle className="w-4 h-4" />
+                Завершить расследование
+              </button>
+            </div>
+          )}
         </div>
       </main>
       ) : (
@@ -2448,7 +2559,7 @@ export default function App() {
 
       {/* DAY TRANSITION OVERLAY */}
       {dayTransition && (
-        <div className={`absolute inset-0 bg-black z-50 flex flex-col justify-center items-center p-6 text-center select-none transition-opacity duration-1000 ${
+        <div className={`fixed inset-0 bg-black z-50 flex flex-col justify-center items-center p-6 text-center select-none overflow-hidden transition-opacity duration-1000 ${
           dayTransition.isFadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'
         }`}>
           <div className="max-w-md w-full border border-white/10 bg-[#080808] p-8 relative">
@@ -2694,6 +2805,7 @@ export default function App() {
                               daysSurvived: prev.daysSurvived,
                               gameStatus: 'playing',
                               isMuted: prev.isMuted,
+                              notifiedChapters: prev.notifiedChapters || [],
                               storyState: {
                                 ...cleanState.storyState,
                                 completedChapters: updatedCompletedChapters
@@ -2889,7 +3001,7 @@ export default function App() {
             {/* Header */}
             <div className="text-center mb-6 relative z-10">
               <span className="text-[10px] text-amber-500 uppercase tracking-[0.3em] font-bold block mb-1">Издательский дом «Граб Стрит»</span>
-              <h2 className="font-serif text-2xl font-bold italic text-white tracking-wide">Издание Бульварного Романа</h2>
+              <h2 className="font-serif text-2xl font-bold italic text-white tracking-wide">Издание Большого Дела</h2>
               <div className="h-[1px] bg-neutral-800 my-3" />
               <p className="text-[11px] text-neutral-400 italic">
                 Вы завершили детективную кампанию: <span className="text-amber-400 font-bold">«{gameState.customCampaignIdea || 'Приключения Ванса и Миднайта'}»</span>
@@ -2899,7 +3011,7 @@ export default function App() {
             {!critiqueResult && !isCritiquing ? (
               <div className="space-y-6 relative z-10">
                 <p className="text-[11px] leading-relaxed text-neutral-400 text-center">
-                  Поздравляем! Ваш детективный роман успешно прошел обкатку в реальных делах. Перед тем как отправить рукопись на печатные станки, оцените свои впечатления от этой истории:
+                  Поздравляем! Ваше Большое дело успешно прошло обкатку во всех сюжетных главах. Перед тем как отправить рукопись на печатные станки, оцените свои впечатления от этой истории:
                 </p>
 
                 {/* Rating 1: Idea */}
@@ -3015,6 +3127,75 @@ export default function App() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* UNLOCK FUNCTIONALITY NOTIFICATION MODAL */}
+      {activeUnlockModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md">
+          <div className="relative w-full max-w-md bg-neutral-900 border border-amber-500/40 rounded-none p-6 font-mono text-xs text-neutral-300 shadow-2xl animate-fade-in text-center">
+            {/* Elegant double border frame */}
+            <div className="absolute inset-2 border border-amber-500/10 pointer-events-none" />
+            
+            <div className="relative z-10 space-y-4">
+              <Lucide.Award className="w-12 h-12 text-amber-500 mx-auto animate-bounce" />
+              <h2 className="font-serif text-lg font-bold italic text-white tracking-wide">
+                {activeUnlockModal.title}
+              </h2>
+              <div className="h-[1px] bg-neutral-800 my-2" />
+              <p className="font-serif text-[12px] text-neutral-300 leading-relaxed italic">
+                «{activeUnlockModal.description}»
+              </p>
+              
+              <button
+                onClick={() => {
+                  try { gameAudio.playClick(); } catch (e) {}
+                  setActiveUnlockModal(null);
+                }}
+                className="w-full h-11 bg-amber-500 hover:bg-amber-400 text-black font-sans text-xs font-bold uppercase tracking-widest transition-all mt-4 cursor-pointer"
+              >
+                Отлично!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* LOCKED WARNING MODAL */}
+      {warningModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md text-center">
+          <div className={`relative w-full max-w-md bg-neutral-900 border ${warningModal.type === 'hint' ? 'border-amber-500/40' : 'border-red-500/40'} rounded-none p-6 font-mono text-xs text-neutral-300 shadow-2xl animate-fade-in`}>
+            <div className={`absolute inset-2 border ${warningModal.type === 'hint' ? 'border-amber-500/10' : 'border-red-500/10'} pointer-events-none`} />
+            
+            <div className="relative z-10 space-y-4">
+              {warningModal.type === 'hint' ? (
+                <Lucide.Lightbulb className="w-10 h-10 text-amber-400 mx-auto animate-pulse" />
+              ) : (
+                <Lucide.Lock className="w-10 h-10 text-red-500 mx-auto" />
+              )}
+              <h2 className={`font-serif text-lg font-bold italic tracking-wide ${warningModal.type === 'hint' ? 'text-amber-400' : 'text-white'}`}>
+                {warningModal.title}
+              </h2>
+              <div className="h-[1px] bg-neutral-800 my-2" />
+              <p className={`font-serif text-[12px] leading-relaxed italic text-left ${warningModal.type === 'hint' ? 'text-neutral-300 whitespace-pre-line' : 'text-neutral-400'}`}>
+                {warningModal.type === 'hint' ? warningModal.description : `«${warningModal.description}»`}
+              </p>
+              
+              <button
+                onClick={() => {
+                  try { gameAudio.playClick(); } catch (e) {}
+                  setWarningModal(null);
+                }}
+                className={`w-full h-11 text-white border font-sans text-xs font-bold uppercase tracking-widest transition-all mt-4 cursor-pointer ${
+                  warningModal.type === 'hint' 
+                    ? 'bg-amber-950/40 hover:bg-amber-900/60 border-amber-500/30 hover:border-amber-500 text-amber-300' 
+                    : 'bg-neutral-800 hover:bg-neutral-750 border-neutral-750'
+                }`}
+              >
+                Понятно
+              </button>
+            </div>
           </div>
         </div>
       )}

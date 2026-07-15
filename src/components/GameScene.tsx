@@ -478,13 +478,7 @@ export default function GameScene({
 
     // Dressing room (Ballerina / etc)
     if (idLower.includes('ballerina') || idLower.includes('dress')) {
-      if (idLower.includes('2')) {
-        return '/src/img/Dressingr_Console02.png';
-      }
-      if (idLower.includes('drawer')) {
-        return '/src/img/Dressingr_Drawer.png';
-      }
-      return '/src/img/Dressingr_Console01.png';
+      return '/src/img/Dressingr_Tablemirror.png';
     }
 
     // Grocery / Shop
@@ -601,17 +595,32 @@ export default function GameScene({
     }
   };
   
-  const deskScale = 1.75;
+  const deskScale = 1.4875;
   const deskX = (objects.desk?.x ?? 43) - ((objects.desk?.w ?? 32) * (deskScale - 1)) / 2;
   const deskW = (objects.desk?.w ?? 32) * deskScale;
   const deskY = (objects.desk?.y ?? 58) - ((objects.desk?.h ?? 32) * (deskScale - 1));
   const deskH = (objects.desk?.h ?? 32) * deskScale;
 
+  const roomId_scene = gameState.roomInfo?.id || '';
+  const idLower_scene = roomId_scene.toLowerCase();
+  const isDressingRoom = roomId_scene === 'room_ballerina' || idLower_scene.includes('ballerina') || idLower_scene.includes('dress');
+
   const deskScreenLeft = deskX + deskW * 0.1;
   const deskScreenWidth = deskW * 0.8;
-  const deskScreenTop = deskY + deskH * 0.2;
-  const deskScreenHeight = deskH * 0.8;
-  const deskTabletopY = deskScreenTop + deskScreenHeight * 0.2;
+  
+  // For dressing rooms with a mirror table, make the container taller by shifting the top upwards
+  const deskScreenTop = isDressingRoom 
+    ? (deskY + deskH * 0.2) - (deskH * 0.35) 
+    : (deskY + deskH * 0.2);
+    
+  const deskScreenHeight = isDressingRoom 
+    ? (deskH * 0.8) + (deskH * 0.35) 
+    : (deskH * 0.8);
+
+  // Keep the deskTabletopY at the same level relative to the floor so safe/clues sit on the actual table tabletop, not on the mirror
+  const deskTabletopY = isDressingRoom
+    ? (deskY + deskH * 0.36)
+    : (deskScreenTop + deskScreenHeight * 0.2);
 
   const isDeskVisible = isVisible('desk');
 
@@ -682,15 +691,52 @@ export default function GameScene({
     const h = objects.bookshelf?.h ?? 70;
     const x = objects.bookshelf?.x ?? 4;
 
-    const scaleW = 2.4 * 0.95; // reduced by 5%
-    const scaleH = 1.25 * 0.95; // reduced by 5%
+    const scaleW = 2.4 * 0.95 * 0.8; // reduced by 20%
+    const scaleH = 1.25 * 0.95 * 0.8; // reduced by 20%
 
     const width = w * scaleW;
     const height = h * scaleH;
 
     // Floor is at exactly 84% vertical height
     const top = 84.0 - height;
-    const left = Math.max(-2, x - w * 0.45);
+    let left = Math.max(-2, x - w * 0.45);
+
+    // Collision checking with other floor objects to prevent overlap
+    if (isDeskVisible) {
+      if (x < deskX) {
+        // Bookshelf is to the left of the desk, push it left to avoid overlap
+        left = Math.min(left, deskX - width - 0.5);
+      } else {
+        // Bookshelf is to the right of the desk, push it right to avoid overlap
+        left = Math.max(left, deskX + deskW + 0.5);
+      }
+    }
+
+    if (isVisible('safeStand')) {
+      if (x < safeStandLeft) {
+        left = Math.min(left, safeStandLeft - width - 0.5);
+      } else {
+        left = Math.max(left, safeStandLeft + safeStandWidth + 0.5);
+      }
+    }
+
+    if (isVisible('safe')) {
+      const safeRight = safeLeft + safeWidth;
+      const bookshelfRight = left + width;
+      // Extra precaution for safe overlap
+      if (left < safeRight && safeLeft < bookshelfRight) {
+        const safeCenter = safeLeft + safeWidth / 2;
+        const bookshelfCenter = left + width / 2;
+        if (bookshelfCenter < safeCenter) {
+          left = safeLeft - width - 1.0;
+        } else {
+          left = safeRight + 1.0;
+        }
+      }
+    }
+
+    // Bound within the room width
+    left = Math.max(-2, Math.min(100 - width, left));
 
     return { left, top, width, height };
   };
@@ -1292,22 +1338,6 @@ export default function GameScene({
       case 'dressingr':
         return (
           <>
-            {/* Mirror in the center */}
-            <div className="absolute top-[16%] left-[37%] w-[26%] h-[35%] border-4 border-amber-900 bg-neutral-900 shadow-2xl p-2 flex flex-col justify-center items-center relative z-[2]">
-              <div className="absolute inset-1 border border-amber-800" />
-              <div className="w-full h-full bg-neutral-950 flex items-center justify-center relative shadow-inner overflow-hidden border border-neutral-800">
-                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent rotate-12 pointer-events-none" />
-                <span className="font-serif text-[10px] text-neutral-600 tracking-wider">ГРИМЕРНОЕ ЗЕРКАЛО</span>
-              </div>
-              {[
-                'top-1 left-1', 'top-1 left-1/2 -translate-x-1/2', 'top-1 right-1',
-                'bottom-1 left-1', 'bottom-1 left-1/2 -translate-x-1/2', 'bottom-1 right-1',
-                'top-1/2 -translate-y-1/2 left-1', 'top-1/2 -translate-y-1/2 right-1'
-              ].map((pos, index) => (
-                <div key={index} className={`absolute ${pos} w-2 h-2 rounded-full bg-yellow-100 border border-yellow-200 shadow-[0_0_8px_#fef08a] animate-pulse`} />
-              ))}
-            </div>
-            
             {/* Dressing room windows on left and right - identical and symmetric */}
             <RoomWindow 
               src="/src/img/windows/Dressingr__window_01.png"
@@ -1618,19 +1648,6 @@ export default function GameScene({
         }}
       >
         <div className="relative w-full h-full flex flex-col justify-end group-hover:scale-[1.01] transition-transform duration-200">
-          {/* Dressing Room Mirror Option */}
-          {gameState.roomInfo?.id === 'room_ballerina' && (
-            <img 
-              src="/src/img/Dressingr_Tablemirror.png" 
-              alt="Dressing mirror" 
-              className="absolute top-[-70%] left-[20%] w-[60%] h-[80%] object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.6)] z-20"
-              referrerPolicy="no-referrer"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
-            />
-          )}
-
           {/* Desk PNG Graphic (Primary overlay) */}
           <img 
             src={getDeskImg()} 
@@ -1870,13 +1887,13 @@ export default function GameScene({
       {isVisible('safeStand') && (
       <div
         id="safe-stand-obj"
-        className="absolute z-0 flex flex-col justify-end"
+        className="absolute flex flex-col justify-end"
         style={{
           left: `${safeStandLeft}%`,
           top: `${safeStandTop}%`,
           width: `${safeStandWidth}%`,
           height: `${safeStandHeight}%`,
-          zIndex: objects.safeStand?.zIndex
+          zIndex: objects.safeStand?.zIndex !== undefined ? objects.safeStand.zIndex : 10
         }}
       >
         <div className="relative w-full h-full">
@@ -1898,13 +1915,13 @@ export default function GameScene({
       <div
         id="safe-obj"
         onClick={() => handleObjectClick('safe')}
-        className="absolute group cursor-pointer z-0 flex flex-col justify-end"
+        className="absolute group cursor-pointer flex flex-col justify-end"
         style={{
           left: `${safeLeft}%`,
           top: `${safeTop}%`,
           width: `${safeWidth}%`,
           height: `${safeHeight}%`,
-          zIndex: objects.safe.zIndex
+          zIndex: objects.safe.zIndex !== undefined ? objects.safe.zIndex : 11
         }}
       >
         <div className="relative w-full h-full transition-all duration-300 hover:scale-105">
